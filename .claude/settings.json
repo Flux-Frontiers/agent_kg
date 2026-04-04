@@ -1,0 +1,67 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.prompt' | { read -r p; REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg ingest \"$p\" --role user --repo \"$REPO_ROOT\" --person egs --no-embed; } 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg ingest \"Session ended.\" --role assistant --repo \"$REPO_ROOT\" --person egs --no-embed 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(agent-kg:*)",
+      "Bash(agent-kg-mcp:*)",
+      "Bash(agent-kg-ingest:*)",
+      "Bash(agent-kg-query:*)",
+      "Bash(agent-kg-assemble:*)",
+      "Bash(agent-kg-prune:*)",
+      "Bash(agent-kg-stats:*)",
+      "Bash(agent-kg-analyze:*)",
+      "Bash(agent-kg-sessions:*)",
+      "Bash(agent-kg-snapshot:*)",
+      "Bash(agent-kg-onboard:*)",
+      "Bash(agent-kg-profile:*)",
+      "Bash(poetry install:*)",
+      "Bash(poetry lock:*)",
+      "Bash(poetry update:*)",
+      "Bash(poetry show:*)",
+      "Bash(poetry run:*)",
+      "Bash(poetry add:*)",
+      "Bash(poetry remove:*)",
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(ruff format:*)",
+      "Bash(ruff check:*)",
+      "Bash(mypy:*)",
+      "Bash(pre-commit:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git restore:*)",
+      "Bash(git tag:*)",
+      "Bash(gh release:*)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}

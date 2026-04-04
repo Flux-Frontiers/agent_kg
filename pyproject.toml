@@ -1,0 +1,82 @@
+# agent_kg
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "agent-kg"
+version = "0.1.0"
+description = "Conversational memory as a knowledge graph"
+authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
+license = "Elastic-2.0"
+readme = "README.md"
+packages = [{ include = "agent_kg", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+lancedb = ">=0.29.0"
+numpy = ">=1.24.0"
+sentence-transformers = "^5.2.0"
+transformers = "^4.57.6"
+safetensors = "^0.5.0"
+torch = ">=2.5.1"
+click = ">=8.1.0"
+mcp = ">=1.0.0"
+rich = "^14.0.0"
+spacy = { version = ">=3.7.0", optional = true }
+anthropic = { version = ">=0.25.0", optional = true }
+httpx = { version = ">=0.27.0", optional = true }
+
+#kg-rag = { git = "https://github.com/Flux-Frontiers/KGRAG.git"}
+code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git"}
+doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git"}
+ftree-kg = { git = "https://github.com/Flux-Frontiers/FTree_kg.git", optional = true }
+
+
+[tool.poetry.extras]
+nlp = ["spacy"]
+llm = ["anthropic"]
+local = ["httpx"]
+all = ["spacy", "anthropic", "httpx"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-cov = ">=5.0.0"
+ruff = ">=0.4.0"
+mypy = ">=1.10.0"
+
+[tool.poetry.scripts]
+agent-kg          = "agent_kg.cli.main:cli"
+agent-kg-mcp      = "agent_kg.mcp.server:main"
+agent-kg-ingest   = "agent_kg.cli.main:ingest"
+agent-kg-query    = "agent_kg.cli.main:query"
+agent-kg-assemble = "agent_kg.cli.main:assemble"
+agent-kg-prune    = "agent_kg.cli.main:prune_cmd"
+agent-kg-stats    = "agent_kg.cli.main:stats"
+agent-kg-analyze  = "agent_kg.cli.main:analyze"
+agent-kg-sessions = "agent_kg.cli.main:sessions"
+agent-kg-snapshot = "agent_kg.cli.main:snapshot"
+agent-kg-onboard  = "agent_kg.cli.main:onboard"
+agent-kg-profile  = "agent_kg.cli.main:profile"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = false
+ignore_missing_imports = true
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.poetry.virtualenvs]
+in-project = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
