@@ -1,10 +1,14 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """preferences.py — Preference, commitment, and expertise extraction.
 
 Detects when a user is expressing a standing rule, personal preference,
 area of expertise, or interest. Returns typed records for storage in the
 UserProfile tree.
 
-Each result is: {"kind": "preference"|"commitment"|"expertise"|"interest", "label": str, "text": str}
+Each result is:
+    {"kind": "preference"|"commitment"|"expertise"|"interest", "label": str, "text": str}
 """
 
 from __future__ import annotations
@@ -81,7 +85,9 @@ def _extract_preferences(text: str) -> list[dict[str, Any]]:
         for m in pattern.finditer(text):
             label = m.group(2).strip().rstrip(".,;")
             if len(label) >= 3:
-                results.append({"kind": "preference", "label": label[:80], "text": m.group(0).strip()})
+                results.append(
+                    {"kind": "preference", "label": label[:80], "text": m.group(0).strip()}
+                )
     for pattern in (_PREF_STYLE, _PREF_CONCISE):
         for m in pattern.finditer(text):
             label = m.group(1).strip()

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """store.py — SQLite + LanceDB storage for the AgentKG conversation tree."""
 
 from __future__ import annotations
@@ -62,6 +65,21 @@ _EMBED_DIM = 384
 _EMBED_MODEL = "all-MiniLM-L6-v2"
 
 
+def _make_node_schema() -> Any:
+    """Build the shared PyArrow schema for the LanceDB node vector table."""
+    import pyarrow as pa  # noqa: PLC0415
+
+    return pa.schema(
+        [
+            pa.field("node_id", pa.utf8()),
+            pa.field("kind", pa.utf8()),
+            pa.field("text", pa.utf8()),
+            pa.field("session_id", pa.utf8()),
+            pa.field("vector", pa.list_(pa.float32(), _EMBED_DIM)),
+        ]
+    )
+
+
 class AgentKGStore:
     """Two-layer storage: SQLite for graph topology + LanceDB for embeddings.
 
@@ -102,20 +120,19 @@ class AgentKGStore:
             return self._tbl
         try:
             import lancedb  # noqa: PLC0415
-            import pyarrow as pa  # noqa: PLC0415
+            import pyarrow  # noqa: PLC0415, F401
         except ImportError as exc:
             raise ImportError("lancedb and pyarrow are required for AgentKG embeddings") from exc
 
         self._lancedb_dir.mkdir(parents=True, exist_ok=True)
         self._ldb = lancedb.connect(str(self._lancedb_dir))
-        schema = pa.schema([
-            pa.field("node_id", pa.utf8()),
-            pa.field("kind", pa.utf8()),
-            pa.field("text", pa.utf8()),
-            pa.field("session_id", pa.utf8()),
-            pa.field("vector", pa.list_(pa.float32(), _EMBED_DIM)),
-        ])
-        if "nodes" in self._ldb.table_names():
+        schema = _make_node_schema()
+        import warnings  # noqa: PLC0415
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            existing = self._ldb.table_names()
+        if "nodes" in existing:
             self._tbl = self._ldb.open_table("nodes")
         else:
             self._tbl = self._ldb.create_table("nodes", schema=schema)
@@ -124,6 +141,7 @@ class AgentKGStore:
     def _get_embedder(self):
         if self._embedder is None:
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+
             self._embedder = SentenceTransformer(self._embed_model_name)
         return self._embedder
 
@@ -142,7 +160,9 @@ class AgentKGStore:
         d = node.to_dict()
         cols = ", ".join(d.keys())
         placeholders = ", ".join(["?"] * len(d))
-        db.execute(f"INSERT OR REPLACE INTO nodes ({cols}) VALUES ({placeholders})", list(d.values()))
+        db.execute(
+            f"INSERT OR REPLACE INTO nodes ({cols}) VALUES ({placeholders})", list(d.values())
+        )
         db.commit()
 
     def embed_node(self, node: Node) -> None:
@@ -162,13 +182,17 @@ class AgentKGStore:
             tbl.delete(f"node_id = '{node.id}'")
         except Exception:  # pylint: disable=broad-exception-caught
             pass
-        tbl.add([{
-            "node_id": node.id,
-            "kind": str(node.kind),
-            "text": text[:500],
-            "session_id": node.session_id,
-            "vector": vector,
-        }])
+        tbl.add(
+            [
+                {
+                    "node_id": node.id,
+                    "kind": str(node.kind),
+                    "text": text[:500],
+                    "session_id": node.session_id,
+                    "vector": vector,
+                }
+            ]
+        )
 
     def upsert_node_with_embedding(self, node: Node) -> None:
         """Write to SQLite and LanceDB in one call."""
@@ -185,7 +209,8 @@ class AgentKGStore:
         db = self._get_db()
         if session_id:
             rows = db.execute(
-                "SELECT * FROM nodes WHERE kind = ? AND session_id = ? ORDER BY turn_index, created_at",
+                "SELECT * FROM nodes WHERE kind = ? AND session_id = ?"
+                " ORDER BY turn_index, created_at",
                 (str(kind), session_id),
             ).fetchall()
         else:
@@ -201,15 +226,20 @@ class AgentKGStore:
 
     def get_open_tasks(self) -> list[Node]:
         """Return all Task nodes with status = 'open'."""
-        rows = self._get_db().execute(
-            "SELECT * FROM nodes WHERE kind = ? AND status = 'open' ORDER BY created_at",
-            (str(NodeKind.TASK),),
-        ).fetchall()
+        rows = (
+            self._get_db()
+            .execute(
+                "SELECT * FROM nodes WHERE kind = ? AND status = 'open' ORDER BY created_at",
+                (str(NodeKind.TASK),),
+            )
+            .fetchall()
+        )
         return [Node.from_dict(dict(r)) for r in rows]
 
     def update_node_field(self, node_id: str, field: str, value: Any) -> None:
         """Update a single field on an existing node."""
         from datetime import UTC, datetime  # noqa: PLC0415
+
         db = self._get_db()
         db.execute(
             f"UPDATE nodes SET {field} = ?, updated_at = ? WHERE id = ?",
@@ -232,9 +262,7 @@ class AgentKGStore:
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
-    def find_similar_node(
-        self, text: str, kind: NodeKind, threshold: float = 0.88
-    ) -> Node | None:
+    def find_similar_node(self, text: str, kind: NodeKind, threshold: float = 0.88) -> Node | None:
         """Return an existing node of ``kind`` whose embedding is within
         ``threshold`` cosine similarity of ``text``, or None.
 
@@ -264,7 +292,9 @@ class AgentKGStore:
         d = edge.to_dict()
         cols = ", ".join(d.keys())
         placeholders = ", ".join(["?"] * len(d))
-        db.execute(f"INSERT OR IGNORE INTO edges ({cols}) VALUES ({placeholders})", list(d.values()))
+        db.execute(
+            f"INSERT OR IGNORE INTO edges ({cols}) VALUES ({placeholders})", list(d.values())
+        )
         db.commit()
 
     def get_edges(
@@ -312,13 +342,15 @@ class AgentKGStore:
             results = searcher.to_list()
             hits = []
             for r in results:
-                hits.append({
-                    "node_id": r["node_id"],
-                    "kind": r["kind"],
-                    "text": r["text"],
-                    "session_id": r.get("session_id", ""),
-                    "score": float(max(0.0, 1.0 - r.get("_distance", 1.0))),
-                })
+                hits.append(
+                    {
+                        "node_id": r["node_id"],
+                        "kind": r["kind"],
+                        "text": r["text"],
+                        "session_id": r.get("session_id", ""),
+                        "score": float(max(0.0, 1.0 - r.get("_distance", 1.0))),
+                    }
+                )
                 if len(hits) >= k:
                     break
             return hits
@@ -370,16 +402,14 @@ class AgentKGStore:
 
     def get_session(self, session_id: str) -> dict | None:
         """Return a session record dict or None."""
-        row = self._get_db().execute(
-            "SELECT * FROM sessions WHERE id = ?", (session_id,)
-        ).fetchone()
+        row = (
+            self._get_db().execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        )
         return dict(row) if row else None
 
     def list_sessions(self) -> list[dict]:
         """Return all sessions ordered by start_time."""
-        rows = self._get_db().execute(
-            "SELECT * FROM sessions ORDER BY start_time"
-        ).fetchall()
+        rows = self._get_db().execute("SELECT * FROM sessions ORDER BY start_time").fetchall()
         return [dict(r) for r in rows]
 
     def increment_session_turns(self, session_id: str) -> None:
@@ -414,12 +444,17 @@ class AgentKGStore:
             return 0
         created = 0
         for i, t1 in enumerate(topics):
-            for t2 in topics[i + 1:]:
+            for t2 in topics[i + 1 :]:
                 v1 = self.embed(t1.label or t1.text)
                 v2 = self.embed(t2.label or t2.text)
                 sim = float(sum(a * b for a, b in zip(v1, v2)))
                 if sim >= threshold:
-                    edge = Edge(source_id=t1.id, target_id=t2.id, relation=EdgeRelation.RELATED_TO, weight=sim)
+                    edge = Edge(
+                        source_id=t1.id,
+                        target_id=t2.id,
+                        relation=EdgeRelation.RELATED_TO,
+                        weight=sim,
+                    )
                     self.add_edge(edge)
                     created += 1
         return created
@@ -435,8 +470,10 @@ class AgentKGStore:
 # Helpers
 # ------------------------------------------------------------------
 
+
 def _row_to_edge(r: dict) -> Edge:
     from datetime import UTC, datetime  # noqa: PLC0415
+
     try:
         relation = EdgeRelation(r["relation"])
     except ValueError:

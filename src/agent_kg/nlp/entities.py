@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """entities.py — Named entity extraction for AgentKG Turn nodes.
 
 Uses spaCy NER when available; falls back to regex patterns for
@@ -33,23 +36,67 @@ _SPACY_KIND_MAP = {
     "FAC": "concept",
 }
 
-_STOP_WORDS = frozenset({
-    "i", "we", "you", "it", "is", "was", "are", "were", "be", "been",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "must", "shall", "the", "a", "an", "and",
-    "or", "but", "if", "in", "on", "at", "to", "for", "of", "with",
-    "as", "by", "from", "that", "this", "these", "those", "not", "no",
-})
+_STOP_WORDS = frozenset(
+    {
+        "i",
+        "we",
+        "you",
+        "it",
+        "is",
+        "was",
+        "are",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "must",
+        "shall",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "if",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "as",
+        "by",
+        "from",
+        "that",
+        "this",
+        "these",
+        "those",
+        "not",
+        "no",
+    }
+)
 
 
 def _spacy_entities(text: str) -> list[dict[str, Any]]:
     """Extract named entities using spaCy NER."""
     try:
-        from agent_kg.nlp.intent import _get_spacy_model  # noqa: PLC0415
-        nlp = _get_spacy_model()
-        if nlp is None:
+        from agent_kg.nlp.intent import _get_spacy_doc  # noqa: PLC0415
+
+        doc = _get_spacy_doc(text)
+        if doc is None:
             return []
-        doc = nlp(text[:1024])
         results = []
         for ent in doc.ents:
             kind = _SPACY_KIND_MAP.get(ent.label_, "concept")

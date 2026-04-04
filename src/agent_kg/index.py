@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """index.py — ConversationIndex: LanceDB-backed semantic index for conversation nodes."""
 
 from __future__ import annotations
@@ -5,9 +8,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-DEFAULT_MODEL = "all-MiniLM-L6-v2"
+from agent_kg.store import _make_node_schema
 
-_EMBED_DIM = 384
+DEFAULT_MODEL = "all-MiniLM-L6-v2"
 
 
 class ConversationIndex:
@@ -34,32 +37,30 @@ class ConversationIndex:
     def _get_embedder(self) -> Any:
         if self._embedder is None:
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+
             self._embedder = SentenceTransformer(self.model_name)
         return self._embedder
 
     def _get_db(self) -> Any:
         if self._db is None:
             import lancedb  # noqa: PLC0415
+
             self._db = lancedb.connect(str(self.lancedb_dir))
         return self._db
 
     def _get_table(self, create: bool = False) -> Any:
         if self._table is not None:
             return self._table
+        import warnings  # noqa: PLC0415
+
         db = self._get_db()
-        names = db.table_names()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            names = db.table_names()
         if self.TABLE in names:
             self._table = db.open_table(self.TABLE)
         elif create:
-            import pyarrow as pa  # noqa: PLC0415
-            schema = pa.schema([
-                pa.field("node_id", pa.utf8()),
-                pa.field("kind", pa.utf8()),
-                pa.field("text", pa.utf8()),
-                pa.field("session_id", pa.utf8()),
-                pa.field("vector", pa.list_(pa.float32(), _EMBED_DIM)),
-            ])
-            self._table = db.create_table(self.TABLE, schema=schema)
+            self._table = db.create_table(self.TABLE, schema=_make_node_schema())
         return self._table
 
     def add(self, nodes: list[dict]) -> int:
@@ -78,19 +79,19 @@ class ConversationIndex:
         vecs = embedder.encode(texts, normalize_embeddings=True)
         rows = []
         for node, vec in zip(nodes, vecs):
-            rows.append({
-                "node_id": node.get("node_id") or node.get("id", ""),
-                "kind": node.get("kind", ""),
-                "text": node.get("text") or node.get("label", ""),
-                "session_id": node.get("session_id") or "",
-                "vector": vec.tolist(),
-            })
+            rows.append(
+                {
+                    "node_id": node.get("node_id") or node.get("id", ""),
+                    "kind": node.get("kind", ""),
+                    "text": node.get("text") or node.get("label", ""),
+                    "session_id": node.get("session_id") or "",
+                    "vector": vec.tolist(),
+                }
+            )
         table.add(rows)
         return len(rows)
 
-    def search(
-        self, query: str, k: int = 10, session_id: str | None = None
-    ) -> list[dict]:
+    def search(self, query: str, k: int = 10, session_id: str | None = None) -> list[dict]:
         """Semantic search over indexed nodes.
 
         :param query: Natural language query string.
@@ -111,18 +112,25 @@ class ConversationIndex:
         results = q.to_list()
         out = []
         for r in results:
-            out.append({
-                "node_id": r["node_id"],
-                "kind": r["kind"],
-                "text": r["text"],
-                "session_id": r["session_id"],
-                "score": float(r.get("_distance", 0.0)),
-            })
+            out.append(
+                {
+                    "node_id": r["node_id"],
+                    "kind": r["kind"],
+                    "text": r["text"],
+                    "session_id": r["session_id"],
+                    "score": float(r.get("_distance", 0.0)),
+                }
+            )
         return out
 
     def wipe(self) -> None:
         """Drop the conversation table from LanceDB."""
+        import warnings  # noqa: PLC0415
+
         db = self._get_db()
-        if self.TABLE in db.table_names():
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            existing = db.table_names()
+        if self.TABLE in existing:
             db.drop_table(self.TABLE)
         self._table = None

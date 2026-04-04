@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """assemble.py — Context assembly for AgentKG.
 
 Implements the KG-based context assembly strategy that defeats context rot:
@@ -19,7 +22,7 @@ from agent_kg.schema import NodeKind
 if TYPE_CHECKING:
     from agent_kg.store import AgentKGStore
 
-_RECENT_WINDOW = 6   # verbatim recent turns always included
+_RECENT_WINDOW = 6  # verbatim recent turns always included
 _CHARS_PER_TOKEN = 4  # rough approximation
 
 
@@ -28,7 +31,7 @@ def _approx_tokens(text: str) -> int:
 
 
 def assemble_context(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     query: str,
     budget: int = 4000,
     recent_window: int = _RECENT_WINDOW,

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """consolidate.py — Phase 2 background consolidation for AgentKG.
 
 Triggered when turn count exceeds a threshold (default: 20) or explicitly:
@@ -19,7 +22,7 @@ _CONSOLIDATE_THRESHOLD = 20  # turns before consolidation is triggered
 
 
 def consolidate(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     session_id: str | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
@@ -69,7 +72,9 @@ def consolidate(
     tasks = store.get_nodes_by_kind(NodeKind.TASK)
     for task in tasks:
         if task.status == str(TaskStatus.OPEN):
-            resolving_edges = store.get_edges(target_id=task.id, relation=str(EdgeRelation.RESOLVES))
+            resolving_edges = store.get_edges(
+                target_id=task.id, relation=str(EdgeRelation.RESOLVES)
+            )
             if resolving_edges:
                 store.update_node_field(task.id, "status", str(TaskStatus.COMPLETED))
                 report["tasks_updated"] += 1
@@ -77,7 +82,7 @@ def consolidate(
     return report
 
 
-def should_consolidate(store: "AgentKGStore", session_id: str | None = None) -> bool:
+def should_consolidate(store: AgentKGStore, session_id: str | None = None) -> bool:
     """Return True if a consolidation pass is warranted.
 
     :param store: The backing store.

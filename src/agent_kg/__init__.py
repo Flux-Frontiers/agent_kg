@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """agent_kg — Conversational memory as a live, queryable knowledge graph.
 
 AgentKG gives AI agents persistent, semantically searchable memory that
@@ -41,7 +44,7 @@ from agent_kg.session import Session
 from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Eric G. Suchanek, PhD"
 
 __all__ = [

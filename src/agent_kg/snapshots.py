@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """snapshots.py — Temporal snapshot support for AgentKG.
 
 Captures point-in-time metrics for the conversation tree:
@@ -17,14 +20,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from agent_kg.schema import NodeKind
+
 if TYPE_CHECKING:
     from agent_kg.store import AgentKGStore
 
-from agent_kg.schema import NodeKind
-
 
 def capture(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     snapshots_dir: Path,
     label: str | None = None,
     version: str = "0.1.0",
@@ -93,17 +96,22 @@ def list_snapshots(snapshots_dir: Path) -> list[dict[str, Any]]:
     return snaps
 
 
-def diff_snapshots(
-    snap_a: dict[str, Any], snap_b: dict[str, Any]
-) -> dict[str, Any]:
+def diff_snapshots(snap_a: dict[str, Any], snap_b: dict[str, Any]) -> dict[str, Any]:
     """Compute deltas between two snapshots.
 
     :param snap_a: Earlier snapshot.
     :param snap_b: Later snapshot.
     :return: Dict of ``{field: (a_value, b_value, delta)}`` for numeric fields.
     """
-    numeric_keys = ["node_count", "edge_count", "turn_count", "summary_count",
-                    "open_task_count", "session_count", "pruning_pass"]
+    numeric_keys = [
+        "node_count",
+        "edge_count",
+        "turn_count",
+        "summary_count",
+        "open_task_count",
+        "session_count",
+        "pruning_pass",
+    ]
     deltas: dict[str, Any] = {}
     for key in numeric_keys:
         a = snap_a.get(key, 0)

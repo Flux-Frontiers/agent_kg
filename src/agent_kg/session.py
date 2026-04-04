@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """session.py — Session lifecycle management for AgentKG."""
 
 from __future__ import annotations
@@ -21,14 +24,14 @@ class Session:
     :param store: The :class:`~agent_kg.store.AgentKGStore` backing this session.
     """
 
-    def __init__(self, session_id: str, store: "AgentKGStore") -> None:
+    def __init__(self, session_id: str, store: AgentKGStore) -> None:
         self.id = session_id
         self._store = store
         self._turn_index = 0
         self._start_time = datetime.now(UTC)
 
     @classmethod
-    def open(cls, store: "AgentKGStore", session_id: str | None = None) -> "Session":
+    def open(cls, store: AgentKGStore, session_id: str | None = None) -> Session:
         """Open a new session or resume an existing one.
 
         :param store: The backing store.

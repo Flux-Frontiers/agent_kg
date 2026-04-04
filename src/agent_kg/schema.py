@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """schema.py — AgentKG node and edge type definitions."""
 
 from __future__ import annotations
@@ -154,12 +157,13 @@ class Node:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Node":
+    def from_dict(cls, d: dict[str, Any]) -> Node:
         """Deserialize from a SQLite row dict."""
+
         def _dt(s: str | None) -> datetime:
             try:
                 return datetime.fromisoformat(s) if s else _now()
-            except Exception:
+            except (ValueError, TypeError):
                 return _now()
 
         return cls(

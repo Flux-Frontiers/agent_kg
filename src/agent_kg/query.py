@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """query.py — Semantic query and snippet pack for AgentKG.
 
 Delegates to the LanceDB semantic index in AgentKGStore.
@@ -14,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def query(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     q: str,
     k: int = 8,
     kind_filter: str | None = None,
@@ -33,25 +36,27 @@ def query(
     for h in hits:
         node = store.get_node(h["node_id"])
         if node:
-            enriched.append({
-                "node_id": h["node_id"],
-                "kind": h["kind"],
-                "text": node.text or node.label,
-                "label": node.label,
-                "role": node.role,
-                "turn_index": node.turn_index,
-                "session_id": h["session_id"],
-                "score": h["score"],
-                "status": node.status,
-                "created_at": node.created_at.isoformat(),
-            })
+            enriched.append(
+                {
+                    "node_id": h["node_id"],
+                    "kind": h["kind"],
+                    "text": node.text or node.label,
+                    "label": node.label,
+                    "role": node.role,
+                    "turn_index": node.turn_index,
+                    "session_id": h["session_id"],
+                    "score": h["score"],
+                    "status": node.status,
+                    "created_at": node.created_at.isoformat(),
+                }
+            )
         else:
             enriched.append(h)
     return enriched
 
 
 def pack(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     q: str,
     k: int = 8,
 ) -> list[dict[str, Any]]:
@@ -65,7 +70,7 @@ def pack(
     :param k: Number of snippets to return.
     :return: List of ``{node_id, kind, content, score}`` dicts.
     """
-    results = []
+    results: list[dict] = []
     # Prefer summaries first (they represent compressed history)
     summaries = store.search(q, k=k // 2 + 1, kind_filter=str(NodeKind.SUMMARY))
     turns = store.search(q, k=k, kind_filter=str(NodeKind.TURN))
@@ -81,12 +86,14 @@ def pack(
             content = node.text if node else h.get("text", "")
             if prefix and node and node.role:
                 content = f"[{node.role.upper()}] {content}"
-            results.append({
-                "node_id": h["node_id"],
-                "kind": h["kind"],
-                "content": content,
-                "score": h["score"],
-            })
+            results.append(
+                {
+                    "node_id": h["node_id"],
+                    "kind": h["kind"],
+                    "content": content,
+                    "score": h["score"],
+                }
+            )
 
     _add(summaries, prefix="summary")
     _add(turns, prefix="turn")

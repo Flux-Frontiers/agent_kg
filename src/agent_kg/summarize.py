@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """summarize.py — Configurable LLM summarization backend for KG Context Pruning.
 
 Supports two backends:
@@ -14,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -38,15 +42,19 @@ class SummarizerConfig:
     max_tokens: int = 512
 
     @classmethod
-    def from_env(cls) -> "SummarizerConfig":
+    def from_env(cls) -> SummarizerConfig:
         """Load configuration from environment variables."""
         return cls(
-            backend=os.environ.get("AGENTKG_SUMMARIZER_BACKEND", "primary"),  # type: ignore[arg-type]
+            backend=os.environ.get(  # type: ignore[arg-type]
+                "AGENTKG_SUMMARIZER_BACKEND", "primary"
+            ),
             local_endpoint=os.environ.get(
                 "AGENTKG_SUMMARIZER_ENDPOINT", "http://localhost:11434/api/generate"
             ),
             local_model=os.environ.get("AGENTKG_SUMMARIZER_MODEL", "llama3.2"),
-            primary_model=os.environ.get("AGENTKG_SUMMARIZER_PRIMARY_MODEL", "claude-haiku-4-5-20251001"),
+            primary_model=os.environ.get(
+                "AGENTKG_SUMMARIZER_PRIMARY_MODEL", "claude-haiku-4-5-20251001"
+            ),
         )
 
 
@@ -96,6 +104,7 @@ class Summarizer:
         """Call the Anthropic API via the anthropic SDK."""
         try:
             import anthropic  # noqa: PLC0415
+
             client = anthropic.Anthropic()
             msg = client.messages.create(
                 model=self._config.primary_model,
@@ -111,12 +120,15 @@ class Summarizer:
         """POST to an Ollama-compatible local endpoint."""
         try:
             import urllib.request  # noqa: PLC0415
-            payload = json.dumps({
-                "model": self._config.local_model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": self._config.temperature},
-            }).encode()
+
+            payload = json.dumps(
+                {
+                    "model": self._config.local_model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": self._config.temperature},
+                }
+            ).encode()
             req = urllib.request.Request(
                 self._config.local_endpoint,
                 data=payload,
@@ -132,7 +144,6 @@ class Summarizer:
     @staticmethod
     def _extractive_fallback(text: str) -> str:
         """Return the first and last sentence of ``text`` as a stub summary."""
-        import re  # noqa: PLC0415
         sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
         if not sentences:
             return text[:200]

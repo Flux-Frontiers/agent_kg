@@ -1,0 +1,138 @@
+{
+  "key": "458669e4a6c82b0fa55c0735b50ab80da31c2de2",
+  "branch": "main",
+  "timestamp": "2026-04-04T21:59:23.125645+00:00",
+  "version": "0.11.0",
+  "metrics": {
+    "db_path": ".codekg/graph.sqlite",
+    "total_nodes": 3460,
+    "meaningful_nodes": 413,
+    "total_edges": 4587,
+    "node_counts": {
+      "class": 49,
+      "function": 75,
+      "method": 255,
+      "module": 34,
+      "symbol": 3047
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 1061,
+      "CALLS": 1093,
+      "CONTAINS": 379,
+      "IMPORTS": 206,
+      "INHERITS": 4,
+      "RESOLVES_TO": 1844
+    },
+    "docstring_coverage": 0.9129999999999999,
+    "critical_issues": 1,
+    "complexity_median": 11,
+    "module_node_counts": {
+      "src/agent_kg/__init__.py": 4,
+      "src/agent_kg/assemble.py": 52,
+      "src/agent_kg/cli/__init__.py": 1,
+      "src/agent_kg/cli/main.py": 181,
+      "src/agent_kg/consolidate.py": 40,
+      "src/agent_kg/graph.py": 164,
+      "src/agent_kg/index.py": 90,
+      "src/agent_kg/ingest.py": 113,
+      "src/agent_kg/kg.py": 2,
+      "src/agent_kg/mcp/__init__.py": 1,
+      "src/agent_kg/mcp/server.py": 89,
+      "src/agent_kg/nlp/__init__.py": 2,
+      "src/agent_kg/nlp/entities.py": 53,
+      "src/agent_kg/nlp/intent.py": 66,
+      "src/agent_kg/nlp/preferences.py": 66,
+      "src/agent_kg/nlp/topics.py": 46,
+      "src/agent_kg/onboard.py": 37,
+      "src/agent_kg/profile.py": 151,
+      "src/agent_kg/prune.py": 150,
+      "src/agent_kg/query.py": 46,
+      "src/agent_kg/schema.py": 109,
+      "src/agent_kg/session.py": 62,
+      "src/agent_kg/snapshots.py": 53,
+      "src/agent_kg/store.py": 298,
+      "src/agent_kg/summarize.py": 56,
+      "tests/__init__.py": 1,
+      "tests/test_consolidate.py": 41,
+      "tests/test_ingest.py": 202,
+      "tests/test_nlp.py": 161,
+      "tests/test_profile.py": 135,
+      "tests/test_schema.py": 193,
+      "tests/test_session.py": 88,
+      "tests/test_snapshots.py": 119,
+      "tests/test_store.py": 203
+    }
+  },
+  "hotspots": [
+    {
+      "name": "m:src/agent_kg/graph.py:AgentKG.close",
+      "callers": 22,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.upsert_node",
+      "callers": 15,
+      "callees": 9,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/profile.py:UserProfileStore.upsert",
+      "callers": 15,
+      "callees": 14,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_db",
+      "callers": 14,
+      "callees": 5,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_nodes_by_kind",
+      "callers": 11,
+      "callees": 6,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/nlp/intent.py:_heuristic_classify",
+      "callers": 11,
+      "callees": 5,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:stats",
+      "callers": 11,
+      "callees": 9,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/graph.py:AgentKG.stats",
+      "callers": 11,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/profile.py:UserProfileStore.get_by_kind",
+      "callers": 10,
+      "callees": 6,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:_resolve_kg",
+      "callers": 10,
+      "callees": 1,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[WARN] 6 orphaned functions found (`test_delete_nonexistent_is_safe`, `wipe`, `TestNodeCRUD`, `TestSessionPersistence`, `TestSessionManagement`, `test_request_text`) -- consider archiving or documenting"
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 0,
+    "edges": -4,
+    "coverage_delta": 0.0,
+    "critical_issues_delta": 0
+  }
+}

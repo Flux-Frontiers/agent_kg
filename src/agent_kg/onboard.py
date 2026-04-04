@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """onboard.py — Structured onboarding interview for AgentKG UserProfile.
 
 Conducts a four-phase interview to populate the UserProfile tree on first use.
@@ -24,40 +27,85 @@ _PHASES: list[dict[str, Any]] = [
         "name": "Identity & Context",
         "questions": [
             {"key": "name", "prompt": "What's your name?", "kind": "context"},
-            {"key": "role", "prompt": "What's your primary role? (e.g. 'Python developer', 'ML engineer')", "kind": "context"},
-            {"key": "projects", "prompt": "What projects are you mainly working in?", "kind": "context"},
-            {"key": "machine", "prompt": "What machine/OS are you on? (e.g. 'macOS M3', 'Ubuntu 24.04')", "kind": "context"},
+            {
+                "key": "role",
+                "prompt": "What's your primary role? (e.g. 'Python developer', 'ML engineer')",
+                "kind": "context",
+            },
+            {
+                "key": "projects",
+                "prompt": "What projects are you mainly working in?",
+                "kind": "context",
+            },
+            {
+                "key": "machine",
+                "prompt": "What machine/OS are you on? (e.g. 'macOS M3', 'Ubuntu 24.04')",
+                "kind": "context",
+            },
         ],
     },
     {
         "name": "Coding Style",
         "questions": [
-            {"key": "language", "prompt": "Preferred language(s) and style conventions?", "kind": "preference"},
-            {"key": "docstrings", "prompt": "Docstring format? (Google / NumPy / Sphinx / none)", "kind": "style"},
-            {"key": "verbosity", "prompt": "How verbose do you want my responses? (concise / detailed / adaptive)", "kind": "preference"},
-            {"key": "rules", "prompt": "Any standing rules I should always follow? (one per line, blank to skip)", "kind": "commitment"},
+            {
+                "key": "language",
+                "prompt": "Preferred language(s) and style conventions?",
+                "kind": "preference",
+            },
+            {
+                "key": "docstrings",
+                "prompt": "Docstring format? (Google / NumPy / Sphinx / none)",
+                "kind": "style",
+            },
+            {
+                "key": "verbosity",
+                "prompt": "How verbose do you want my responses? (concise / detailed / adaptive)",
+                "kind": "preference",
+            },
+            {
+                "key": "rules",
+                "prompt": "Any standing rules I should always follow?"
+                " (one per line, blank to skip)",
+                "kind": "commitment",
+            },
         ],
     },
     {
         "name": "Domain Expertise",
         "questions": [
-            {"key": "strong_domains", "prompt": "What are your strongest technical domains?", "kind": "expertise"},
-            {"key": "learning", "prompt": "What are you currently learning or exploring?", "kind": "interest"},
+            {
+                "key": "strong_domains",
+                "prompt": "What are your strongest technical domains?",
+                "kind": "expertise",
+            },
+            {
+                "key": "learning",
+                "prompt": "What are you currently learning or exploring?",
+                "kind": "interest",
+            },
         ],
     },
     {
         "name": "Personal (optional)",
         "optional": True,
         "questions": [
-            {"key": "hobbies", "prompt": "Any hobbies or interests you'd like me to know about? (blank to skip)", "kind": "interest"},
-            {"key": "collaboration", "prompt": "Anything that helps us work better together? (blank to skip)", "kind": "preference"},
+            {
+                "key": "hobbies",
+                "prompt": "Any hobbies or interests you'd like me to know about? (blank to skip)",
+                "kind": "interest",
+            },
+            {
+                "key": "collaboration",
+                "prompt": "Anything that helps us work better together? (blank to skip)",
+                "kind": "preference",
+            },
         ],
     },
 ]
 
 
 def run_onboard_interview(
-    profile: "UserProfileStore",
+    profile: UserProfileStore,
     input_fn=None,
     print_fn=None,
     skip_optional: bool = False,
@@ -75,7 +123,7 @@ def run_onboard_interview(
     _input = input_fn or input
     _print = print_fn or print
 
-    _KIND_MAP = {
+    kind_map = {
         "context": NodeKind.CONTEXT,
         "preference": NodeKind.PREFERENCE,
         "style": NodeKind.STYLE,
@@ -99,7 +147,7 @@ def run_onboard_interview(
         for q in phase["questions"]:
             prompt = q["prompt"]
             kind_str = q["kind"]
-            node_kind = _KIND_MAP.get(kind_str, NodeKind.PREFERENCE)
+            node_kind = kind_map.get(kind_str, NodeKind.PREFERENCE)
             key = q["key"]
 
             try:
@@ -125,13 +173,15 @@ def run_onboard_interview(
 
     _print("\n=== Onboarding complete! ===")
     stats = profile.stats()
-    _print(f"Stored {stats['total']} profile facts across {len(stats['by_kind'])} categories.\n")
+    _print(f"Stored {stats['total']} profile facts across {len(stats['by_kind'])} categories.")
+    _print(f"Profile saved to: {profile._db_path}")
+    _print("Use --person with the same value on all commands to access this profile.\n")
 
     return all_answers
 
 
 def apply_implicit_update(
-    profile: "UserProfileStore",
+    profile: UserProfileStore,
     updates: list[dict[str, Any]],
 ) -> int:
     """Apply NLP-extracted preference/commitment/expertise updates to the profile.

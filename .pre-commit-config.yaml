@@ -9,7 +9,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1000]
-        exclude: '^(src|docs|article)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.codekg/'
+        exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.codekg/|^\.dockg/'
       - id: debug-statements
 
   # Pylint code quality checking
@@ -45,7 +45,7 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.codekg/snapshots/.*']
+        args: ['--baseline', '.secrets.baseline', '--exclude-files', '(\.agentkg|\.codekg|\.dockg)/.*']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.10

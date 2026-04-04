@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """profile.py — UserProfile tree: globally persistent personal knowledge.
 
 Stores Preference, Style, Interest, Expertise, Commitment, and Context
@@ -68,8 +71,14 @@ class UserProfileStore:
     # Upsert
     # ------------------------------------------------------------------
 
-    def upsert(self, kind: NodeKind, label: str, text: str = "",
-               confidence: float = 1.0, category: str = "") -> Node:
+    def upsert(
+        self,
+        kind: NodeKind,
+        label: str,
+        text: str = "",
+        confidence: float = 1.0,
+        category: str = "",
+    ) -> Node:
         """Insert a new profile node or update confidence + text if label exists.
 
         :param kind: NodeKind (PREFERENCE, EXPERTISE, INTEREST, etc.)
@@ -80,6 +89,7 @@ class UserProfileStore:
         :return: The upserted Node.
         """
         import uuid  # noqa: PLC0415
+
         db = self._get_db()
         now = datetime.now(UTC).isoformat()
 
@@ -98,19 +108,22 @@ class UserProfileStore:
             )
             db.commit()
             return self._row_to_node(dict(row))
-        else:
-            node_id = str(uuid.uuid4())
-            db.execute(
-                """INSERT INTO profile_nodes
-                   (id, kind, label, text, confidence, category, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (node_id, str(kind), label, text, confidence, category, now, now),
-            )
-            db.commit()
-            return Node(
-                id=node_id, kind=kind, label=label, text=text,
-                confidence=confidence, category=category,
-            )
+        node_id = str(uuid.uuid4())
+        db.execute(
+            """INSERT INTO profile_nodes
+               (id, kind, label, text, confidence, category, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (node_id, str(kind), label, text, confidence, category, now, now),
+        )
+        db.commit()
+        return Node(
+            id=node_id,
+            kind=kind,
+            label=label,
+            text=text,
+            confidence=confidence,
+            category=category,
+        )
 
     def apply_updates(self, updates: list[dict[str, Any]]) -> list[Node]:
         """Apply a batch of NLP-extracted preference/commitment/expertise records.
@@ -121,7 +134,7 @@ class UserProfileStore:
                         :func:`~agent_kg.nlp.preferences.extract_preferences`.
         :return: List of upserted nodes.
         """
-        _KIND_MAP = {
+        kind_map = {
             "preference": NodeKind.PREFERENCE,
             "style": NodeKind.STYLE,
             "interest": NodeKind.INTEREST,
@@ -132,7 +145,7 @@ class UserProfileStore:
         nodes = []
         for u in updates:
             kind_key = u.get("kind", "preference")
-            node_kind = _KIND_MAP.get(kind_key, NodeKind.PREFERENCE)
+            node_kind = kind_map.get(kind_key, NodeKind.PREFERENCE)
             node = self.upsert(
                 kind=node_kind,
                 label=u["label"],
@@ -147,10 +160,14 @@ class UserProfileStore:
 
     def get_by_kind(self, kind: NodeKind) -> list[Node]:
         """Return all profile nodes of a given kind."""
-        rows = self._get_db().execute(
-            "SELECT * FROM profile_nodes WHERE kind = ? ORDER BY confidence DESC",
-            (str(kind),),
-        ).fetchall()
+        rows = (
+            self._get_db()
+            .execute(
+                "SELECT * FROM profile_nodes WHERE kind = ? ORDER BY confidence DESC",
+                (str(kind),),
+            )
+            .fetchall()
+        )
         return [self._row_to_node(dict(r)) for r in rows]
 
     def preferences(self) -> list[Node]:
@@ -175,9 +192,11 @@ class UserProfileStore:
 
     def all_nodes(self) -> list[Node]:
         """Return all profile nodes ordered by kind + confidence."""
-        rows = self._get_db().execute(
-            "SELECT * FROM profile_nodes ORDER BY kind, confidence DESC"
-        ).fetchall()
+        rows = (
+            self._get_db()
+            .execute("SELECT * FROM profile_nodes ORDER BY kind, confidence DESC")
+            .fetchall()
+        )
         return [self._row_to_node(dict(r)) for r in rows]
 
     def summary(self) -> dict[str, Any]:

@@ -1,0 +1,43 @@
+{
+  "format": "1.0",
+  "last_update": "2026-04-04T22:00:06.432475+00:00",
+  "snapshots": [
+    {
+      "key": "1771ace598ab20ea913d094f2438d6be59d0298a",
+      "branch": "main",
+      "timestamp": "2026-04-04T22:00:06.432117+00:00",
+      "version": "0.7.0",
+      "file": "1771ace598ab20ea913d094f2438d6be59d0298a.json",
+      "metrics": {
+        "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
+        "total_nodes": 674,
+        "total_edges": 3225,
+        "node_counts": {
+          "chunk": 94,
+          "document": 4,
+          "entity": 219,
+          "keyword": 208,
+          "section": 72,
+          "topic": 77
+        },
+        "edge_counts": {
+          "CONTAINS": 167,
+          "CO_OCCURS_WITH": 2200,
+          "HAS_KEYWORD": 360,
+          "HAS_TOPIC": 94,
+          "MENTIONS_ENTITY": 370,
+          "NEXT": 21,
+          "SIMILAR_TO": 13
+        },
+        "meaningful_nodes": 670,
+        "coverage_score": 0.9468085106382979,
+        "issues_count": 0,
+        "complexity_median": 14.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": null
+      }
+    }
+  ]
+}

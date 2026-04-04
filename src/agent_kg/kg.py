@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """kg.py — Re-exports AgentKG for import compatibility.
 
 The canonical ``AgentKG`` implementation lives in :mod:`agent_kg.graph`.

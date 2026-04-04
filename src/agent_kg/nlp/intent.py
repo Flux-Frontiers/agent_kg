@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+# pylint: disable=line-too-long  # regex pattern strings cannot be split
+
 """intent.py — Intent classification for AgentKG Turn nodes.
 
 Two-stage pipeline:
@@ -11,29 +15,48 @@ Result is one of: question | request | correction | confirmation |
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from agent_kg.schema import IntentCategory
 
 # Regex patterns for heuristic classification
 _QUESTION_PATTERNS = [
-    re.compile(r"^\s*(what|who|where|when|why|how|which|is|are|was|were|do|does|did|can|could|should|would|will)\b", re.I),
+    re.compile(
+        r"^\s*(what|who|where|when|why|how|which|is|are|was|were|do|does|did|can|could|should|would|will)\b",
+        re.I,
+    ),
     re.compile(r"\?\s*$"),
 ]
 _CORRECTION_PATTERNS = [
-    re.compile(r"\b(no,?\s+)?(actually|that'?s?\s+(not|wrong|incorrect)|don'?t|shouldn'?t|never|stop|don'?t\s+do|i\s+said)\b", re.I),
+    re.compile(
+        r"\b(no,?\s+)?(actually|that'?s?\s+(not|wrong|incorrect)|don'?t|shouldn'?t|never|stop|don'?t\s+do|i\s+said)\b",
+        re.I,
+    ),
     re.compile(r"^\s*(no|nope|wrong|incorrect|not\s+quite|not\s+right)\b", re.I),
 ]
 _CONFIRMATION_PATTERNS = [
-    re.compile(r"^\s*(yes|yeah|yep|correct|exactly|right|that'?s?\s+(right|correct|good|perfect)|looks?\s+good|perfect|great|nice|ok|okay)\b", re.I),
+    re.compile(
+        r"^\s*(yes|yeah|yep|correct|exactly|right|that'?s?\s+(right|correct|good|perfect)|looks?\s+good|perfect|great|nice|ok|okay)\b",
+        re.I,
+    ),
 ]
 _REQUEST_PATTERNS = [
-    re.compile(r"^\s*(please|can\s+you|could\s+you|would\s+you|make|create|add|remove|update|change|fix|write|implement|build|run|show|tell|explain|help|give)\b", re.I),
+    re.compile(
+        r"^\s*(please|can\s+you|could\s+you|would\s+you|make|create|add|remove|update|change|fix|write|implement|build|run|show|tell|explain|help|give)\b",
+        re.I,
+    ),
 ]
 _CLARIFICATION_PATTERNS = [
-    re.compile(r"\b(what\s+do\s+you\s+mean|clarif|explain\s+further|more\s+detail|elaborate|not\s+sure\s+i\s+understand)\b", re.I),
+    re.compile(
+        r"\b(what\s+do\s+you\s+mean|clarif|explain\s+further|more\s+detail|elaborate|not\s+sure\s+i\s+understand)\b",
+        re.I,
+    ),
 ]
 _FEEDBACK_PATTERNS = [
-    re.compile(r"\b(looks?\s+(good|great|nice|bad|wrong)|that\s+(works|worked|helped|didn'?t\s+work)|good\s+job|well\s+done|thanks?|thank\s+you)\b", re.I),
+    re.compile(
+        r"\b(looks?\s+(good|great|nice|bad|wrong)|that\s+(works|worked|helped|didn'?t\s+work)|good\s+job|well\s+done|thanks?|thank\s+you)\b",
+        re.I,
+    ),
 ]
 
 
@@ -78,10 +101,19 @@ def _get_spacy_model():
     if _SPACY_MODEL is _SENTINEL:
         try:
             import spacy  # noqa: PLC0415
+
             _SPACY_MODEL = spacy.load("en_core_web_sm")
         except Exception:  # pylint: disable=broad-exception-caught
             _SPACY_MODEL = None
     return _SPACY_MODEL
+
+
+def _get_spacy_doc(text: str) -> Any:
+    """Return a spaCy Doc for *text* (truncated to 1024 chars), or ``None``."""
+    nlp = _get_spacy_model()
+    if nlp is None:
+        return None
+    return nlp(text[:1024])
 
 
 def _heuristic_classify(text: str) -> IntentCategory:

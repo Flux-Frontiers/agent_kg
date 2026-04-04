@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """ingest.py — Phase 1 incremental turn ingestion for AgentKG.
 
 On every conversation turn:
@@ -14,19 +17,18 @@ by delegating to the profile module.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from agent_kg.nlp import classify_intent, extract_entities, extract_preferences, extract_topics
-from agent_kg.schema import Edge, EdgeRelation, IntentCategory, Node, NodeKind, TaskStatus
+from agent_kg.schema import Edge, EdgeRelation, Node, NodeKind, TaskStatus
 
 if TYPE_CHECKING:
     from agent_kg.session import Session
     from agent_kg.store import AgentKGStore
 
 # --- Task extraction heuristics ------------------------------------------------
-
-import re
 
 _TASK_IMPERATIVE = re.compile(
     r"^\s*(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|would\s+you\s+)?"
@@ -60,6 +62,7 @@ def _looks_like_resolution(text: str) -> bool:
 
 # -------------------------------------------------------------------------------
 
+
 class IngestResult:
     """Result of ingesting a single turn.
 
@@ -92,8 +95,8 @@ class IngestResult:
 def ingest_turn(
     text: str,
     role: str,
-    session: "Session",
-    store: "AgentKGStore",
+    session: Session,
+    store: AgentKGStore,
     embed: bool = True,
 ) -> IngestResult:
     """Ingest a single conversation turn into the AgentKG.
@@ -142,7 +145,9 @@ def ingest_turn(
     prev_turns = [t for t in all_turns if t.turn_index < turn_idx and t.id != turn_node.id]
     if prev_turns:
         prev = max(prev_turns, key=lambda t: t.turn_index)
-        store.add_edge(Edge(source_id=prev.id, target_id=turn_node.id, relation=EdgeRelation.FOLLOWS))
+        store.add_edge(
+            Edge(source_id=prev.id, target_id=turn_node.id, relation=EdgeRelation.FOLLOWS)
+        )
         result.edges_created += 1
 
     # ------------------------------------------------------------------
@@ -161,7 +166,9 @@ def ingest_turn(
         last_seen=now,
     )
     store.upsert_node(intent_node)
-    store.add_edge(Edge(source_id=turn_node.id, target_id=intent_node.id, relation=EdgeRelation.EXPRESSES))
+    store.add_edge(
+        Edge(source_id=turn_node.id, target_id=intent_node.id, relation=EdgeRelation.EXPRESSES)
+    )
     result.intent_node = intent_node
     result.edges_created += 1
 

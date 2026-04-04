@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "agent-kg"
-version = "0.1.0"
+version = "0.2.0"
 description = "Conversational memory as a knowledge graph"
 authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
 license = "Elastic-2.0"
@@ -27,10 +27,8 @@ spacy = { version = ">=3.7.0", optional = true }
 anthropic = { version = ">=0.25.0", optional = true }
 httpx = { version = ">=0.27.0", optional = true }
 
-#kg-rag = { git = "https://github.com/Flux-Frontiers/KGRAG.git"}
 code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git"}
 doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git"}
-ftree-kg = { git = "https://github.com/Flux-Frontiers/FTree_kg.git", optional = true }
 
 
 [tool.poetry.extras]
@@ -47,6 +45,8 @@ mypy = ">=1.10.0"
 
 [tool.poetry.scripts]
 agent-kg          = "agent_kg.cli.main:cli"
+agent-kg-init     = "agent_kg.cli.main:init"
+agent-kg-install-hooks = "agent_kg.cli.main:install_hooks"
 agent-kg-mcp      = "agent_kg.mcp.server:main"
 agent-kg-ingest   = "agent_kg.cli.main:ingest"
 agent-kg-query    = "agent_kg.cli.main:query"
@@ -74,8 +74,40 @@ ignore_missing_imports = true
 mypy_path = "src"
 explicit_package_bases = true
 
-[tool.poetry.virtualenvs]
-in-project = true
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.messages_control]
+disable = [
+    # Optional runtime dependencies — not installed in the lint environment
+    "E0401",  # import-error
+    # Intentional lazy imports throughout (lancedb, spacy, anthropic, etc.)
+    "C0415",  # import-outside-toplevel
+    # Storage / domain classes with necessarily large APIs
+    "R0902",  # too-many-instance-attributes
+    "R0903",  # too-few-public-methods   (data container / config classes)
+    "R0904",  # too-many-public-methods
+    # Complex domain functions — refactoring would obscure the intent
+    "R0912",  # too-many-branches
+    "R0913",  # too-many-arguments
+    "R0914",  # too-many-locals
+    "R0915",  # too-many-statements
+    "R0917",  # too-many-positional-arguments
+    # Duplicate fixture boilerplate across test files is intentional
+    "R0801",  # duplicate-code
+    # Standard pytest fixture pattern (fixture name shadows module-level name)
+    "W0621",  # redefined-outer-name
+    # pyarrow imported purely for availability check; ruff F401 handles unused imports
+    "W0611",  # unused-import
+    # Protected member access in CLI / migration utilities is acceptable
+    "W0212",  # protected-access
+    # Explicit `== []` comparisons are clearer in test assertions
+    "C1803",  # use-implicit-booleaness-not-comparison
+    # Classification functions with many early-return branches are intentional
+    "R0911",  # too-many-return-statements
+    # global-statement for lazy-loaded singleton (spaCy model cache)
+    "W0603",  # global-statement
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

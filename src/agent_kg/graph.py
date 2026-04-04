@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """graph.py — AgentKG: the main entry point for agent conversational memory.
 
 ``AgentKG`` is the high-level façade that wires together all AgentKG components:
@@ -106,7 +109,7 @@ class AgentKG:
     # ------------------------------------------------------------------
 
     @property
-    def index(self) -> "AgentKGStore":
+    def index(self) -> AgentKGStore:
         """Expose the store as the semantic index (has .search() method)."""
         return self._store
 

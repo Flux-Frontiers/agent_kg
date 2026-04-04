@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """mcp/server.py — MCP tool surface for AgentKG.
 
 Exposes the following tools to MCP clients (e.g. Claude Code):
@@ -45,7 +48,7 @@ from pathlib import Path
 from typing import Any
 
 import mcp.server.stdio
-import mcp.types as types
+from mcp import types
 from mcp.server import Server
 
 from agent_kg.graph import AgentKG
@@ -66,8 +69,16 @@ _TOOLS = [
             "properties": {
                 "turn_text": {"type": "string", "description": "The turn text to ingest."},
                 "role": {"type": "string", "enum": ["user", "assistant"], "default": "user"},
-                "repo": {"type": "string", "description": "Repo root path.", "default": _DEFAULT_REPO},
-                "person_id": {"type": "string", "description": "Person ID.", "default": _DEFAULT_PERSON},
+                "repo": {
+                    "type": "string",
+                    "description": "Repo root path.",
+                    "default": _DEFAULT_REPO,
+                },
+                "person_id": {
+                    "type": "string",
+                    "description": "Person ID.",
+                    "default": _DEFAULT_PERSON,
+                },
                 "session_id": {"type": "string", "description": "Session UUID (optional)."},
             },
             "required": ["turn_text"],
@@ -277,13 +288,16 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
         elif name == "agent_kg_topics":
             kg = AgentKG(repo_path=repo, person_id=person_id)
             from agent_kg.schema import NodeKind  # noqa: PLC0415
+
             topics = kg._store.get_nodes_by_kind(NodeKind.TOPIC)
             kg.close()
             if not topics:
                 text = "No topics tracked yet."
             else:
-                lines = [f"- {t.label or t.text} (last seen: {t.last_seen.strftime('%Y-%m-%d')})"
-                         for t in topics]
+                lines = [
+                    f"- {t.label or t.text} (last seen: {t.last_seen.strftime('%Y-%m-%d')})"
+                    for t in topics
+                ]
                 text = f"Topics ({len(topics)}):\n" + "\n".join(lines)
 
         elif name == "agent_kg_tasks":
@@ -298,6 +312,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
         elif name == "agent_kg_profile":
             from agent_kg.profile import UserProfileStore  # noqa: PLC0415
+
             profile_dir = Path.home() / ".kgrag" / "profiles" / person_id
             profile = UserProfileStore(profile_dir)
             text = profile.render_markdown()
@@ -317,10 +332,21 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
     return [types.TextContent(type="text", text=text)]
 
 
+async def _serve() -> None:
+    """Run the AgentKG MCP server on stdio."""
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+        await app.run(
+            read_stream,
+            write_stream,
+            app.create_initialization_options(),
+        )
+
+
 def main() -> None:
     """Start the AgentKG MCP server on stdio."""
     import asyncio  # noqa: PLC0415
-    asyncio.run(mcp.server.stdio.stdio_server(app))
+
+    asyncio.run(_serve())
 
 
 if __name__ == "__main__":

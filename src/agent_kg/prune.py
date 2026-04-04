@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
+# SPDX-License-Identifier: Elastic-2.0
+
 """prune.py — KG Context Pruning: the core innovation of AgentKG.
 
 When a conversation grows long, pruning compresses old Turn subgraphs
@@ -34,14 +37,12 @@ if TYPE_CHECKING:
     from agent_kg.summarize import Summarizer
 
 # Pruning configuration
-_DEFAULT_WINDOW = 20       # turns within this distance of current are "hot"
-_MIN_CLUSTER_SIZE = 3      # minimum turns to form a prunable cluster
+_DEFAULT_WINDOW = 20  # turns within this distance of current are "hot"
+_MIN_CLUSTER_SIZE = 3  # minimum turns to form a prunable cluster
 _TOPIC_SIM_THRESHOLD = 0.25  # cosine distance threshold for topic clustering
 
 
-def _get_topic_nodes_for_turns(
-    turn_ids: list[str], store: "AgentKGStore"
-) -> list[Node]:
+def _get_topic_nodes_for_turns(turn_ids: list[str], store: AgentKGStore) -> list[Node]:
     """Return Topic nodes linked to any of the given turns via ADDRESSES edges."""
     topics: list[Node] = []
     seen_ids: set[str] = set()
@@ -54,9 +55,7 @@ def _get_topic_nodes_for_turns(
     return topics
 
 
-def _get_entity_nodes_for_turns(
-    turn_ids: list[str], store: "AgentKGStore"
-) -> list[Node]:
+def _get_entity_nodes_for_turns(turn_ids: list[str], store: AgentKGStore) -> list[Node]:
     """Return Entity nodes linked to any of the given turns via MENTIONS edges."""
     entities: list[Node] = []
     seen_ids: set[str] = set()
@@ -71,7 +70,7 @@ def _get_entity_nodes_for_turns(
 
 def _cluster_turns_by_topic(
     turns: list[Node],
-    store: "AgentKGStore",
+    store: AgentKGStore,
     threshold: float = _TOPIC_SIM_THRESHOLD,
 ) -> list[list[Node]]:
     """Cluster turns by topic proximity using cosine distance over embeddings.
@@ -101,8 +100,7 @@ def _cluster_turns_by_topic(
             for cluster in clusters:
                 # Compare to centroid of cluster (mean of vectors)
                 centroid = [
-                    sum(turn_vecs[j][d] for j in cluster) / len(cluster)
-                    for d in range(len(vec))
+                    sum(turn_vecs[j][d] for j in cluster) / len(cluster) for d in range(len(vec))
                 ]
                 sim = _cosine_sim(vec, centroid)
                 if sim >= (1.0 - threshold):
@@ -118,16 +116,16 @@ def _cluster_turns_by_topic(
         # Fallback: sequential windows of MIN_CLUSTER_SIZE
         result = []
         for i in range(0, len(turns), _MIN_CLUSTER_SIZE):
-            result.append(turns[i: i + _MIN_CLUSTER_SIZE])
+            result.append(turns[i : i + _MIN_CLUSTER_SIZE])
         return result
 
 
 def prune(
-    store: "AgentKGStore",
-    summarizer: "Summarizer",
-    session: "Session | None" = None,
+    store: AgentKGStore,
+    summarizer: Summarizer,
+    session: Session | None = None,
     window: int = _DEFAULT_WINDOW,
-    token_budget: int | None = None,
+    token_budget: int | None = None,  # pylint: disable=unused-argument
 ) -> PruneReport:
     """Execute one KG Context Pruning pass.
 
@@ -259,7 +257,7 @@ def prune(
 
 
 def should_prune(
-    store: "AgentKGStore",
+    store: AgentKGStore,
     window: int = _DEFAULT_WINDOW,
     token_budget: int | None = None,
 ) -> bool:
