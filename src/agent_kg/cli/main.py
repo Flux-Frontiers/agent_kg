@@ -5,7 +5,7 @@
 
 Commands:
   init          — Download embedding model and create profile directory (run first)
-  install-hooks — Install pre-commit hook (rebuilds CodeKG + DocKG, captures snapshots)
+  install-hooks — Install pre-commit hook and/or Claude Code auto-ingest hooks
   ingest   — Add a turn to the conversation graph
   query    — Semantic search over the graph
   pack     — Extract context snippets
@@ -15,9 +15,11 @@ Commands:
   analyze  — Full Markdown analysis report
   sessions — List all sessions
   snapshot — Capture a snapshot
-  onboard  — Run the UserProfile onboarding interview
-  profile  — Show the UserProfile
-  wipe     — Erase local conversation graph and/or global user profile
+  onboard      — Run the UserProfile onboarding interview
+  profile      — Show the UserProfile
+  profile-set  — Update identity fields / add profile nodes
+  profile-remove — Remove specific nodes or wipe categories
+  wipe         — Erase local conversation graph and/or global user profile
   viz      — Visualize agent and/or profile trees (terminal or browser)
 """
 
@@ -326,6 +328,281 @@ def profile(repo: str, person: str) -> None:
     kg.close()
 
 
+@cli.command("profile-set")
+@click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
+@click.option(
+    "--person",
+    default=_DEFAULT_PERSON,
+    show_default=True,
+    help=_PERSON_HELP,
+)
+@click.option("--name", default=None, help="Full name.")
+@click.option("--email", default=None, help="Email address.")
+@click.option("--phone", default=None, help="Phone number.")
+@click.option("--address", default=None, help="Home / mailing address.")
+@click.option("--birth-date", "birth_date", default=None, help="Birth date (YYYY-MM-DD).")
+@click.option("--gender", default=None, help="Gender.")
+@click.option(
+    "--cognitive-score",
+    "cognitive_score",
+    type=int,
+    default=None,
+    help="Cognitive clarity score 0-100.",
+)
+@click.option(
+    "--delta-year",
+    "delta_year",
+    type=int,
+    default=None,
+    help="Year offset from birth for diary entry timestamps (0-150).",
+)
+@click.option(
+    "--education",
+    "education_entries",
+    multiple=True,
+    help="Add an education entry (repeatable). E.g. --education 'PhD CS, MIT, 1998'.",
+)
+@click.option("--preference", "preferences", multiple=True, help="Add a preference (repeatable).")
+@click.option(
+    "--commitment",
+    "commitments",
+    multiple=True,
+    help="Add a standing rule/commitment (repeatable).",
+)
+@click.option(
+    "--expertise", "expertise_entries", multiple=True, help="Add an expertise (repeatable)."
+)
+@click.option("--interest", "interests", multiple=True, help="Add an interest (repeatable).")
+@click.option("--style", "styles", multiple=True, help="Add a style note (repeatable).")
+def profile_set(
+    repo: str,
+    person: str,
+    name: str | None,
+    email: str | None,
+    phone: str | None,
+    address: str | None,
+    birth_date: str | None,
+    gender: str | None,
+    cognitive_score: int | None,
+    delta_year: int | None,
+    education_entries: tuple[str, ...],
+    preferences: tuple[str, ...],
+    commitments: tuple[str, ...],
+    expertise_entries: tuple[str, ...],
+    interests: tuple[str, ...],
+    styles: tuple[str, ...],
+) -> None:
+    """Update identity fields and/or add knowledge-graph profile nodes.
+
+    Only the options you pass are written — unspecified fields are unchanged.
+    Node options (--preference, --commitment, etc.) are all repeatable.
+
+    Examples::
+
+        agent-kg profile-set --name "Alice Smith" --email alice@example.com
+        agent-kg profile-set --commitment "always write pytest tests for new code"
+        agent-kg profile-set --preference "concise responses" --style ":param: docstrings"
+        agent-kg profile-set --education "BSc Physics, Oxford, 1990" \\
+                              --education "PhD CS, MIT, 1995"
+    """
+    from agent_kg.schema import NodeKind  # noqa: PLC0415
+
+    kg = _resolve_kg(repo, person, None)
+
+    # Update identity fields (only non-None)
+    has_identity = any(
+        v is not None
+        for v in (name, email, phone, address, birth_date, gender, cognitive_score, delta_year)
+    )
+    if has_identity:
+        updated = kg.profile.set_identity(
+            name=name,
+            email=email,
+            phone=phone,
+            address=address,
+            birth_date=birth_date,
+            gender=gender,
+            cognitive_score=cognitive_score,
+            delta_year=delta_year,
+        )
+        click.echo("Identity updated:")
+        for k, v in updated.items():
+            if v not in ("", 0, None) or k in ("cognitive_score", "delta_year"):
+                click.echo(f"  {k}: {v}")
+
+    # Knowledge-graph profile nodes
+    node_groups = [
+        (NodeKind.EDUCATION, education_entries, "Education"),
+        (NodeKind.PREFERENCE, preferences, "Preference"),
+        (NodeKind.COMMITMENT, commitments, "Commitment"),
+        (NodeKind.EXPERTISE, expertise_entries, "Expertise"),
+        (NodeKind.INTEREST, interests, "Interest"),
+        (NodeKind.STYLE, styles, "Style"),
+    ]
+    any_nodes = False
+    for kind, entries, label in node_groups:
+        for entry in entries:
+            kg.profile.upsert(kind=kind, label=entry[:120], text=entry)
+            click.echo(f"{label} added: {entry}")
+            any_nodes = True
+
+    if not has_identity and not any_nodes:
+        click.echo("Nothing to update — pass at least one option. Use --help for options.")
+
+    kg.close()
+
+
+@cli.command("profile-remove")
+@click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
+@click.option(
+    "--person",
+    default=_DEFAULT_PERSON,
+    show_default=True,
+    help=_PERSON_HELP,
+)
+@click.option(
+    "--preference", "preferences", multiple=True, help="Remove a preference by label (repeatable)."
+)
+@click.option(
+    "--commitment", "commitments", multiple=True, help="Remove a commitment by label (repeatable)."
+)
+@click.option(
+    "--expertise",
+    "expertise_entries",
+    multiple=True,
+    help="Remove an expertise by label (repeatable).",
+)
+@click.option(
+    "--interest", "interests", multiple=True, help="Remove an interest by label (repeatable)."
+)
+@click.option("--style", "styles", multiple=True, help="Remove a style note by label (repeatable).")
+@click.option(
+    "--education",
+    "education_entries",
+    multiple=True,
+    help="Remove an education entry by label (repeatable).",
+)
+@click.option("--clear-preferences", is_flag=True, help="Wipe all preferences.")
+@click.option("--clear-commitments", is_flag=True, help="Wipe all commitments.")
+@click.option("--clear-expertise", is_flag=True, help="Wipe all expertise nodes.")
+@click.option("--clear-interests", is_flag=True, help="Wipe all interests.")
+@click.option("--clear-styles", is_flag=True, help="Wipe all style notes.")
+@click.option("--clear-education", is_flag=True, help="Wipe all education entries.")
+@click.option("--clear-all", is_flag=True, help="Wipe every profile node (identity is preserved).")
+def profile_remove(
+    repo: str,
+    person: str,
+    preferences: tuple[str, ...],
+    commitments: tuple[str, ...],
+    expertise_entries: tuple[str, ...],
+    interests: tuple[str, ...],
+    styles: tuple[str, ...],
+    education_entries: tuple[str, ...],
+    clear_preferences: bool,
+    clear_commitments: bool,
+    clear_expertise: bool,
+    clear_interests: bool,
+    clear_styles: bool,
+    clear_education: bool,
+    clear_all: bool,
+) -> None:
+    """Remove specific profile nodes or wipe entire categories.
+
+    Examples::
+
+        agent-kg profile-remove --commitment "always write pytest tests for new code"
+        agent-kg profile-remove --clear-preferences
+        agent-kg profile-remove --clear-all
+    """
+    from agent_kg.schema import NodeKind  # noqa: PLC0415
+
+    kg = _resolve_kg(repo, person, None)
+    did_something = False
+
+    # Wipe entire categories
+    clear_map = [
+        (clear_all or clear_preferences, NodeKind.PREFERENCE, "preferences"),
+        (clear_all or clear_commitments, NodeKind.COMMITMENT, "commitments"),
+        (clear_all or clear_expertise, NodeKind.EXPERTISE, "expertise"),
+        (clear_all or clear_interests, NodeKind.INTEREST, "interests"),
+        (clear_all or clear_styles, NodeKind.STYLE, "styles"),
+        (clear_all or clear_education, NodeKind.EDUCATION, "education"),
+    ]
+    for flag, kind, label in clear_map:
+        if flag:
+            n = kg.profile.clear_kind(kind)
+            click.echo(f"Cleared {n} {label}.")
+            did_something = True
+
+    # Remove specific nodes by label
+    node_groups = [
+        (NodeKind.PREFERENCE, preferences, "Preference"),
+        (NodeKind.COMMITMENT, commitments, "Commitment"),
+        (NodeKind.EXPERTISE, expertise_entries, "Expertise"),
+        (NodeKind.INTEREST, interests, "Interest"),
+        (NodeKind.STYLE, styles, "Style"),
+        (NodeKind.EDUCATION, education_entries, "Education"),
+    ]
+    for kind, entries, label in node_groups:
+        for entry in entries:
+            found = kg.profile.delete(kind=kind, label=entry)
+            if found:
+                click.echo(f"{label} removed: {entry}")
+            else:
+                click.echo(f"{label} not found: {entry}")
+            did_something = True
+
+    if not did_something:
+        click.echo("Nothing to remove — pass at least one option. Use --help for options.")
+
+    kg.close()
+
+
+# Claude Code hooks block — merged into .claude/settings.json by install-hooks --claude
+_CLAUDE_HOOKS = {
+    "UserPromptSubmit": [
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": (
+                        "PROMPT=$(jq -r '.prompt'); "
+                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
+                        'agent-kg ingest "$PROMPT" --role user --repo "$REPO_ROOT" '
+                        "2>/dev/null || true"
+                    ),
+                    "async": True,
+                }
+            ]
+        }
+    ],
+    "Stop": [
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": (
+                        "MSG=$(jq -r '.last_assistant_message // empty'); "
+                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
+                        '[ -n "$MSG" ] && agent-kg ingest "$MSG" --role assistant '
+                        '--repo "$REPO_ROOT" --no-embed 2>/dev/null || true'
+                    ),
+                    "async": True,
+                },
+                {
+                    "type": "command",
+                    "command": (
+                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
+                        'agent-kg snapshot --repo "$REPO_ROOT" --label "session-end" '
+                        "2>/dev/null || true"
+                    ),
+                    "async": True,
+                },
+            ]
+        }
+    ],
+}
+
 _PRE_COMMIT_HOOK = """\
 #!/usr/bin/env bash
 # AgentKG pre-commit hook — rebuilds CodeKG + DocKG indices and captures
@@ -389,21 +666,41 @@ exit 0
     "--repo", default=".", type=click.Path(exists=True), show_default=True, help="Repository root."
 )
 @click.option("--force", is_flag=True, help="Overwrite an existing pre-commit hook.")
-def install_hooks(repo: str, force: bool) -> None:
-    """Install the AgentKG pre-commit git hook.
+@click.option(
+    "--claude",
+    "claude_hooks",
+    is_flag=True,
+    help="Also install Claude Code auto-ingest hooks into .claude/settings.json.",
+)
+@click.option(
+    "--global",
+    "global_hooks",
+    is_flag=True,
+    help="Install Claude Code hooks into ~/.claude/settings.json (all repos).",
+)
+def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool) -> None:
+    """Install the AgentKG pre-commit git hook and/or Claude Code auto-ingest hooks.
 
-    After installation, before each commit:
+    Git pre-commit hook (default):
       1. Rebuilds local CodeKG index if codekg is installed
       2. Rebuilds local DocKG index if dockg is installed and docs/ exists
       3. Captures metrics snapshots for both KGs keyed by tree hash
       4. Stages both snapshot directories atomically
       5. Runs pre-commit framework checks (ruff, mypy, detect-secrets, etc.)
+
+    Claude Code hooks (--claude or --global):
+      Installs UserPromptSubmit + Stop hooks that auto-ingest every user and
+      assistant turn into the AgentKG conversation graph.  Use --claude for
+      project-level (.claude/settings.json) or --global for all repos
+      (~/.claude/settings.json).
     """
+    import json  # noqa: PLC0415
     import stat  # noqa: PLC0415
 
     repo_root = Path(repo).resolve()
-    git_dir = repo_root / ".git"
 
+    # ── Git pre-commit hook ───────────────────────────────────────────────────
+    git_dir = repo_root / ".git"
     if not git_dir.is_dir():
         click.echo(f"Error: {repo_root} is not a git repository.", err=True)
         raise SystemExit(1)
@@ -420,10 +717,42 @@ def install_hooks(repo: str, force: bool) -> None:
     hook_path.write_text(_PRE_COMMIT_HOOK)
     mode = hook_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     hook_path.chmod(mode)
-
     click.echo(f"OK Installed pre-commit hook: {hook_path}")
     click.echo("  CodeKG + DocKG indices will be rebuilt before each commit.")
     click.echo("  Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...")
+
+    # ── Claude Code hooks ─────────────────────────────────────────────────────
+    targets: list[Path] = []
+    if global_hooks:
+        targets.append(Path.home() / ".claude" / "settings.json")
+    if claude_hooks:
+        targets.append(repo_root / ".claude" / "settings.json")
+
+    for settings_path in targets:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        existing: dict = {}
+        if settings_path.exists():
+            try:
+                existing = json.loads(settings_path.read_text())
+            except json.JSONDecodeError:
+                click.echo(f"Warning: could not parse {settings_path} — skipping.", err=True)
+                continue
+
+        existing_hooks = existing.setdefault("hooks", {})
+        updated = False
+        for event, entries in _CLAUDE_HOOKS.items():
+            if event not in existing_hooks:
+                existing_hooks[event] = entries
+                updated = True
+            else:
+                click.echo(f"  {event} hook already present in {settings_path} — skipping.")
+
+        if updated or not settings_path.exists():
+            settings_path.write_text(json.dumps(existing, indent=2) + "\n")
+            click.echo(f"OK Claude Code hooks written to: {settings_path}")
+            click.echo("  Turns will be auto-ingested on UserPromptSubmit and Stop.")
+        else:
+            click.echo(f"  No changes needed in {settings_path}.")
 
 
 @cli.command()

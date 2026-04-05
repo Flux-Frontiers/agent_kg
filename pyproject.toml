@@ -5,12 +5,17 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "agent-kg"
-version = "0.3.0"
+version = "0.4.0"
 description = "Conversational memory as a knowledge graph"
 authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
 license = "Elastic-2.0"
 readme = "README.md"
 packages = [{ include = "agent_kg", from = "src" }]
+
+[[tool.poetry.source]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"

@@ -16,6 +16,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "MSG=$(jq -r '.last_assistant_message // empty'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; [ -n \"$MSG\" ] && agent-kg ingest \"$MSG\" --role assistant --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
+            "async": true
+          },
+          {
+            "type": "command",
             "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
             "async": true
           }

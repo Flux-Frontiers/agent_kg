@@ -1,0 +1,132 @@
+{
+  "key": "61e11deb1dccf532dd89d0c76097e01e3a5c923a",
+  "branch": "main",
+  "timestamp": "2026-04-05T04:39:26.775064+00:00",
+  "version": "0.11.0",
+  "metrics": {
+    "db_path": ".codekg/graph.sqlite",
+    "total_nodes": 3135,
+    "meaningful_nodes": 221,
+    "total_edges": 3211,
+    "node_counts": {
+      "class": 15,
+      "function": 86,
+      "method": 93,
+      "module": 27,
+      "symbol": 2914
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 998,
+      "CALLS": 1018,
+      "CONTAINS": 194,
+      "IMPORTS": 174,
+      "INHERITS": 4,
+      "RESOLVES_TO": 823
+    },
+    "docstring_coverage": 0.7959999999999999,
+    "critical_issues": 2,
+    "complexity_median": 6,
+    "module_node_counts": {
+      "src/agent_kg/__init__.py": 4,
+      "src/agent_kg/app.py": 218,
+      "src/agent_kg/assemble.py": 52,
+      "src/agent_kg/cli/__init__.py": 1,
+      "src/agent_kg/cli/main.py": 345,
+      "src/agent_kg/consolidate.py": 40,
+      "src/agent_kg/graph.py": 164,
+      "src/agent_kg/index.py": 90,
+      "src/agent_kg/ingest.py": 142,
+      "src/agent_kg/kg.py": 2,
+      "src/agent_kg/mcp/__init__.py": 1,
+      "src/agent_kg/mcp/server.py": 89,
+      "src/agent_kg/nlp/__init__.py": 2,
+      "src/agent_kg/nlp/entities.py": 59,
+      "src/agent_kg/nlp/intent.py": 74,
+      "src/agent_kg/nlp/preferences.py": 66,
+      "src/agent_kg/nlp/topics.py": 46,
+      "src/agent_kg/onboard.py": 44,
+      "src/agent_kg/prune.py": 150,
+      "src/agent_kg/query.py": 46,
+      "src/agent_kg/schema.py": 114,
+      "src/agent_kg/session.py": 65,
+      "src/agent_kg/snapshots.py": 53,
+      "src/agent_kg/store.py": 314,
+      "src/agent_kg/summarize.py": 59,
+      "src/agent_kg/user_profile.py": 248,
+      "src/agent_kg/viz.py": 186
+    }
+  },
+  "hotspots": [
+    {
+      "name": "m:src/agent_kg/graph.py:AgentKG.close",
+      "callers": 23,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_db",
+      "callers": 16,
+      "callees": 5,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:_resolve_kg",
+      "callers": 12,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore._get_db",
+      "callers": 8,
+      "callees": 5,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.add_edge",
+      "callers": 7,
+      "callees": 9,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:stats",
+      "callers": 7,
+      "callees": 9,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore.get_by_kind",
+      "callers": 6,
+      "callees": 6,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_nodes_by_kind",
+      "callers": 6,
+      "callees": 6,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_table",
+      "callers": 5,
+      "callees": 10,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.embed",
+      "callers": 5,
+      "callees": 3,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[WARN] Moderate docstring coverage (79.6%) \u2014 semantic retrieval quality is degraded for undocumented nodes; BM25 is as effective as embeddings without docstrings",
+    "[WARN] 3 orphaned functions found (`wipe`, `_init_state`, `_parse_args`) -- consider archiving or documenting"
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": -325,
+    "edges": -1380,
+    "coverage_delta": -0.11699999999999999,
+    "critical_issues_delta": 1
+  }
+}

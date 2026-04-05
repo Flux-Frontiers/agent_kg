@@ -225,6 +225,20 @@ class TestExtractPreferences:
         comms = [r for r in result if r["kind"] == "commitment"]
         assert len(comms) >= 1, f"Expected commitment in {result}"
 
+    def test_commitment_whenever(self):
+        """'whenever we write new code' is extracted as a commitment."""
+        result = extract_preferences(
+            "whenever we write new code we should write proper unittests for pytest"
+        )
+        comms = [r for r in result if r["kind"] == "commitment"]
+        assert len(comms) >= 1, f"Expected commitment in {result}"
+
+    def test_commitment_whenever_case_insensitive(self):
+        """'Whenever' (capitalised) is also extracted as a commitment."""
+        result = extract_preferences("Whenever I add a feature, update the changelog.")
+        comms = [r for r in result if r["kind"] == "commitment"]
+        assert len(comms) >= 1, f"Expected commitment in {result}"
+
     def test_expertise_working_with(self):
         """'I'm working with Python' is extracted as expertise."""
         result = extract_preferences("I'm working with Python.")

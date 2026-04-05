@@ -21,12 +21,30 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from agent_kg.user_profile import UserProfileStore
 
+# Identity fields that map directly to set_identity() kwargs (not graph nodes)
+_IDENTITY_QUESTIONS: list[dict[str, str]] = [
+    {"key": "name", "prompt": "Full name?"},
+    {"key": "email", "prompt": "Email address? (blank to skip)"},
+    {"key": "phone", "prompt": "Phone number? (blank to skip)"},
+    {"key": "address", "prompt": "Home address? (blank to skip)"},
+    {"key": "birth_date", "prompt": "Birth date? YYYY-MM-DD format (blank to skip)"},
+    {"key": "gender", "prompt": "Gender? (blank to skip)"},
+    {
+        "key": "cognitive_score",
+        "prompt": "Cognitive clarity score 0-100? (100 = fully sharp, blank to skip)",
+    },
+    {
+        "key": "delta_year",
+        "prompt": "Delta year offset for diary entries?"
+        " (years from birth to simulate writing age, blank to skip)",
+    },
+]
+
 # Interview phases and questions
 _PHASES: list[dict[str, Any]] = [
     {
         "name": "Identity & Context",
         "questions": [
-            {"key": "name", "prompt": "What's your name?", "kind": "context"},
             {
                 "key": "role",
                 "prompt": "What's your primary role? (e.g. 'Python developer', 'ML engineer')",
@@ -112,6 +130,10 @@ def run_onboard_interview(
 ) -> dict[str, Any]:
     """Conduct the structured onboarding interview.
 
+    Phase 0 collects structured identity fields (name, email, phone, address,
+    birth date, gender, cognitive score, delta year) directly into the identity
+    table.  Subsequent phases populate graph nodes via the NLP pipeline.
+
     :param profile: :class:`~agent_kg.user_profile.UserProfileStore` to populate.
     :param input_fn: Callable for getting user input (default: builtin ``input``).
     :param print_fn: Callable for output (default: builtin ``print``).
@@ -137,6 +159,47 @@ def run_onboard_interview(
     _print("\n=== AgentKG Onboarding ===")
     _print("Let me learn a bit about you so I can work better with you.\n")
 
+    # ── Phase 0: structured identity ──────────────────────────────────────────
+    _print("--- Phase: Personal Identity ---")
+    identity_answers: dict[str, Any] = {}
+    for q in _IDENTITY_QUESTIONS:
+        try:
+            answer = _input(f"{q['prompt']}\n> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            answer = ""
+        if not answer:
+            continue
+        identity_answers[q["key"]] = answer
+
+    if identity_answers:
+        # cognitive_score and delta_year must be ints if provided
+        for int_key in ("cognitive_score", "delta_year"):
+            if int_key in identity_answers:
+                try:
+                    identity_answers[int_key] = int(identity_answers[int_key])
+                except ValueError:
+                    identity_answers.pop(int_key)
+        profile.set_identity(**identity_answers)
+    all_answers["Personal Identity"] = identity_answers
+
+    # ── Phase 0b: education entries ───────────────────────────────────────────
+    _print("\n--- Phase: Education ---")
+    _print("Enter each education entry on its own line (e.g. 'PhD Computer Science, MIT, 1998').")
+    _print("Blank line to finish.")
+    edu_entries: list[str] = []
+    while True:
+        try:
+            line = _input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not line:
+            break
+        edu_entries.append(line)
+        profile.upsert(kind=NodeKind.EDUCATION, label=line[:120], text=line)
+    if edu_entries:
+        all_answers["Education"] = edu_entries
+
+    # ── Remaining phases: graph nodes ─────────────────────────────────────────
     for phase in _PHASES:
         if phase.get("optional") and skip_optional:
             continue

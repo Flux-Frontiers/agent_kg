@@ -44,6 +44,19 @@ CREATE TABLE IF NOT EXISTS profile_edges (
     relation   TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS profile_identity (
+    id              TEXT PRIMARY KEY DEFAULT 'singleton',
+    name            TEXT DEFAULT '',
+    email           TEXT DEFAULT '',
+    phone           TEXT DEFAULT '',
+    address         TEXT DEFAULT '',
+    birth_date      TEXT DEFAULT '',
+    gender          TEXT DEFAULT '',
+    cognitive_score INTEGER DEFAULT 100,
+    delta_year      INTEGER DEFAULT 0,
+    updated_at      TEXT NOT NULL
+);
 """
 
 
@@ -155,6 +168,110 @@ class UserProfileStore:
         return nodes
 
     # ------------------------------------------------------------------
+    # Identity (structured personal/biographical data)
+    # ------------------------------------------------------------------
+
+    def set_identity(
+        self,
+        name: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+        address: str | None = None,
+        birth_date: str | None = None,
+        gender: str | None = None,
+        cognitive_score: int | None = None,
+        delta_year: int | None = None,
+    ) -> dict[str, Any]:
+        """Upsert the singleton identity record.
+
+        Only non-None arguments are written — pass only what you want to change.
+
+        :param name: Full name.
+        :param email: Email address.
+        :param phone: Phone number (any format).
+        :param address: Home / mailing address (free-form).
+        :param birth_date: ISO date string ``YYYY-MM-DD``.
+        :param gender: Gender string.
+        :param cognitive_score: Cognitive clarity score 0-100.
+        :param delta_year: Year offset from birth for diary entry timestamps
+            (0-150).  Lets you simulate writing at a specific life age.
+        :return: The updated identity dict.
+        """
+        db = self._get_db()
+        now = datetime.now(UTC).isoformat()
+
+        row = db.execute("SELECT * FROM profile_identity WHERE id = 'singleton'").fetchone()
+        if row is None:
+            db.execute(
+                "INSERT INTO profile_identity (id, updated_at) VALUES ('singleton', ?)",
+                (now,),
+            )
+            db.commit()
+            row = db.execute("SELECT * FROM profile_identity WHERE id = 'singleton'").fetchone()
+
+        updates: list[tuple[Any, str]] = []
+        if name is not None:
+            updates.append((name, "name"))
+        if email is not None:
+            updates.append((email, "email"))
+        if phone is not None:
+            updates.append((phone, "phone"))
+        if address is not None:
+            updates.append((address, "address"))
+        if birth_date is not None:
+            updates.append((birth_date, "birth_date"))
+        if gender is not None:
+            updates.append((gender, "gender"))
+        if cognitive_score is not None:
+            updates.append((max(0, min(100, int(cognitive_score))), "cognitive_score"))
+        if delta_year is not None:
+            updates.append((max(0, min(150, int(delta_year))), "delta_year"))
+
+        for value, col in updates:
+            db.execute(
+                f"UPDATE profile_identity SET {col} = ?, updated_at = ?"  # noqa: S608
+                " WHERE id = 'singleton'",
+                (value, now),
+            )
+        db.commit()
+        return self.get_identity()
+
+    def get_identity(self) -> dict[str, Any]:
+        """Return the identity record as a plain dict (empty defaults if not set).
+
+        :return: Dict with keys: ``name``, ``email``, ``phone``, ``address``,
+                 ``birth_date``, ``gender``, ``cognitive_score``.
+        """
+        row = (
+            self._get_db()
+            .execute("SELECT * FROM profile_identity WHERE id = 'singleton'")
+            .fetchone()
+        )
+        if row is None:
+            return {
+                "name": "",
+                "email": "",
+                "phone": "",
+                "address": "",
+                "birth_date": "",
+                "gender": "",
+                "cognitive_score": 100,
+                "delta_year": 0,
+            }
+        return {
+            "name": row["name"] or "",
+            "email": row["email"] or "",
+            "phone": row["phone"] or "",
+            "address": row["address"] or "",
+            "birth_date": row["birth_date"] or "",
+            "gender": row["gender"] or "",
+            "cognitive_score": row["cognitive_score"]
+            if row["cognitive_score"] is not None
+            else 100,
+            "delta_year": row["delta_year"] if row["delta_year"] is not None else 0,
+        }
+
+    # ------------------------------------------------------------------
     # Query
     # ------------------------------------------------------------------
 
@@ -189,6 +306,10 @@ class UserProfileStore:
     def styles(self) -> list[Node]:
         """Return all Style nodes."""
         return self.get_by_kind(NodeKind.STYLE)
+
+    def education(self) -> list[Node]:
+        """Return all Education nodes."""
+        return self.get_by_kind(NodeKind.EDUCATION)
 
     def all_nodes(self) -> list[Node]:
         """Return all profile nodes ordered by kind + confidence."""
@@ -245,6 +366,8 @@ class UserProfileStore:
     def summary(self) -> dict[str, Any]:
         """Return a structured summary of the profile (for PersonCorpusEntry sync)."""
         return {
+            "identity": self.get_identity(),
+            "education": [n.label for n in self.education()],
             "preferences": [n.label for n in self.preferences()],
             "commitments": [n.label for n in self.commitments()],
             "expertise": [n.label for n in self.expertise()],
@@ -255,6 +378,40 @@ class UserProfileStore:
     def render_markdown(self) -> str:
         """Render the full UserProfile as a Markdown report."""
         lines = ["# UserProfile\n"]
+
+        # Identity section
+        identity = self.get_identity()
+        identity_fields = [
+            ("Name", identity.get("name")),
+            ("Email", identity.get("email")),
+            ("Phone", identity.get("phone")),
+            ("Address", identity.get("address")),
+            ("Birth date", identity.get("birth_date")),
+            ("Gender", identity.get("gender")),
+            (
+                "Cognitive score",
+                str(identity["cognitive_score"])
+                if identity.get("cognitive_score") is not None
+                else None,
+            ),
+            ("Delta year", str(identity["delta_year"]) if identity.get("delta_year") else None),
+        ]
+        shown = [(k, v) for k, v in identity_fields if v]
+        if shown:
+            lines.append("## Identity")
+            for key, val in shown:
+                lines.append(f"- **{key}:** {val}")
+            lines.append("")
+
+        # Education
+        edu_nodes = self.education()
+        if edu_nodes:
+            lines.append("## Education")
+            for n in edu_nodes:
+                lines.append(f"- {n.label}")
+            lines.append("")
+
+        # Knowledge graph sections
         sections = [
             ("Commitments", self.commitments()),
             ("Preferences", self.preferences()),
@@ -270,6 +427,32 @@ class UserProfileStore:
                     lines.append(f"- {n.label} *(confidence: {conf_pct}%)*")
                 lines.append("")
         return "\n".join(lines)
+
+    def delete(self, kind: NodeKind, label: str) -> bool:
+        """Delete a single profile node by kind + label (case-insensitive).
+
+        :param kind: NodeKind of the node to remove.
+        :param label: Label of the node to remove.
+        :return: True if a row was deleted, False if not found.
+        """
+        db = self._get_db()
+        cur = db.execute(
+            "DELETE FROM profile_nodes WHERE kind = ? AND LOWER(label) = LOWER(?)",
+            (str(kind), label),
+        )
+        db.commit()
+        return cur.rowcount > 0
+
+    def clear_kind(self, kind: NodeKind) -> int:
+        """Delete all profile nodes of a given kind.
+
+        :param kind: NodeKind to wipe.
+        :return: Number of rows deleted.
+        """
+        db = self._get_db()
+        cur = db.execute("DELETE FROM profile_nodes WHERE kind = ?", (str(kind),))
+        db.commit()
+        return cur.rowcount
 
     def stats(self) -> dict[str, Any]:
         """Return total node count and per-kind breakdown."""

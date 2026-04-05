@@ -157,3 +157,200 @@ class TestRenderAndStats:
         assert s["total"] == 2
         assert s["by_kind"]["preference"] == 1
         assert s["by_kind"]["expertise"] == 1
+
+
+class TestSetIdentity:
+    """set_identity() and get_identity() — structured personal fields."""
+
+    def test_set_and_get_all_fields(self, profile):
+        """All identity fields round-trip correctly."""
+        profile.set_identity(
+            name="Alice Smith",
+            email="alice@example.com",
+            phone="555-1234",
+            address="1 Main St",
+            birth_date="1980-06-15",
+            gender="Female",
+            cognitive_score=90,
+            delta_year=25,
+        )
+        identity = profile.get_identity()
+        assert identity["name"] == "Alice Smith"
+        assert identity["email"] == "alice@example.com"
+        assert identity["phone"] == "555-1234"
+        assert identity["address"] == "1 Main St"
+        assert identity["birth_date"] == "1980-06-15"
+        assert identity["gender"] == "Female"
+        assert identity["cognitive_score"] == 90
+        assert identity["delta_year"] == 25
+
+    def test_partial_update_preserves_other_fields(self, profile):
+        """Updating one field does not clear the others."""
+        profile.set_identity(name="Bob", email="bob@example.com")
+        profile.set_identity(phone="555-9999")
+        identity = profile.get_identity()
+        assert identity["name"] == "Bob"
+        assert identity["email"] == "bob@example.com"
+        assert identity["phone"] == "555-9999"
+
+    def test_get_identity_defaults_when_empty(self, profile):
+        """get_identity returns safe defaults when no record exists."""
+        identity = profile.get_identity()
+        assert identity["name"] == ""
+        assert identity["cognitive_score"] == 100
+        assert identity["delta_year"] == 0
+
+    def test_cognitive_score_clamped_high(self, profile):
+        """cognitive_score above 100 is clamped to 100."""
+        profile.set_identity(cognitive_score=200)
+        assert profile.get_identity()["cognitive_score"] == 100
+
+    def test_cognitive_score_clamped_low(self, profile):
+        """cognitive_score below 0 is clamped to 0."""
+        profile.set_identity(cognitive_score=-5)
+        assert profile.get_identity()["cognitive_score"] == 0
+
+    def test_delta_year_clamped_high(self, profile):
+        """delta_year above 150 is clamped to 150."""
+        profile.set_identity(delta_year=999)
+        assert profile.get_identity()["delta_year"] == 150
+
+    def test_delta_year_clamped_low(self, profile):
+        """delta_year below 0 is clamped to 0."""
+        profile.set_identity(delta_year=-10)
+        assert profile.get_identity()["delta_year"] == 0
+
+    def test_set_identity_returns_updated_dict(self, profile):
+        """set_identity returns the full updated identity dict."""
+        result = profile.set_identity(name="Carol")
+        assert isinstance(result, dict)
+        assert result["name"] == "Carol"
+
+    def test_singleton_row_only_one_row(self, profile):
+        """Multiple set_identity calls never create more than one row."""
+        profile.set_identity(name="A")
+        profile.set_identity(name="B")
+        profile.set_identity(name="C")
+        db = profile._get_db()
+        count = db.execute("SELECT COUNT(*) FROM profile_identity").fetchone()[0]
+        assert count == 1
+
+
+class TestEducation:
+    """Education nodes — upsert, retrieve, and render."""
+
+    def test_upsert_education_node(self, profile):
+        """Upserting an EDUCATION node stores it correctly."""
+        node = profile.upsert(NodeKind.EDUCATION, "PhD CS, MIT, 1998")
+        assert node.kind == NodeKind.EDUCATION
+        assert node.label == "PhD CS, MIT, 1998"
+
+    def test_education_accessor(self, profile):
+        """education() returns only EDUCATION nodes."""
+        profile.upsert(NodeKind.EDUCATION, "BSc Physics, Oxford, 1990")
+        profile.upsert(NodeKind.PREFERENCE, "dark mode")
+        edu = profile.education()
+        assert len(edu) == 1
+        assert edu[0].kind == NodeKind.EDUCATION
+
+    def test_multiple_education_entries(self, profile):
+        """Multiple education entries are all stored independently."""
+        profile.upsert(NodeKind.EDUCATION, "BSc Physics, Oxford, 1990")
+        profile.upsert(NodeKind.EDUCATION, "PhD CS, MIT, 1998")
+        assert len(profile.education()) == 2
+
+    def test_render_markdown_includes_education(self, profile):
+        """render_markdown shows an Education section when entries exist."""
+        profile.upsert(NodeKind.EDUCATION, "PhD CS, MIT, 1998")
+        md = profile.render_markdown()
+        assert "## Education" in md
+        assert "PhD CS, MIT, 1998" in md
+
+    def test_render_markdown_includes_identity(self, profile):
+        """render_markdown shows an Identity section when fields are set."""
+        profile.set_identity(name="Eric", cognitive_score=95)
+        md = profile.render_markdown()
+        assert "## Identity" in md
+        assert "Eric" in md
+        assert "95" in md
+
+    def test_render_markdown_omits_personal_strings_when_not_set(self, profile):
+        """render_markdown does not show name/email/etc when they are blank."""
+        md = profile.render_markdown()
+        assert "Name" not in md
+        assert "Email" not in md
+        assert "Address" not in md
+
+    def test_summary_includes_identity_and_education(self, profile):
+        """summary() dict contains identity and education keys."""
+        profile.set_identity(name="Eric")
+        profile.upsert(NodeKind.EDUCATION, "PhD CS, MIT, 1998")
+        s = profile.summary()
+        assert "identity" in s
+        assert "education" in s
+        assert s["identity"]["name"] == "Eric"
+        assert "PhD CS, MIT, 1998" in s["education"]
+
+
+class TestDelete:
+    """delete() — remove a single node by kind + label."""
+
+    def test_delete_existing_node(self, profile):
+        """delete() removes a node and returns True."""
+        profile.upsert(NodeKind.PREFERENCE, "dark mode")
+        removed = profile.delete(NodeKind.PREFERENCE, "dark mode")
+        assert removed is True
+        assert len(profile.preferences()) == 0
+
+    def test_delete_case_insensitive(self, profile):
+        """delete() matches the label case-insensitively."""
+        profile.upsert(NodeKind.PREFERENCE, "Dark Mode")
+        removed = profile.delete(NodeKind.PREFERENCE, "dark mode")
+        assert removed is True
+        assert len(profile.preferences()) == 0
+
+    def test_delete_missing_node_returns_false(self, profile):
+        """delete() returns False when the node does not exist."""
+        result = profile.delete(NodeKind.PREFERENCE, "nonexistent")
+        assert result is False
+
+    def test_delete_only_removes_matching_kind(self, profile):
+        """delete() on PREFERENCE does not remove a same-label EXPERTISE node."""
+        profile.upsert(NodeKind.PREFERENCE, "Python")
+        profile.upsert(NodeKind.EXPERTISE, "Python")
+        profile.delete(NodeKind.PREFERENCE, "Python")
+        assert len(profile.preferences()) == 0
+        assert len(profile.expertise()) == 1
+
+    def test_delete_one_of_many(self, profile):
+        """delete() removes only the targeted node, leaving others intact."""
+        profile.upsert(NodeKind.COMMITMENT, "write tests")
+        profile.upsert(NodeKind.COMMITMENT, "no globals")
+        profile.delete(NodeKind.COMMITMENT, "write tests")
+        remaining = profile.commitments()
+        assert len(remaining) == 1
+        assert remaining[0].label == "no globals"
+
+
+class TestClearKind:
+    """clear_kind() — wipe all nodes of a given kind."""
+
+    def test_clear_removes_all_of_kind(self, profile):
+        """clear_kind removes every node of the specified kind."""
+        profile.upsert(NodeKind.PREFERENCE, "dark mode")
+        profile.upsert(NodeKind.PREFERENCE, "concise")
+        n = profile.clear_kind(NodeKind.PREFERENCE)
+        assert n == 2
+        assert len(profile.preferences()) == 0
+
+    def test_clear_does_not_touch_other_kinds(self, profile):
+        """clear_kind leaves nodes of other kinds untouched."""
+        profile.upsert(NodeKind.PREFERENCE, "dark mode")
+        profile.upsert(NodeKind.EXPERTISE, "Python")
+        profile.clear_kind(NodeKind.PREFERENCE)
+        assert len(profile.expertise()) == 1
+
+    def test_clear_empty_kind_returns_zero(self, profile):
+        """clear_kind on a kind with no nodes returns 0."""
+        n = profile.clear_kind(NodeKind.INTEREST)
+        assert n == 0

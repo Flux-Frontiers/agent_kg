@@ -18,7 +18,7 @@ from typing import Any
 
 # --- Commitment patterns ("always do X", "never do Y", "always run Z") ------
 _COMMITMENT_ALWAYS = re.compile(
-    r"\b(always|every\s+time|each\s+time|make\s+sure\s+to|remember\s+to)\b.{3,80}",
+    r"\b(always|whenever|every\s+time|each\s+time|make\s+sure\s+to|remember\s+to)\b.{3,80}",
     re.I,
 )
 _COMMITMENT_NEVER = re.compile(

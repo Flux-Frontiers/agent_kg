@@ -1,7 +1,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 
 **AgentKG** — Conversational Memory as a Live, Queryable Knowledge Graph
@@ -14,7 +14,7 @@
 
 ## Overview
 
-AgentKG stores every conversation turn, topic, entity, intent, task, and user preference as a node in a **persistent knowledge graph** (SQLite + LanceDB). Edges encode relationships between turns, sessions, and profile facts. The result is a queryable, pruneable, semantically searchable memory that survives context resets and accumulates across projects.
+AgentKG stores every conversation turn, topic, entity, intent, task, and user preference as a node in a **persistent knowledge graph** (SQLite + LanceDB). Edges encode relationships between turns, sessions, and profile facts. The result is a queryable, prunable, semantically searchable memory that survives context resets and accumulates across projects.
 
 The graph is split into two stores:
 
@@ -239,6 +239,8 @@ Add these hooks to `.claude/settings.json` to ingest every prompt automatically:
 agent_kg/
 ├── README.md
 ├── pyproject.toml
+├── scripts/
+│   └── generate_wiki.py      # GitHub wiki generator
 ├── src/
 │   └── agent_kg/
 │       ├── __init__.py
@@ -246,7 +248,7 @@ agent_kg/
 │       ├── store.py          # SQLite + LanceDB storage
 │       ├── index.py          # LanceDB semantic indexing
 │       ├── ingest.py         # Phase 1 incremental turn ingest
-│       ├── profile.py        # Global UserProfile tree
+│       ├── user_profile.py   # Global UserProfile tree
 │       ├── onboard.py        # Structured onboarding interview
 │       ├── session.py        # Session lifecycle
 │       ├── query.py          # Hybrid semantic + graph query
@@ -257,12 +259,18 @@ agent_kg/
 │       ├── snapshots.py      # Point-in-time snapshot capture
 │       ├── schema.py         # Node/Edge dataclasses
 │       ├── kg.py             # High-level KG facade
+│       ├── app.py            # Streamlit explorer UI
+│       ├── viz.py            # Visualization helpers (Rich + pyvis)
 │       ├── cli/
 │       │   ├── main.py       # Click CLI entry points
 │       │   └── __init__.py
 │       ├── mcp/
 │       │   └── server.py     # MCP server
 │       └── nlp/              # NLP pipeline (optional)
+│           ├── entities.py
+│           ├── intent.py
+│           ├── preferences.py
+│           └── topics.py
 └── tests/
 ```
 

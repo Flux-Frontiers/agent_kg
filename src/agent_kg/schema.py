@@ -33,6 +33,8 @@ class NodeKind(StrEnum):
     USER_PROFILE = "user_profile"
     # Project scope
     PROJECT_CONTEXT = "project_context"
+    # Personal / biographical
+    EDUCATION = "education"
 
 
 class EdgeRelation(StrEnum):
