@@ -311,7 +311,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
                 text = f"Open tasks ({len(tasks)}):\n" + "\n".join(lines)
 
         elif name == "agent_kg_profile":
-            from agent_kg.profile import UserProfileStore  # noqa: PLC0415
+            from agent_kg.user_profile import UserProfileStore  # noqa: PLC0415
 
             profile_dir = Path.home() / ".kgrag" / "profiles" / person_id
             profile = UserProfileStore(profile_dir)

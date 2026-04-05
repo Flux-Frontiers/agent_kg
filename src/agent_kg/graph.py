@@ -6,7 +6,7 @@
 ``AgentKG`` is the high-level façade that wires together all AgentKG components:
 
   - :class:`~agent_kg.store.AgentKGStore` — SQLite + LanceDB storage
-  - :class:`~agent_kg.profile.UserProfileStore` — global UserProfile tree
+  - :class:`~agent_kg.user_profile.UserProfileStore` — global UserProfile tree
   - :class:`~agent_kg.session.Session` — session lifecycle
   - :func:`~agent_kg.ingest.ingest_turn` — Phase 1 incremental ingest
   - :func:`~agent_kg.query.query` / :func:`~agent_kg.query.pack` — semantic query
@@ -34,11 +34,11 @@ from typing import Any
 from agent_kg import assemble, consolidate, prune, query, snapshots
 from agent_kg.ingest import IngestResult, ingest_turn
 from agent_kg.onboard import apply_implicit_update
-from agent_kg.profile import UserProfileStore
 from agent_kg.schema import NodeKind, PruneReport
 from agent_kg.session import Session
 from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
+from agent_kg.user_profile import UserProfileStore
 
 # Default storage layout (mirrors .codekg / .dockg convention)
 _AGENTKG_DIR = ".agentkg"

@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from agent_kg.profile import UserProfileStore
+    from agent_kg.user_profile import UserProfileStore
 
 # Interview phases and questions
 _PHASES: list[dict[str, Any]] = [
@@ -112,7 +112,7 @@ def run_onboard_interview(
 ) -> dict[str, Any]:
     """Conduct the structured onboarding interview.
 
-    :param profile: :class:`~agent_kg.profile.UserProfileStore` to populate.
+    :param profile: :class:`~agent_kg.user_profile.UserProfileStore` to populate.
     :param input_fn: Callable for getting user input (default: builtin ``input``).
     :param print_fn: Callable for output (default: builtin ``print``).
     :param skip_optional: If True, skip the optional Personal phase.

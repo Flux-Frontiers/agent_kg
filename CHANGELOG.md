@@ -39,7 +39,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by the `UserPromptSubmit` hook no longer create topic/entity/intent nodes in the
   graph, eliminating bigram noise like `"perform assessments"` and `"changelog commit"`
 
+### Added
+
+- **`scripts/generate_wiki.py`** — GitHub wiki generator that builds Home,
+  Installation, CLI Reference, Architecture, MCP Integration, Python API, Deployment,
+  and `_Sidebar` pages from living `docs/` markdown files; supports `--dry-run` and
+  `--repo` flags; registered as `poe wiki` / `poe wiki-preview` tasks
+
+### Fixed
+
+- **`summarize.py` mypy type-narrowing** — `msg.content[0].text` access now guarded
+  with `isinstance(block, anthropic.types.TextBlock)` to silence the `union-attr`
+  errors raised when the Anthropic SDK returns non-text block types
+
 ### Changed
+
+- **`src/agent_kg/profile.py` → `src/agent_kg/user_profile.py`** — module renamed
+  for clarity; all internal imports in `__init__.py`, `graph.py`, `mcp/server.py`,
+  `onboard.py`, and `tests/test_profile.py` updated accordingly
+- **`--person` documentation and examples** throughout README.md, docs/cheatsheet.md,
+  assessments/AssessmentProtocol_AgentKG.md, and SKILL.md clarified: `--person`
+  defaults to the OS login name and is only required for profile-scoped commands
+  (`init`, `onboard`, `profile`, `viz --profile`, `wipe --global`); local graph
+  commands are repo-scoped and ignore it
+- **Version bump 0.2.0 → 0.3.0** (`pyproject.toml`, `src/agent_kg/__init__.py`,
+  `poetry.lock`)
 
 - **`assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md`** removed —
   superseded by the 2026-04-05 assessment which covers the same build state with a

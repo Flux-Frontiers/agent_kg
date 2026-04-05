@@ -58,23 +58,23 @@ Embeddings are on by default. `init` pre-warms the model cache so the first `ing
 
 ## Person ID
 
-Every command accepts a `--person` flag that identifies whose profile to read/write.
-The default is `"default"`. Profiles are stored globally at:
+`--person` identifies the **global user profile** at `~/.kgrag/profiles/<person>/`.
+The default is your OS login name (`getpass.getuser()`), which is correct automatically
+on a single-user machine — you rarely need to set it explicitly.
 
-```
-~/.kgrag/profiles/<person>/userprofile.sqlite
-```
-
-**You must use the same `--person` value across all commands or your profile will not be found.**
+**`--person` only affects profile-scoped commands:** `init`, `onboard`, `profile`,
+`viz --profile`, `wipe --global`. Local graph commands (`query`, `assemble`, `stats`,
+`sessions`, `snapshot`, `prune`, `ingest`, `analyze`) are repo-scoped and ignore it.
 
 ```bash
-# These two commands refer to different profiles:
-agent-kg onboard --person egs   # writes to ~/.kgrag/profiles/egs/
-agent-kg profile                 # reads from ~/.kgrag/profiles/default/  ← wrong!
+# Single-user machine: default is correct, no flag needed
+agent-kg onboard    # writes to ~/.kgrag/profiles/<your-os-username>/
+agent-kg profile    # reads the same path ← correct
 
-# Correct usage:
-agent-kg onboard --person egs
-agent-kg profile --person egs
+# Multi-user or named profiles: be explicit on profile commands only
+agent-kg onboard --person alice
+agent-kg profile --person alice
+agent-kg query "auth strategy"   # no --person needed here
 ```
 
 If `agent-kg profile` returns an empty `# UserProfile`, check which `--person` value
@@ -84,7 +84,9 @@ was used during `onboard`. The completion message prints the exact path.
 
 ## CLI Reference
 
-All commands accept `--repo <path>` (default `.`) and `--person <id>` (default `"default"`).
+All commands accept `--repo <path>` (default `.`). `--person <id>` defaults to your OS
+username and is only needed for profile-scoped commands (`init`, `onboard`, `profile`,
+`viz --profile`, `wipe --global`).
 
 | Command | Description |
 |---|---|
@@ -104,13 +106,13 @@ All commands accept `--repo <path>` (default `.`) and `--person <id>` (default `
 Each command also ships as a dedicated `agent-kg-<name>` script — no `poetry run` needed:
 
 ```bash
-agent-kg-init     --person egs
-agent-kg-onboard  --person egs
-agent-kg-profile  --person egs
-agent-kg-stats    --repo . --person egs
-agent-kg-query    "authentication strategy" --k 8 --repo . --person egs
-agent-kg-assemble "what did we decide about auth?" --budget 4000 --repo . --person egs
-agent-kg-prune    --window 20 --repo . --person egs
+agent-kg-init     --person egs          # profile-scoped
+agent-kg-onboard  --person egs          # profile-scoped
+agent-kg-profile  --person egs          # profile-scoped
+agent-kg-stats    --repo .
+agent-kg-query    "authentication strategy" --k 8 --repo .
+agent-kg-assemble "what did we decide about auth?" --budget 4000 --repo .
+agent-kg-prune    --window 20 --repo .
 agent-kg-mcp
 ```
 
@@ -210,14 +212,14 @@ Add these hooks to `.claude/settings.json` to ingest every prompt automatically:
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "jq -r '.prompt' | { read -r p; REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$p\" --role user --repo \"$REPO_ROOT\" --person egs --no-embed; } 2>/dev/null || true",
+        "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
         "async": true
       }]
     }],
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"Session ended.\" --role assistant --repo \"$REPO_ROOT\" --person egs --no-embed 2>/dev/null || true",
+        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
         "async": true
       }]
     }]
@@ -225,7 +227,9 @@ Add these hooks to `.claude/settings.json` to ingest every prompt automatically:
 }
 ```
 
-`--no-embed` defers embedding to a later consolidate pass — keeps hooks fast.
+- `PROMPT=$(jq -r '.prompt')` captures the **full** multiline prompt (not just the first line)
+- `--no-embed` defers embedding to a later consolidate pass — keeps hooks fast
+- The Stop hook captures a metrics snapshot instead of injecting a synthetic turn
 
 ---
 

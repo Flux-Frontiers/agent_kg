@@ -112,7 +112,8 @@ class Summarizer:
                 temperature=self._config.temperature,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return msg.content[0].text.strip() if msg.content else None
+            block = msg.content[0] if msg.content else None
+            return block.text.strip() if isinstance(block, anthropic.types.TextBlock) else None
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 

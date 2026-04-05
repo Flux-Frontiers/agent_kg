@@ -1,12 +1,12 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
 
-"""Unit tests for agent_kg.profile.UserProfileStore."""
+"""Unit tests for agent_kg.user_profile.UserProfileStore."""
 
 import pytest
 
-from agent_kg.profile import UserProfileStore
 from agent_kg.schema import Node, NodeKind
+from agent_kg.user_profile import UserProfileStore
 
 
 @pytest.fixture

@@ -30,7 +30,6 @@ Architecture:
 from agent_kg import assemble, consolidate, prune, query, snapshots
 from agent_kg.graph import AgentKG
 from agent_kg.index import ConversationIndex
-from agent_kg.profile import UserProfileStore
 from agent_kg.schema import (
     Edge,
     EdgeRelation,
@@ -43,8 +42,9 @@ from agent_kg.schema import (
 from agent_kg.session import Session
 from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
+from agent_kg.user_profile import UserProfileStore
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Eric G. Suchanek, PhD"
 
 __all__ = [

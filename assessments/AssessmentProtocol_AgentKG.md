@@ -27,30 +27,31 @@ You have access to AgentKG's CLI tools and MCP server in this session. Your task
 Before starting, verify the graph has data to work with:
 
 ```bash
-agent-kg-stats --repo "$(git rev-parse --show-toplevel)" --person egs
+agent-kg-stats --repo "$(git rev-parse --show-toplevel)"
 ```
 
 If turn count is low (< 20), ingest a few representative turns first:
 
 ```bash
 agent-kg-ingest "What is the architecture of the MCP server?" --role user \
-  --repo "$(git rev-parse --show-toplevel)" --person egs
+  --repo "$(git rev-parse --show-toplevel)"
 agent-kg-ingest "The MCP server uses FastMCP with tool handlers in mcp_server.py." \
-  --role assistant --repo "$(git rev-parse --show-toplevel)" --person egs
+  --role assistant --repo "$(git rev-parse --show-toplevel)"
 ```
 
 ---
 
 ## Phase 1: Orientation & Health Check
 
-1. Run `agent-kg-stats --repo . --person egs` — review node/edge counts by kind.
+1. Run `agent-kg-stats --repo .` — review node/edge counts by kind.
    Are the proportions sensible? (turns >> topics > entities > tasks)
-2. Run `agent-kg-sessions --repo . --person egs` — how many sessions exist? Are
+2. Run `agent-kg-sessions --repo .` — how many sessions exist? Are
    session boundaries correctly detected?
-3. Run `agent-kg-analyze --repo . --person egs` — read the full Markdown analysis.
+3. Run `agent-kg-analyze --repo .` — read the full Markdown analysis.
    - Is the breakdown useful for understanding conversation history?
    - Are topics, intents, and entities accurately extracted?
 4. Run `agent-kg-profile --repo . --person egs` — is the user profile populated?
+   (`--person` required here — profile is user-scoped, not repo-scoped.)
    - If empty, note it as a setup issue, not a tool failure.
 
 ## Phase 2: Semantic Recall
@@ -66,8 +67,13 @@ Test the hybrid search and assembly capabilities with varied queries:
 
 For each query, run **both**:
 ```bash
-agent-kg-query "<query>" --k 8 --repo . --person egs
-agent-kg-assemble "<query>" --budget 4000 --repo . --person egs
+agent-kg-query "<query>" --k 8 --repo .
+agent-kg-assemble "<query>" --budget 4000 --repo .
+```
+
+For preference recall specifically, also run:
+```bash
+agent-kg-query "<query>" --k 8 --repo . --include-profile
 ```
 
 Compare:
@@ -110,7 +116,7 @@ Compare:
 
 1. Capture a snapshot:
    ```bash
-   agent-kg-snapshot --repo . --person egs --label "assessment baseline"
+   agent-kg-snapshot --repo . --label "assessment baseline"
    ```
 2. List snapshots:
    ```bash
@@ -125,7 +131,9 @@ Compare:
 1. Check current turn count from stats.
 2. Run a dry-run prune (if supported) or run with a conservative window:
    ```bash
-   agent-kg-prune --window 20 --repo . --person egs
+   agent-kg-prune --window 20 --repo .
+   # If all turns are in the current session, add --force
+   agent-kg-prune --window 20 --repo . --force
    ```
 3. Re-run stats and compare node counts.
 4. Run a recall query from Phase 2 again — does quality degrade after pruning?

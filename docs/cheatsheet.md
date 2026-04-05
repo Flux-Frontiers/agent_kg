@@ -4,19 +4,27 @@
 
 ---
 
-## The Golden Rule
+## The `--person` Rule
 
-**Always pass `--person <you>` on every command.** The default is `"default"`.
-Mixing values creates two separate profiles that never merge.
+`--person` identifies the **global user profile** at `~/.kgrag/profiles/<person>/`.
+The default is your OS login name (`getpass.getuser()`), so it is correct automatically
+on a single-user machine.
+
+**Only profile-scoped commands need an explicit `--person`:**
+`init`, `onboard`, `profile`, `viz --profile`, `wipe --global`.
+
+Local graph commands (`query`, `assemble`, `stats`, `sessions`, `snapshot`, `prune`,
+`ingest`, `analyze`) are **repo-scoped** — `--person` has no effect on what data
+they read or write.
 
 ```bash
-# BAD — these two commands target different profiles
-agent-kg onboard --person egs
-agent-kg profile              # reads 'default', not 'egs'
+# These two always refer to the same profile on a single-user machine:
+agent-kg onboard    # uses getpass.getuser() → correct
+agent-kg profile    # same default → correct
 
-# GOOD
-agent-kg onboard --person egs
-agent-kg profile --person egs
+# Explicit only needed on shared machines or with named profiles:
+agent-kg onboard --person alice
+agent-kg profile --person alice
 ```
 
 ---
@@ -59,31 +67,39 @@ agent-kg install-hooks
 ### Ingest a turn
 
 ```bash
-agent-kg ingest "We decided to use OAuth2 with PKCE." --role user --person egs
-agent-kg ingest "Understood, I'll implement it that way." --role assistant --person egs
+agent-kg ingest "We decided to use OAuth2 with PKCE." --role user
+agent-kg ingest "Understood, I'll implement it that way." --role assistant
 
 # Defer embedding (fast — run consolidate later)
-agent-kg ingest "quick note" --role user --person egs --no-embed
+agent-kg ingest "quick note" --role user --no-embed
 ```
+
+Slash commands, `"Session ended."`, and IDE-tag-only turns are silently skipped.
 
 ### Semantic search
 
 ```bash
-agent-kg query "authentication strategy" --k 10 --person egs
+agent-kg query "authentication strategy" --k 10
+
+# Also search profile nodes (preferences, commitments, style)
+agent-kg query "docstring style" --k 8 --include-profile
 ```
 
 ### Assemble a token-budgeted context block
 
 ```bash
 # Returns Markdown ready to prepend to a prompt
-agent-kg assemble "what did we decide about auth?" --budget 4000 --person egs
+agent-kg assemble "what did we decide about auth?" --budget 4000
 ```
 
 ### Prune old turns into Summary nodes
 
 ```bash
 # Keeps 20 most-recent turns verbatim; compresses the rest
-agent-kg prune --window 20 --person egs
+agent-kg prune --window 20
+
+# Single-session graph: bypass the "cold turns" gate
+agent-kg prune --window 20 --force
 ```
 
 ---
@@ -92,23 +108,23 @@ agent-kg prune --window 20 --person egs
 
 ```bash
 # Node/edge counts
-agent-kg stats --person egs
+agent-kg stats
 
 # Full Markdown analysis report
-agent-kg analyze --person egs
+agent-kg analyze
 
 # List all sessions for this repo
-agent-kg sessions --person egs
+agent-kg sessions
 
-# Show the UserProfile
+# Show the UserProfile (profile-scoped — --person needed if non-default)
 agent-kg profile --person egs
 ```
 
 ### Quick health check
 
 ```bash
-agent-kg stats --repo . --person egs
-agent-kg profile --repo . --person egs
+agent-kg stats
+agent-kg profile --person egs
 sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
   "SELECT kind, COUNT(*) FROM profile_nodes GROUP BY kind;"
 ```
@@ -119,8 +135,8 @@ sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
 
 ```bash
 # Capture a snapshot (stored in .agentkg/snapshots/)
-agent-kg snapshot --person egs
-agent-kg snapshot --person egs --label "before refactor"
+agent-kg snapshot
+agent-kg snapshot --label "before refactor"
 ```
 
 ---
@@ -128,14 +144,14 @@ agent-kg snapshot --person egs --label "before refactor"
 ## Wipe
 
 ```bash
-# Wipe only this repo's conversation graph
-agent-kg wipe --local --person egs
+# Wipe only this repo's conversation graph (repo-scoped, --person not needed)
+agent-kg wipe --local
 
-# Wipe the global user profile (affects all repos)
+# Wipe the global user profile (profile-scoped — specify --person if non-default)
 agent-kg wipe --global --person egs
 
 # Wipe both without a confirmation prompt
-agent-kg wipe --local --global --person egs --yes
+agent-kg wipe --local --global --yes
 ```
 
 ---
@@ -187,14 +203,14 @@ Add to `.claude/settings.json`:
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "jq -r '.prompt' | { read -r p; REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$p\" --role user --repo \"$REPO_ROOT\" --person egs --no-embed; } 2>/dev/null || true",
+        "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
         "async": true
       }]
     }],
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"Session ended.\" --role assistant --repo \"$REPO_ROOT\" --person egs --no-embed 2>/dev/null || true",
+        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
         "async": true
       }]
     }]
@@ -202,7 +218,9 @@ Add to `.claude/settings.json`:
 }
 ```
 
-`--no-embed` keeps hooks fast — embeddings are populated during a later consolidate pass.
+- `PROMPT=$(jq -r '.prompt')` captures the **full** multiline prompt (not just the first line)
+- `--no-embed` keeps hooks fast — embeddings are populated during a later consolidate pass
+- The Stop hook snapshots instead of ingesting a synthetic turn
 
 ---
 
@@ -210,14 +228,16 @@ Add to `.claude/settings.json`:
 
 | Option | Commands | Default | Notes |
 |---|---|---|---|
-| `--person TEXT` | all | `default` | Must match across all commands |
+| `--person TEXT` | `init`, `onboard`, `profile`, `viz --profile`, `wipe --global` | OS username | Only needed for profile-scoped commands or non-default named profiles |
 | `--repo PATH` | most | `.` | Use `$(git rev-parse --show-toplevel)` in scripts |
 | `--role user\|assistant` | `ingest` | `user` | |
 | `--session UUID` | `ingest`, `assemble`, `prune` | auto | Resume a specific session |
 | `--no-embed` | `ingest` | off | Defer embedding; run consolidate later |
+| `--include-profile` | `query` | off | Also search profile nodes (preferences, style, commitments) |
 | `--k INT` | `query` | `8` | Number of results |
 | `--budget INT` | `assemble` | `4000` | Token budget for context block |
 | `--window INT` | `prune` | `20` | Keep N most-recent turns verbatim |
+| `--force` | `prune` | off | Bypass "cold turns" readiness check |
 | `--label TEXT` | `snapshot` | none | Human-readable snapshot label |
 | `--update` | `onboard` | off | Re-run to refine preferences |
 | `--skip-optional` | `onboard` | off | Skip Personal phase |
@@ -261,12 +281,21 @@ sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
 agent-kg onboard --person egs
 ```
 
+### Prune says "Not enough cold turns to prune yet"
+
+Pruning normally requires turns from completed (closed) sessions. Use `--force` to
+prune the current session anyway:
+
+```bash
+agent-kg prune --window 20 --force
+```
+
 ### Semantic search returns `score=0.000`
 
 Turns were ingested with `--no-embed`. Run without that flag or trigger a consolidate pass:
 
 ```bash
-agent-kg ingest "test" --role user --person egs   # populates LanceDB
+agent-kg ingest "test" --role user   # populates LanceDB
 ```
 
 ### Wrong repo path in hooks

@@ -1,7 +1,7 @@
 {
-  "key": "1c7b8639596d10fcd9477b46be410ec157db17b2",
+  "key": "644ddcdc929c69c49f278192e49bb48cbb260a4c",
   "branch": "main",
-  "timestamp": "2026-04-05T01:37:14.715114+00:00",
+  "timestamp": "2026-04-05T03:01:01.454079+00:00",
   "version": "0.7.0",
   "metrics": {
     "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
