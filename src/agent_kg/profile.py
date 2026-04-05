@@ -199,6 +199,49 @@ class UserProfileStore:
         )
         return [self._row_to_node(dict(r)) for r in rows]
 
+    def search(self, q: str, k: int = 8) -> list[dict[str, Any]]:
+        """Keyword search over profile nodes (label + text fields).
+
+        Returns nodes whose label or text contains any word from *q*,
+        ranked by number of matching words then confidence.  Since profile
+        nodes live in a separate SQLite without vector embeddings, this is
+        a lightweight text-match fallback rather than semantic search.
+
+        :param q: Query string — matched word-by-word (case-insensitive).
+        :param k: Maximum number of results.
+        :return: List of ``{"node_id", "kind", "text", "label", "score", "source"}``
+                 dicts compatible with the conversation-graph hit format.
+        """
+        words = [w.lower() for w in q.split() if len(w) > 2]
+        if not words:
+            return []
+
+        nodes = self.all_nodes()
+        scored: list[tuple[float, Node]] = []
+        for node in nodes:
+            # Include the node kind so queries like "style preference" can match :param: nodes
+            haystack = f"{node.kind} {node.label} {node.text or ''}".lower()
+            hits = sum(1 for w in words if w in haystack)
+            if hits > 0:
+                score = round(hits / len(words) * node.confidence, 3)
+                scored.append((score, node))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = []
+        for score, node in scored[:k]:
+            results.append(
+                {
+                    "node_id": node.id,
+                    "kind": str(node.kind),
+                    "text": node.text or node.label,
+                    "label": node.label,
+                    "role": None,
+                    "score": score,
+                    "source": "profile",
+                }
+            )
+        return results
+
     def summary(self) -> dict[str, Any]:
         """Return a structured summary of the profile (for PersonCorpusEntry sync)."""
         return {

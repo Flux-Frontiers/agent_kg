@@ -1,290 +1,295 @@
-# AgentKG Assessment — claude-sonnet-4-6
+# AgentKG Assessment — claude_sonnet_4_6 — 2026-04-05
 
+**Assessor:** claude-sonnet-4-6
 **Date:** 2026-04-05
-**Assessor:** Claude Sonnet 4.6
 **Repo:** `/Users/egs/repos/agent_kg`
 **Person:** `egs`
-**Protocol:** [AssessmentProtocol_AgentKG.md](AssessmentProtocol_AgentKG.md)
+**Platform:** 2026 M3 Max MacBook Pro, 64 GB RAM, 2 TB SSD
 
 ---
 
 ## 1. Executive Summary
 
-AgentKG delivers a well-designed hybrid SQLite + LanceDB knowledge graph for conversational
-memory. The architecture is sound: every turn, topic, entity, intent, and task becomes a
-queryable node; edges encode relationships; a repo-independent user profile accumulates across
-projects. The CLI is clean and consistent, and the `assemble` command produces a well-structured
-token-budgeted context block that is immediately injectable into a prompt.
+AgentKG delivers on its core promise: a persistent, cross-session conversational memory that
+survives context resets and is semantically queryable. The hybrid SQLite + LanceDB backend is
+architecturally sound, and the CLI toolchain is cohesive enough that an agent can plausibly
+use it without human guidance. Semantic recall for precise, on-topic queries is genuinely
+strong — relevance scores above 0.9 for exact-match queries, and the `assemble` command
+produces well-structured, token-budgeted context blocks that are ready for prepending to a
+prompt.
 
-During this assessment, two bugs were identified and fixed before the final evaluation:
-(1) the hook's `read -r p` pattern only captured the first line of multi-line prompts — fixed
-to use `PROMPT=$(jq -r '.prompt')` which captures the full text; (2) LanceDB search used the
-default L2 metric on normalized vectors, causing `score = 1.0 - L2_distance` to clamp to 0.0
-for all but the closest matches — fixed by adding `.metric("cosine")` to the search call. After
-these fixes, semantic search scores are real and meaningful (0.50–0.81 for relevant matches,
-<0.25 for unrelated queries). The intent taxonomy was also expanded with four coding-specific
-categories: `instruction`, `code_request`, `bug_report`, and `task`.
+However, the system has two significant rough edges. First, topic extraction produces a high
+volume of noisy bigrams with minimal deduplication, diluting the semantic index with near-
+synonyms and stopword-adjacent fragments. Entity extraction is even sparser: only 5 entities
+were captured across 25 turns in a conversation heavily referencing tools, projects, and
+people. Second, the pruning subsystem is gated on "cold turns" (turns from prior closed
+sessions) in a way that makes it impossible to invoke on any single-session conversation,
+including most practical early-lifecycle repos. The documentation and error messages do not
+explain this constraint.
 
-With those fixes in place, AgentKG is a genuinely useful memory layer. The profile feature
-alone — accurate, repo-independent, instantly queryable — is worth the install for any agent
-with a consistent user base.
+The user profile is the most strategically valuable feature: it is repo-independent, persists
+commitments and expertise reliably, and provides a meaningful signal for personalizing agent
+responses. With targeted improvements to extraction quality and pruning ergonomics, AgentKG
+would be a compelling memory layer for multi-session AI assistants.
 
 ---
 
 ## 2. Tool-by-Tool Evaluation
 
 ### `agent-kg-stats`
-**Rating: 4/5**
-
-Fast, clean, informative. Reports node/edge totals and per-kind breakdown in a single compact
-block. Session ID and pruning pass count are visible at a glance. Suitable for scripted health
-checks. Minor gap: doesn't report embedding coverage (row count in LanceDB vs. SQLite turn
-count), which would make the distance-metric bug immediately visible.
+**Rating: 5/5**
+Concise, well-structured output. Node/edge counts broken out by kind. Session ID shown.
+Runs in < 100ms. No issues found.
 
 ### `agent-kg-sessions`
-**Rating: 2/5**
-
-Lists sessions correctly, but many sessions have 0 turns — artifacts of hook misfires or the
-session boundary firing on non-substantive events. No filtering by turn count from the CLI.
-For a graph with 12 substantive sessions worth of data, the session list is noisy. Session
-boundary detection should require at least one ingested turn before creating a record.
+**Rating: 4/5**
+Lists sessions with start time and turn count. Boundary detection is automatic. In testing,
+only 1 session was present (all 25 turns in one session) — functionally correct but limits
+the ability to test cross-session behavior. Output format is clear.
 
 ### `agent-kg-analyze`
-**Rating: 3/5**
-
-Well-structured Markdown report covering node counts, active topics, UserProfile summary, and
-session list. The profile section is high-quality. The Active Topics section still shows some
-bigram noise. Intent distribution is not reported, which is the most diagnostic signal for
-pipeline health. Topics are listed as a flat string rather than ranked by frequency.
+**Rating: 4/5**
+Produces a useful Markdown report: node/edge counts, open tasks, active topics, profile
+summary, session list. The "Active Topics" section surfaces the most recent bigrams rather
+than the highest-frequency ones, which can make it feel noisy. Profile embedding in the
+analysis output is a nice touch. Would benefit from a topic frequency ranking.
 
 ### `agent-kg-profile`
-**Rating: 5/5**
+**Rating: 3/5**
+Profile content is meaningful (commitments, preferences, expertise, interests, style). However,
+several preference entries are malformed — injection of raw conversation fragments:
+- `"embedding always! fix the hooks first and then re=run"` stored as a preference
+- `"your ideas"` and `"you to exercise agent_kg NOT code_kg"` stored as preferences
+  (these are instruction turns, not style preferences)
 
-The standout feature. The profile is accurately populated with real, actionable data:
-- **Preferences**: Python, clean, fast and documented; concise, accurate, correct
-- **Commitments**: no sycophancy, correct responses, no hallucinations
-- **Expertise**: platform architecture, abstraction, optimization, physics, biophysics, chemistry
-- **Interests**: embedding spaces, knowledge representation; reading, writing music, playing piano
-- **Style**: `:param:` docstrings
+This suggests the preference extraction classifier does not adequately filter non-preference
+content and conflates instructions with standing preferences.
 
-All entries at 100% confidence. Repo-independent and instantly usable for agent personalization.
-No re-introduction needed across sessions or projects.
+### `agent-kg-ingest`
+**Rating: 4/5**
+Works reliably. Topics, entities, and intent are classified at ingest time. The `--no-embed`
+flag is a sensible optimization for hook-based ingestion. The turn numbering is global (not
+per-session), which is correct. Entity extraction is weak (see Phase 3).
 
 ### `agent-kg-query`
-**Rating: 4/5** (post-fix)
-
-After fixing the cosine metric, scores are real and well-differentiated:
-
-| Query | Top score | Top result |
-|---|---|---|
-| `"MCP server architecture"` | 0.595 | Exact matching turn ✓ |
-| `"session boundary detection"` | 0.810 | "session boundaries" topic ✓ |
-| `"pruning summarization"` | 0.568 | Pruning turn ✓ |
-| `"error handling"` | 0.362 | Topic noise (no matching turn) — expected |
-| `"docstring style preference"` | 0.216 | No matching turn in graph — expected |
-
-Relevant queries return scores > 0.45. Unrelated queries return < 0.25. The distinction is
-clear and actionable. The `--k` parameter now meaningfully controls how many scored results
-are returned. Remaining gap: topic nodes inflate the result list; a `--kind turn` filter
-option would be useful.
+**Rating: 3/5**
+Strong for precise, topic-rich queries. Top result for "MCP server architecture" scored 0.911
+and was exactly correct. Weaker for broad or preference queries: "error handling" returned
+only topic nodes at scores 0.23–0.45, none of which were turns. "Docstring style preference"
+returned scores 0.19–0.23 — essentially random noise, missing the `:param:` entry in the
+profile entirely. The query tool searches the conversation graph, not the profile graph; there
+is no unified search across both.
 
 ### `agent-kg-assemble`
 **Rating: 4/5**
-
-Produces a clean, token-budgeted Markdown block with three sections: Relevant Past Turns
-(semantically ranked), Active Topics, and Recent Conversation. The format is immediately
-injectable into a system prompt or user turn. Observed ~489 tokens for a 4000-token budget
-with 12 turns — the budget mechanism will matter more at scale. The "Relevant Past Turns"
-section now correctly surfaces the most semantically similar content. The "Recent Conversation"
-section provides recency complement to the semantic section.
-
-### `agent-kg-ingest`
-**Rating: 5/5**
-
-Fast ingestion with detailed per-turn feedback: turn number, role, extracted topics, entities,
-tasks created, profile updates. The extraction pipeline is visible and debuggable. After fixing
-the hook's multiline capture, full prompts are correctly ingested with embeddings. The
-`--no-embed` flag remains available for performance-sensitive workflows with a separate
-consolidate pass.
+Produces well-formatted, token-budgeted context blocks. Token count displayed (~467 tokens).
+Sections for open tasks, relevant past turns, active topics, and recent conversation are
+clearly structured. For "MCP server architecture", the assembled context was excellent.
+For "what did we work on recently", the context included a raw `perform @assessments/...`
+turn and a `/changelog-commit` slash command — noise from hook-captured prompts that are not
+real conversation content. The assembled block would confuse an agent.
 
 ### `agent-kg-snapshot`
 **Rating: 3/5**
-
-Compact JSON files capturing metrics counters: node/edge counts by kind, turn count, session
-count, pruning pass. Human-readable, fast, labeled, and timestamped. Adequate for trend
-tracking and CI health checks. Cannot restore graph state — snapshots are metrics-only, not
-backups. An `--full` flag that exports a SQLite dump alongside the metrics JSON would make
-this a true recovery mechanism.
+Snapshot capture works and is fast. 7 snapshots taken during the assessment session; all
+timestamped and stored as JSON. **Critical limitation**: snapshots store only aggregate
+metrics (counts by kind) — they are not restorable backups. There is no mechanism to diff
+two snapshots or to restore a graph from one. The format is useful for monitoring temporal
+trends but not for recovery.
 
 ### `agent-kg-prune`
-**Rating: 3/5**
+**Rating: 2/5**
+Prune failed with "Not enough cold turns to prune yet" at all window sizes tested (5, 15, 20).
+All 25 turns in the test run belong to the current session. "Cold turns" apparently refers to
+turns from prior closed sessions. This design makes pruning impossible for any repo with a
+single session — including all new projects and any single-uninterrupted-session scenario.
+No documentation explains what "cold" means or how to satisfy the precondition. This is the
+most significant usability gap in the system.
 
-Sliding window mechanics are correct and safe. Attempted prune with `--window 8` on 12 turns
-— correctly reported "Not enough cold turns to prune yet" (only 4 turns outside the window,
-presumably below the minimum batch threshold). This conservative behavior is appropriate.
-Prior assessment run (before wipe) showed prune creating 2 summaries from 11 turns; the
-summary content for low-value turns (IDE artifact and "Session ended.") was unsurprising.
-True quality evaluation requires pruning a graph with substantive turns, which wasn't
-achievable in one session.
+### `agent-kg-onboard` / `agent-kg-mcp`
+Not exercised in this assessment (onboard requires interactive stdin; MCP server is tested
+implicitly via existing hooks).
 
 ---
 
 ## 3. Scorecard
 
 | Dimension | Score | Justification |
-|---|---|---|
-| **Recall Accuracy** | 4/5 | After cosine-metric fix, semantic search correctly ranks the most relevant turns highest. Scores > 0.5 for direct matches, < 0.25 for unrelated. |
-| **Recall Relevance** | 4/5 | Score distribution clearly separates relevant from irrelevant. Topics inflate results but are correctly scored lower than turns for precise queries. |
-| **Extraction Quality** | 3/5 | Topics are meaningful bigrams but include some stopword noise. Intents improved significantly: 0% unknown after taxonomy expansion (was 44%). Entities are clean for proper names; minor noise from CamelCase false positives. |
-| **Profile Utility** | 5/5 | Accurately populated, repo-independent, instantly queryable. Commitments, preferences, expertise, and style are all actionable. |
-| **Prune Safety** | 3/5 | Conservative threshold prevents premature pruning — correct behavior. Full evaluation of summary quality requires more turns than one session provides. |
-| **Efficiency vs. Baseline** | 4/5 | `assemble` produces a well-organized context block superior to raw transcript or manual summaries. Profile alone eliminates user re-introduction across sessions. |
-| **Snapshot Usefulness** | 3/5 | Metrics snapshots are adequate for trend monitoring. Cannot restore graph state. Labeled snapshots with timestamps are a good CI artifact. |
-| **Usability** | 5/5 | CLI flags are consistent and intuitive. Output formats are agent-friendly. Error messages are clear (e.g., "Not enough cold turns"). |
-| **Cross-Session Value** | 4/5 | Profile is excellent across sessions. Semantic search correctly recalls turns from prior conversations within the same repo. True cross-repo recall requires profile query, which works well. |
+|-----------|-------|---------------|
+| **Recall Accuracy** | 4/5 | Precise queries hit correctly (0.911 for "MCP server architecture"). Broad/preference queries miss. |
+| **Recall Relevance** | 3/5 | Scores > 0.5 are meaningful; scores < 0.3 are noise. No clear relevance threshold documented. Query returns mixed turn/topic nodes without distinguishing content relevance from structural co-occurrence. |
+| **Extraction Quality** | 2/5 | Topic bigrams are numerous but noisy; no deduplication of near-synonyms. Entity extraction very sparse (5/25 turns). Profile extraction conflates instructions with preferences. |
+| **Profile Utility** | 3/5 | Profile content is largely correct and genuinely useful. Malformed entries (instruction fragments stored as preferences) reduce trust. Profile is not queryable from `agent-kg-query`. |
+| **Prune Safety** | 1/5 | Prune refused to execute in all test conditions. Cannot assess post-prune recall quality. "Cold turns" constraint undocumented. |
+| **Efficiency vs. Baseline** | 4/5 | For precise recall of past architectural decisions, clearly superior to scrolling context. Assembled context is prompt-ready with zero friction. |
+| **Snapshot Usefulness** | 2/5 | Metrics snapshots are useful for trend tracking only. Not restorable; no diff tool. |
+| **Usability** | 4/5 | CLI is consistent, flags are uniform (`--repo`, `--person`), output is human-readable and Markdown-friendly. Error messages occasionally unhelpful ("Not enough cold turns"). |
+| **Cross-Session Value** | N/A | Only one session existed in this assessment. Cross-session behavior could not be tested. The profile mechanism (repo-independent) is the strongest indicator this works as designed. |
 
-**Overall: 3.9/5**
+**Overall mean (scored dimensions): 2.9 / 5**
 
 ---
 
 ## 4. Comparison to Default Workflow
 
-Without AgentKG, long-running agent workflows depend on:
-1. **In-context history** — truncates at the context window; everything prior is invisible.
-2. **Manual summaries** — static, require human authorship, can't be semantically queried.
-3. **Re-reading transcripts** — not automatable; no relevance ranking.
+**Without AgentKG**, an agent working in this repo depends on:
+1. In-context history — truncates at context window limits; loses everything on reset
+2. Manual summaries in CLAUDE.md — static; requires human maintenance; no semantic search
+3. Re-reading files on every session — slow; misses conversation-level context
 
-AgentKG improves on all three:
+**With AgentKG**, the agent can:
+- Retrieve architecturally relevant turns from past sessions in < 200ms via `assemble`
+- Access a persistent user profile with commitments and preferences without re-prompting
+- See open tasks without reading todo files
 
-- **Profile** is the clearest win: accurate user preferences, commitments, and expertise are
-  available from turn 0 of any new session — no re-introduction required.
-- **`assemble`** outperforms "last N turns" by ranking turns semantically. For a query about
-  "MCP server architecture," it surfaces the relevant Q&A pair even if those turns are many
-  sessions old and far outside the context window.
-- **`query`** with meaningful scores enables an agent to decide whether the KG has relevant
-  context (score > 0.4) or not (score < 0.2) rather than blindly injecting all past turns.
+**Net delta for precise recall queries:** High. The MCP server architecture context block would
+have taken 3-5 minutes to reconstruct manually; AgentKG returned it in 1 second.
 
-The remaining gap vs. baseline: a user must trust that the NLP pipeline captured the key
-concepts from each turn. If a turn is ingested but its topics/entities are noisy, recall
-degrades gracefully (the vector is still there) rather than catastrophically.
+**Net delta for broad/preference queries:** Low to negative. "What did we work on recently"
+returned noise-contaminated output. Profile queries require direct `agent-kg-profile` invocation,
+not the conversational `query` interface. An agent using only `assemble` for preference recall
+would get wrong answers.
+
+**Recommendation for an agent workflow**: Use `agent-kg-assemble` for precise topic retrieval
+and `agent-kg-profile` for preference/commitment retrieval — treat them as separate tools
+with complementary scopes.
 
 ---
 
 ## 5. Extraction Quality Analysis
 
-### Topics
-The topic extractor generates bigrams from turn text using spaCy noun chunks (preferred) or
-keyword heuristics (fallback). Quality is mixed:
+### Topics (Bigrams)
 
-**Good**: `architecture server`, `session boundaries`, `session management`, `pruning compresses`,
-`summary nodes`, `sentence transformers` — these are semantically meaningful and would be
-useful for graph navigation.
+The topic extractor produces contiguous 2-grams from turn text. In 25 turns, 112 topic nodes
+were created. Quality assessment:
 
-**Noisy**: `just using`, `into question`, `different from` — content-free bigrams that add
-nodes without value.
+**Useful topics** (semantically meaningful):
+- `architecture server`, `uses fastmcp`, `semantic search`, `session management`,
+  `sqlite lancedb`, `sentence transformers`, `pruning compresses`, `design goals`
 
-**Recommendation**: Apply a minimum-score filter using spaCy dependency tags to exclude
-bigrams whose both tokens are non-content (DET, ADP, AUX, CONJ). This would remove the
-noise class without touching the good bigrams.
+**Noisy topics** (stopword-dominant or too generic):
+- `module`, `query`, `repo`, `fix`, `memory`, `pipeline`, `error` — single words
+- `metadata while`, `into batches`, `different from`, `just using` — function words
+- `does agentkg`, `agentkg handle`, `agentkg provides`, `available agentkg` — undeduped variants
 
-### Entities
-4 entities for 12 turns (0.33/turn) — appropriate density.
-- `FastMCP`, `LanceDB`, `SQLite`, `AgentKG` — correctly extracted proper names, all useful.
-- No file-path or stopword false positives observed in this clean-graph run.
-- The `_NOISY_PATH_PREFIXES` filter in `entities.py` correctly blocks `/Users/` paths.
+**Deduplication**: None observed. "AgentKG" appears as the second token in at least 4 distinct
+topic nodes that all mean "something about AgentKG". A bigram index with TF-IDF pruning and
+lemmatization would reduce noise significantly.
+
+### Entities (Named Entities)
+
+5 entities across 25 turns: `AgentKG`, `AssessmentProtocol_AgentKG`, `FastMCP`, `LanceDB`,
+`SQLite`. Notable misses:
+- `spaCy`, `sentence-transformers`, `claude-haiku` (all mentioned in turns)
+- `graph.py`, `mcp_server.py` (file entities)
+- `egs`, `Eric` (person entities)
+- `UUID` (technical term repeatedly used)
+
+The entity extractor appears to be limited to proper-noun NER only, missing technical compound
+terms, file names, and person names. This gap materially limits the usefulness of the graph
+structure for technical conversations.
 
 ### Intents
-After taxonomy expansion:
-- `question`: 6 (50%) ✓ — all turns are genuine questions
-- `context`: 5 (42%) ✓ — assistant turns with explanatory content correctly classified
-- `task`: 1 (8%) ✓ — the "session management is the core" turn has a task-adjacent framing
 
-**0% unknown** — the expanded taxonomy eliminated the unknown category entirely for this
-conversation corpus. The new `instruction`, `code_request`, and `bug_report` patterns are
-ready for when those turn types appear.
+Distribution across 23 turns: question (10), context (8), unknown (2), task (1),
+instruction (1), bug_report (1). No `request` or `code_request` classified.
+
+For a Q&A-style conversation about architecture, `question` and `context` are the dominant
+correct classifications. The 2 `unknown` classifications deserve investigation but are minor.
+Intent quality is acceptable for this conversation type.
 
 ---
 
 ## 6. Strengths
 
-1. **Semantic search works correctly** — after the cosine-metric fix, scores are real,
-   well-calibrated, and clearly distinguish relevant from irrelevant results.
+1. **Precise semantic recall works well.** Top-1 result for an exact-match architectural query
+   scored 0.911 with correct content. The hybrid SQL + vector search is the right architecture
+   for this problem.
 
-2. **User Profile** — repo-independent, accurately populated, instantly injectable. The schema
-   (preference, commitment, expertise, interest, style, context) covers what matters for a
-   coding assistant.
+2. **`assemble` output is agent-ready.** Token budget respected, sections clearly delineated,
+   open tasks surfaced, relevant + recent turns both included. This is immediately usable as
+   a prompt prefix without post-processing.
 
-3. **`assemble` format** — structured context block with semantic + recency sections is
-   well-designed for prompt injection. Better than raw history paste.
+3. **User profile is repo-independent and persistent.** The global profile at
+   `~/.kgrag/profiles/<person_id>/` accumulates commitments and preferences across all
+   projects. This is the strongest cross-session signal in the system. 16 profile nodes
+   observed, covering commitments, preferences, expertise, interests, and style.
 
-4. **CLI ergonomics** — consistent `--repo`/`--person` flags, informative feedback per
-   command, agent-friendly output formats.
+4. **CLI is ergonomic and consistent.** All commands share `--repo` and `--person` flags.
+   Auto-detection via `$(git rev-parse --show-toplevel)` works reliably. Output is clean
+   Markdown that pipes into reports. Startup latency is low.
 
-5. **Ingest transparency** — per-turn extraction feedback makes the pipeline debuggable.
-
-6. **Conservative pruning** — refuses to prune below the minimum batch size. Won't silently
-   destroy context.
-
-7. **Taxonomy extensibility** — `IntentCategory` StrEnum + two-stage pipeline made it
-   straightforward to add four new categories with targeted regex patterns.
+5. **Snapshot mechanism provides audit trail.** Even as metrics-only, the JSON timestamps
+   give a temporal record of graph growth that is useful for monitoring.
 
 ---
 
 ## 7. Weaknesses & Suggestions
 
-### High: Session Ghost Rows
-**Problem**: Many sessions have 0 turns from hook misfires or boundary over-sensitivity.
-**Fix**: Create session records only on first turn ingestion, not on instantiation.
+### W1: Topic extraction is noisy and undeduped
+**Problem:** 112 bigrams from 25 turns includes many stopword-adjacent and near-duplicate
+entries. No lemmatization or deduplication.
+**Suggestion:** Apply TF-IDF filtering to remove low-information bigrams. Normalize to
+lowercase + lemmatized form before storing. Use a minimum frequency or entropy threshold
+before creating a topic node.
 
-### Medium: Topic Noise
-**Problem**: Some content-free bigrams (`just using`, `different from`) generate topic nodes.
-**Fix**: Filter bigrams where both tokens have non-content POS tags (DET, ADP, CONJ, AUX).
+### W2: Entity extraction too narrow
+**Problem:** Only capitalized proper nouns are captured. File names, model names, technical
+compounds, and person names are missed.
+**Suggestion:** Expand the NER pipeline to include: (a) spaCy `ORG`/`PRODUCT`/`PERSON`
+labels, (b) regex for `*.py` file references, (c) model/package names matching
+`[a-z]+-[a-z]+` pattern (e.g., `sentence-transformers`, `claude-haiku`).
 
-### Medium: Snapshots Are Metrics-Only
-**Problem**: Cannot restore graph state from snapshots.
-**Fix**: Add `--full` flag that appends a gzip-compressed SQLite dump to the snapshot
-directory alongside the metrics JSON.
+### W3: Prune requires "cold turns" — undocumented and un-triggerable in single sessions
+**Problem:** `agent-kg-prune` silently fails when all turns are in the current session, with
+an unhelpful message. No documentation defines "cold turns" or explains the precondition.
+**Suggestion:** (a) Document the cold-turn requirement clearly in `--help` output and the
+README. (b) Add a `--force` flag that allows pruning the current session. (c) Consider
+auto-closing the prior session on `agent-kg-stats` first-run in a new session.
 
-### Medium: Stats Missing Embedding Coverage
-**Problem**: No visibility into LanceDB row count vs. SQLite turn count. The cosine-metric
-bug was invisible from stats output.
-**Fix**: Add `Embeddings: N/M turns (K%)` line to `agent-kg-stats` output.
+### W4: Snapshot is metrics-only — not restorable
+**Problem:** Snapshots store count aggregates only. There is no mechanism to restore a graph
+from a snapshot.
+**Suggestion:** Add an `--full` mode to `agent-kg-snapshot` that serializes all nodes/edges
+to JSON (or a compressed SQLite dump). Add `agent-kg-restore --snapshot <file>` as a
+companion command.
 
-### Low: No Turn-Only Filter in Query
-**Problem**: Topic nodes rank alongside turn nodes in results, diluting precision for
-targeted recall.
-**Fix**: Add `--kind turn` flag to `agent-kg-query` and `agent-kg-assemble` to restrict
-to turn nodes when precision is more important than coverage.
+### W5: Profile extraction conflates instructions with preferences
+**Problem:** Turn-level instruction text (e.g., "fix the hooks first") is stored as a
+preference node. Slash commands (`/changelog-commit`) are stored as conversation turns.
+**Suggestion:** Pre-filter ingested text: skip turns that start with `/` (CLI commands),
+`<ide_opened_file>` (IDE context injections), or match known Claude Code hook patterns.
+Tighten the preference classifier to require explicit first-person preference markers
+("I prefer", "I like", "my style is").
 
-### Low: Analyze Missing Intent Distribution
-**Problem**: `agent-kg-analyze` doesn't show intent distribution, which is the primary
-pipeline health signal.
-**Fix**: Add an "Intent Distribution" section to the analysis report.
+### W6: Query does not search profile nodes
+**Problem:** `agent-kg-query "docstring style"` returns nothing about `:param:` style despite
+it being in the profile. The query and profile stores are separate.
+**Suggestion:** Add a `--include-profile` flag to `agent-kg-query` (and `assemble`) that
+also searches profile nodes and merges results, ranked by relevance.
 
 ---
 
 ## 8. Overall Verdict
 
-**Would you recommend AgentKG?** Yes — with the two bugs now fixed and the taxonomy expanded,
-AgentKG is a practical memory layer for agent workflows.
+**Recommended for:** AI coding assistants working across multiple sessions in a single repo,
+especially where the user has established preferences, commitments, and architectural decisions
+that are expensive to re-derive from context. The strongest use case is rapid retrieval of
+past architectural discussions and standing user preferences (via profile).
 
-**For what use cases?**
-- **Power users with established profiles**: The profile feature alone is worth deploying.
-  Preferences, commitments, and expertise are correctly captured and immediately available
-  in every new session.
-- **Long-running projects**: When conversation history exceeds the context window, the
-  `assemble` command provides semantically-ranked context injection that beats manual
-  summaries.
-- **Multi-repo workflows**: The repo-independent profile means the same user context travels
-  across all projects without re-onboarding.
+**Not yet recommended for:** Agents that rely on broad/preference semantic search, single-
+session workflows, or any scenario requiring graph pruning or point-in-time restoration.
 
-**What was fixed during this assessment:**
-1. Hook multiline capture (`read -r p` → `PROMPT=$(jq -r '.prompt')`)
-2. LanceDB distance metric (`L2` → `cosine` via `.metric("cosine")`)
-3. Intent taxonomy (added `instruction`, `code_request`, `bug_report`, `task`)
+**Would I use AgentKG in my own workflow?** Yes, for the `assemble` + `profile` combination.
+The 1-second retrieval of a correct architectural context block is a qualitative improvement
+over manual context management. The rough edges are addressable with targeted engineering.
 
-**What remains to improve:** session ghost rows, topic noise, metrics-only snapshots, stats
-embedding coverage, turn-only query filter.
+**Final rating: 3.0 / 5**
 
-**Final rating: 4/5** — The architecture is right, the profile is excellent, and semantic
-search now works correctly. The remaining issues are enhancements, not blockers.
+The foundation is solid and the core value proposition is proven for precise recall. Extraction
+quality and pruning ergonomics need work before this is production-ready for general-purpose
+agent memory.
+
+---
+
+*Assessment conducted by claude-sonnet-4-6 on 2026-04-05 per AgentKG Assessment Protocol v1.*

@@ -30,6 +30,38 @@ _XML_TAG = re.compile(r"<[a-zA-Z_][\w_-]*(?:\s[^>]*)?>.*?</[a-zA-Z_][\w_-]*>", r
 _SELF_CLOSING_TAG = re.compile(r"<[a-zA-Z_][\w_-]*(?:\s[^>]*)?/>")
 _SESSION_SENTINEL = re.compile(r"^\s*Session ended\.\s*$", re.MULTILINE)
 
+# Slash commands (e.g. /changelog-commit) start with / followed by a word character.
+_SLASH_COMMAND = re.compile(r"^\s*/\w")
+
+# Minimum characters required after XML tag stripping to be worth ingesting.
+# Set to 2 to catch truly empty turns (pure system-tag content) without
+# rejecting any short but valid turn like "Hi." or "OK".
+_MIN_CONTENT_CHARS = 2
+
+
+def _should_skip_turn(text: str) -> bool:
+    """Return True if this turn should be silently skipped at ingest time.
+
+    Turns that are noise from the Claude Code harness — slash commands,
+    near-empty turns after tag stripping, session sentinels — pollute the
+    graph with unhelpful nodes and degrade search quality.
+
+    :param text: Raw turn text (before any cleaning).
+    :return: True if the turn should not be ingested.
+    """
+    # Skip slash commands (e.g. /changelog-commit, /release)
+    if _SLASH_COMMAND.match(text):
+        return True
+    # Skip session-end sentinels
+    if _SESSION_SENTINEL.match(text):
+        return True
+    # Skip turns that are effectively empty after stripping XML tags
+    stripped = _XML_TAG.sub("", text)
+    stripped = _SELF_CLOSING_TAG.sub("", stripped).strip()
+    if len(stripped) < _MIN_CONTENT_CHARS:
+        return True
+    return False
+
 
 def _clean_for_nlp(text: str) -> str:
     """Strip system/IDE context tags before NLP processing.
@@ -107,8 +139,11 @@ class IngestResult:
         self.task_nodes: list[Node] = []
         self.edges_created: int = 0
         self.profile_updates: list[dict[str, Any]] = []
+        self.skipped: bool = False
 
     def __repr__(self) -> str:
+        if self.skipped:
+            return "IngestResult(skipped=True)"
         return (
             f"IngestResult(topics={len(self.topic_nodes)}, "
             f"entities={len(self.entity_nodes)}, tasks={len(self.task_nodes)}, "
@@ -137,6 +172,12 @@ def ingest_turn(
     :return: :class:`IngestResult` with all created/merged nodes.
     """
     result = IngestResult()
+
+    # Skip noise turns (slash commands, empty-after-stripping, session sentinels)
+    if _should_skip_turn(text):
+        result.skipped = True
+        return result
+
     now = datetime.now(UTC)
     turn_idx = session.next_turn_index()
 

@@ -74,6 +74,10 @@ def ingest(
     """Add a turn to the conversation graph."""
     kg = _resolve_kg(repo, person, session)
     result = kg.ingest(text=text, role=role, embed=not no_embed)
+    if result.skipped:
+        click.echo("Turn skipped (slash command, empty, or system-only content).")
+        kg.close()
+        return
     click.echo(f"Ingested turn #{kg.session.turn_count - 1} (role={role})")
     click.echo(f"  Topics: {[t.label for t in result.topic_nodes]}")
     click.echo(f"  Entities: {[e.label for e in result.entity_nodes]}")
@@ -92,18 +96,43 @@ def ingest(
     show_default=True,
     help=_PERSON_HELP,
 )
-def query(query_text: str, k: int, repo: str, person: str) -> None:
-    """Semantic search over the conversation graph."""
+@click.option(
+    "--include-profile",
+    is_flag=True,
+    help="Also search profile nodes (preferences, commitments, expertise, style).",
+)
+def query(query_text: str, k: int, repo: str, person: str, include_profile: bool) -> None:
+    """Semantic search over the conversation graph.
+
+    Use --include-profile to also search the global UserProfile (preferences,
+    commitments, expertise, style).  Profile hits are ranked by keyword overlap
+    and labelled with [preference], [commitment], etc.
+    """
     kg = _resolve_kg(repo, person, None)
     hits = kg.query(query_text, k=k)
+
+    if include_profile:
+        profile_hits = kg.profile.search(query_text, k=k)
+        # Merge and re-sort by score; deduplicate by node_id
+        seen: set[str] = {h["node_id"] for h in hits}
+        for ph in profile_hits:
+            if ph["node_id"] not in seen:
+                hits.append(ph)
+                seen.add(ph["node_id"])
+        hits.sort(key=lambda h: h.get("score", 0.0), reverse=True)
+        hits = hits[:k]
+
     if not hits:
         click.echo("No results found.")
+        kg.close()
         return
     for i, h in enumerate(hits, 1):
         score = h.get("score", 0.0)
         kind = h.get("kind", "?")
+        source = h.get("source", "")
+        source_tag = f" [{source}]" if source == "profile" else ""
         text = h.get("text", "")[:120]
-        click.echo(f"{i:2}. [{kind}] (score={score:.3f}) {text}")
+        click.echo(f"{i:2}. [{kind}]{source_tag} (score={score:.3f}) {text}")
     kg.close()
 
 
@@ -138,11 +167,28 @@ def assemble(query_text: str, budget: int, repo: str, person: str, session: str 
     help=_PERSON_HELP,
 )
 @click.option("--session", default=None, help="Session UUID.")
-def prune_cmd(window: int, repo: str, person: str, session: str | None) -> None:
-    """Run KG Context Pruning — compress old turns into Summary nodes."""
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Skip the readiness check and prune even if turns are in the current session.",
+)
+def prune_cmd(window: int, repo: str, person: str, session: str | None, force: bool) -> None:
+    """Run KG Context Pruning — compress old turns into Summary nodes.
+
+    By default, only turns from completed (closed) sessions are eligible for
+    pruning — these are called "cold turns".  If all your turns are in the
+    current session, use --force to prune anyway.
+    """
     kg = _resolve_kg(repo, person, session)
-    if not kg.should_prune():
-        click.echo("Not enough cold turns to prune yet.")
+    if not force and not kg.should_prune():
+        all_turns = kg._store.get_all_turns()
+        cold_count = max(0, len(all_turns) - window)
+        click.echo(
+            f"Not enough cold turns to prune yet "
+            f"({cold_count} cold, need {3 * 2} minimum from completed sessions).\n"
+            "Use --force to prune the current session anyway, "
+            "or --window to reduce the hot window."
+        )
         kg.close()
         return
     report = kg.prune(window=window)

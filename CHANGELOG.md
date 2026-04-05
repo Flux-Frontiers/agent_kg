@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`agent-kg query --include-profile` flag** — merges keyword-searched profile
+  nodes (preferences, commitments, expertise, style) into semantic query results;
+  profile hits are ranked by word-overlap × confidence and tagged with their node
+  kind and `[profile]` source label in the output
+- **`agent-kg prune --force` flag** — bypasses the `should_prune()` readiness check
+  so pruning can be triggered on single-session graphs where all turns are "hot"
+- **`_should_skip_turn()` in `ingest.py`** — silently drops noise turns before graph
+  insertion: slash commands (`/changelog-commit`, `/release`, etc.), session-end
+  sentinels (`"Session ended."`), and turns whose content is entirely XML system tags
+  (< 2 characters after stripping `<ide_opened_file>` / `<system-reminder>` markup)
+- **`UserProfileStore.search()` in `profile.py`** — keyword search over profile nodes
+  that matches query words against `kind + label + text`; returns scored hit dicts
+  compatible with the conversation-graph hit format for unified display
+- **`IngestResult.skipped` field** — set to `True` when a turn is filtered by
+  `_should_skip_turn()`; CLI reports `"Turn skipped ..."` instead of fabricating
+  node-count output for no-op ingestions
+- **`assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-05.md`** — complete
+  re-assessment (3.0/5) conducted against the current build; documents the three
+  highest-impact gaps (noise ingestion, prune ergonomics, profile query isolation)
+  that motivated the fixes above
+
+### Fixed
+
+- **`agent-kg prune` unhelpful error message** — "Not enough cold turns to prune yet"
+  now includes the actual cold-turn count, the minimum required, and guidance to use
+  `--force` or `--window` to satisfy the precondition
+- **Hook noise pollution** — slash commands and `<ide_opened_file>` turns ingested
+  by the `UserPromptSubmit` hook no longer create topic/entity/intent nodes in the
+  graph, eliminating bigram noise like `"perform assessments"` and `"changelog commit"`
+
+### Changed
+
+- **`assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md`** removed —
+  superseded by the 2026-04-05 assessment which covers the same build state with a
+  more rigorous protocol and complete phase coverage
+
 - **`agent-kg viz` command** — visualize the conversation graph and/or UserProfile
   tree as Rich terminal trees, interactive pyvis HTML, or a full Streamlit browser
   explorer (`agent-kg viz --serve`); supports `--agent`, `--profile`, `--html`,
