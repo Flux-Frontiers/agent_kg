@@ -9,13 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`agent-kg viz` command** — visualize the conversation graph and/or UserProfile
+  tree as Rich terminal trees, interactive pyvis HTML, or a full Streamlit browser
+  explorer (`agent-kg viz --serve`); supports `--agent`, `--profile`, `--html`,
+  `--out`, and `--port` flags
+- **`src/agent_kg/app.py` — Streamlit Explorer** — three-tab browser UI (Agent
+  Graph, Profile Graph, Stats) backed by pyvis interactive network graphs; loads
+  directly from SQLite without any external server
+- **`src/agent_kg/viz.py` — visualization helpers** — `build_agent_html()`,
+  `build_profile_html()`, `render_agent_tree_rich()`, `render_profile_tree_rich()`,
+  and `write_html()` extracted into a dedicated module for reuse by both CLI and app
+- **`agent-kg wipe` command** — safely erase the local conversation graph
+  (`--local`) and/or the global user profile (`--global`) with a confirmation
+  prompt; `--yes` skips the prompt for scripted use
+- **`viz` extras group** — `pyvis` (≥0.3.2) and `streamlit` (≥1.35.0) as optional
+  dependencies; install with `pip install "agent-kg[viz]"`
+- **`kgrag` extras group** — `code-kg` and `doc-kg` moved from required to optional;
+  install with `pip install "agent-kg[kgrag]"`
+- **`[tool.codekg]` and `[tool.dockg]` config sections** in `pyproject.toml` — sets
+  `include = ["src"]` for CodeKG and standard `exclude` patterns for DocKG
+- **`analysis/agent_kg_analysis_20260405.md`** — second CodeKG architectural
+  analysis with updated metrics (3 973 nodes, 5 044 edges, 90.3% docstring coverage,
+  grade B/80)
+- **`assessments/AssessmentProtocol_AgentKG.md`** — reproducible assessment
+  protocol covering orientation, semantic recall, profile, prune, comparison to
+  baseline, and extraction quality analysis phases
+- **`assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md`** — initial
+  assessment (3.1/5) identifying the two critical bugs: hook multiline capture and
+  LanceDB distance metric
+- **`assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-05.md`** — follow-up
+  assessment (4/5) after bug fixes; confirms semantic scores now range 0.50–0.81 for
+  relevant queries and < 0.25 for unrelated queries
+- **`docs/cheatsheet.md`** — quick-reference card for common CLI workflows
+- **New CLI entrypoints** — `agent-kg-wipe` and `agent-kg-viz` registered in
+  `[tool.poetry.scripts]`
+
+### Fixed
+
+- **Hook — multiline prompt capture** (`read -r p` captured only the first line of
+  multi-line prompts); replaced with `PROMPT=$(jq -r '.prompt')` so the full prompt
+  text is always ingested and embedded correctly
+- **`store.py` — LanceDB cosine metric** (default L2 metric on normalized vectors
+  caused `score = 1 − L2_distance` to clamp near 0 for all but the closest match);
+  added `.metric("cosine")` to the vector search call — scores now range 0.50–0.81
+  for relevant content vs. < 0.25 for unrelated queries
 - **Unit test suite (169 tests, 0 failures)** across 8 modules with no external
   dependency requirements: `test_schema`, `test_nlp`, `test_store`, `test_session`,
   `test_profile`, `test_snapshots`, `test_ingest` (SQLite-only via `embed=False`),
   and `test_consolidate`
-
-### Fixed
-
 - **`mcp/server.py` — MCP startup crash** (`asyncio.run(stdio_server(app))` passed
   an async-generator context manager where a coroutine was expected); replaced with
   a proper `_serve()` async function using `async with stdio_server() as (r, w)`
@@ -27,6 +68,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`--person` default** changed from the literal string `"default"` to
+  `getpass.getuser()` (the OS login name) across all CLI commands — eliminates the
+  most common misconfiguration on single-user machines
+- **Session-end hook** changed from ingesting a `"Session ended."` turn to running
+  `agent-kg snapshot --label "session-end"` — avoids polluting the graph with
+  synthetic turns and captures a clean point-in-time snapshot instead
+- **`spacy`** promoted from optional to a required dependency (was `optional = true`)
+- **`code-kg` and `doc-kg`** demoted to optional (`kgrag` extras group) — most users
+  do not need the full KG stack for basic conversational memory
+- **`all` extras** updated to include `pyvis`, `streamlit`, `code-kg`, and `doc-kg`
+- **`nlp/intent.py` — expanded intent taxonomy** with four coding-assistant-specific
+  categories: `instruction`, `code_request`, `bug_report`, and `task`; reduced
+  `unknown` classification from 44% to 0% in test corpus
 - **`store.py` / `index.py` — extracted shared `_make_node_schema()`** helper to
   eliminate the duplicated `pa.schema([...])` block that existed in both modules;
   `index.py` now imports `_make_node_schema` and `_EMBED_DIM` from `store`
@@ -36,6 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`store.py` / `index.py` — suppressed lancedb `table_names()` deprecation
   warning** with a `warnings.catch_warnings()` guard at each call site while the
   lancedb API stabilises
+- **`docs/structural_importance.md`** removed — superseded by the CodeKG analysis
+  reports in `analysis/`
 
 ## [0.2.0] - 2026-04-04
 

@@ -31,13 +31,31 @@ class Session:
         self._start_time = datetime.now(UTC)
 
     @classmethod
-    def open(cls, store: AgentKGStore, session_id: str | None = None) -> Session:
+    def open(
+        cls,
+        store: AgentKGStore,
+        session_id: str | None = None,
+        resume_window_hours: float = 4.0,
+    ) -> Session:
         """Open a new session or resume an existing one.
 
+        When ``session_id`` is ``None`` (the default for CLI hook invocations),
+        this method first checks for the most recent session started within
+        ``resume_window_hours``.  If found, it resumes that session instead of
+        creating a new UUID — preventing the per-hook session fragmentation that
+        makes cross-session recall useless.
+
         :param store: The backing store.
-        :param session_id: If given, resumes this session; else creates a new UUID.
+        :param session_id: If given, resumes this exact session UUID.
+        :param resume_window_hours: Look-back window for automatic session resumption.
         :return: A :class:`Session` instance.
         """
+        if session_id is None:
+            # Try to resume the most recent session within the time window.
+            recent = store.latest_open_session(within_hours=resume_window_hours)
+            if recent:
+                session_id = recent["id"]
+
         sid = session_id or str(uuid.uuid4())
         existing = store.get_session(sid)
         sess = cls(sid, store)

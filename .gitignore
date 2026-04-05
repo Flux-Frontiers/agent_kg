@@ -230,13 +230,6 @@ cython_debug/
 .dockg/graph.sqlite*
 .dockg/models
 
-# DiaryKG
-# DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
-.diarykg/lancedb/
-.diarykg/lancedb-*
-.diarykg/graph.sqlite
-.diarykg/graph.sqlite*
-.diarykg/models
 
 # Local MCP configuration (contains absolute paths)
 .mcp.json

@@ -23,19 +23,23 @@ torch = ">=2.5.1"
 click = ">=8.1.0"
 mcp = ">=1.0.0"
 rich = "^14.0.0"
-spacy = { version = ">=3.7.0", optional = true }
+spacy = { version = ">=3.7.0"}
 anthropic = { version = ">=0.25.0", optional = true }
 httpx = { version = ">=0.27.0", optional = true }
+pyvis = { version = ">=0.3.2", optional = true }
+streamlit = { version = ">=1.35.0", optional = true }
 
-code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git"}
-doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git"}
+code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git", optional=true}
+doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git", optional=true}
 
 
 [tool.poetry.extras]
 nlp = ["spacy"]
 llm = ["anthropic"]
 local = ["httpx"]
-all = ["spacy", "anthropic", "httpx"]
+viz = ["pyvis", "streamlit"]
+kgrag = ["code-kg", "doc-kg"]
+all = ["anthropic", "httpx", "pyvis", "streamlit", "code-kg", "doc-kg"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"
@@ -58,6 +62,8 @@ agent-kg-sessions = "agent_kg.cli.main:sessions"
 agent-kg-snapshot = "agent_kg.cli.main:snapshot"
 agent-kg-onboard  = "agent_kg.cli.main:onboard"
 agent-kg-profile  = "agent_kg.cli.main:profile"
+agent-kg-wipe     = "agent_kg.cli.main:wipe"
+agent-kg-viz      = "agent_kg.cli.main:viz"
 
 [tool.ruff]
 line-length = 100
@@ -112,3 +118,29 @@ disable = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+
+[tool.codekg]
+# Directories to include in the knowledge graph build and analysis.
+# When unset, all directories are indexed.
+include = ["src"]
+# Directories to exclude at every depth during the file walk.
+# Combined with the built-in SKIP_DIRS (.git, .venv, __pycache__, etc.).
+# exclude = ["tests", "benchmarks"]
+
+[tool.dockg]
+# Exclude directories from the knowledge graph by default.
+exclude = ["bundles", "dist", "books"]
+
+[tool.poe.tasks.docs]
+help = "Generate project documentation and user guide PDFs"
+sequence = [
+  { shell = "cd src && pdoc --o ../docs --logo ./logo.png kgrag_kg" },
+]
+
+[tool.poe.tasks.wiki]
+help = "Generate and publish GitHub wiki from docs/"
+cmd = "python scripts/generate_wiki.py"
+
+[tool.poe.tasks.wiki-preview]
+help = "Preview wiki generation without publishing"
+cmd = "python scripts/generate_wiki.py --dry-run"

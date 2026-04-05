@@ -24,6 +24,30 @@ from typing import TYPE_CHECKING, Any
 from agent_kg.nlp import classify_intent, extract_entities, extract_preferences, extract_topics
 from agent_kg.schema import Edge, EdgeRelation, Node, NodeKind, TaskStatus
 
+# Tags injected by Claude Code (IDE context, system reminders, hook markers) that
+# should be stripped from text before NLP to prevent topic/entity pollution.
+_XML_TAG = re.compile(r"<[a-zA-Z_][\w_-]*(?:\s[^>]*)?>.*?</[a-zA-Z_][\w_-]*>", re.DOTALL)
+_SELF_CLOSING_TAG = re.compile(r"<[a-zA-Z_][\w_-]*(?:\s[^>]*)?/>")
+_SESSION_SENTINEL = re.compile(r"^\s*Session ended\.\s*$", re.MULTILINE)
+
+
+def _clean_for_nlp(text: str) -> str:
+    """Strip system/IDE context tags before NLP processing.
+
+    Removes ``<ide_opened_file>``, ``<system-reminder>``, and other
+    XML-like tags injected by the Claude Code harness, as well as
+    session-end sentinel lines.  The raw ``text`` is still stored on the
+    Turn node; only NLP extraction runs on the cleaned version.
+
+    :param text: Raw turn text, potentially containing system tags.
+    :return: Cleaned text suitable for intent/topic/entity extraction.
+    """
+    cleaned = _XML_TAG.sub(" ", text)
+    cleaned = _SELF_CLOSING_TAG.sub(" ", cleaned)
+    cleaned = _SESSION_SENTINEL.sub(" ", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 if TYPE_CHECKING:
     from agent_kg.session import Session
     from agent_kg.store import AgentKGStore
@@ -116,6 +140,9 @@ def ingest_turn(
     now = datetime.now(UTC)
     turn_idx = session.next_turn_index()
 
+    # Clean text for NLP (strips IDE/system tags); raw text kept on Turn node.
+    nlp_text = _clean_for_nlp(text)
+
     # ------------------------------------------------------------------
     # 1. Create Turn node
     # ------------------------------------------------------------------
@@ -153,7 +180,7 @@ def ingest_turn(
     # ------------------------------------------------------------------
     # 3. Intent classification
     # ------------------------------------------------------------------
-    category = classify_intent(text)
+    category = classify_intent(nlp_text)
     intent_node = Node(
         kind=NodeKind.INTENT,
         label=str(category),
@@ -175,7 +202,7 @@ def ingest_turn(
     # ------------------------------------------------------------------
     # 4. Topic extraction + dedup
     # ------------------------------------------------------------------
-    topic_labels = extract_topics(text)
+    topic_labels = extract_topics(nlp_text)
     for label in topic_labels:
         # Try to merge with existing topic
         existing = store.find_similar_node(label, NodeKind.TOPIC, threshold=0.88)
@@ -206,7 +233,7 @@ def ingest_turn(
     # ------------------------------------------------------------------
     # 5. Entity extraction + dedup
     # ------------------------------------------------------------------
-    entities = extract_entities(text)
+    entities = extract_entities(nlp_text)
     for ent in entities:
         label = ent["label"]
         kind_str = ent.get("kind", "concept")
@@ -239,7 +266,7 @@ def ingest_turn(
     # 6. Task extraction (user turns only)
     # ------------------------------------------------------------------
     if role == "user":
-        task_descs = _extract_tasks(text)
+        task_descs = _extract_tasks(nlp_text)
         for desc in task_descs:
             task_node = Node(
                 kind=NodeKind.TASK,
@@ -262,7 +289,7 @@ def ingest_turn(
             result.edges_created += 1
 
     # 6b. Task resolution detection
-    if _looks_like_resolution(text):
+    if _looks_like_resolution(nlp_text):
         open_tasks = store.get_open_tasks()
         for task in open_tasks:
             # Naively resolve the most recent open task
@@ -277,7 +304,7 @@ def ingest_turn(
     # 7. Profile update signals (user turns only)
     # ------------------------------------------------------------------
     if role == "user":
-        prefs = extract_preferences(text)
+        prefs = extract_preferences(nlp_text)
         result.profile_updates = prefs
 
     session.record_turn()

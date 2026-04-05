@@ -8,8 +8,8 @@ Two-stage pipeline:
   Stage 1 — Syntactic signals via spaCy (if available).
   Stage 2 — Regex/keyword heuristics as fallback.
 
-Result is one of: question | request | correction | confirmation |
-                  clarification | context | feedback | unknown
+Result is one of: question | request | instruction | code_request | bug_report | task |
+                  correction | confirmation | clarification | context | feedback | unknown
 """
 
 from __future__ import annotations
@@ -55,6 +55,44 @@ _CLARIFICATION_PATTERNS = [
 _FEEDBACK_PATTERNS = [
     re.compile(
         r"\b(looks?\s+(good|great|nice|bad|wrong)|that\s+(works|worked|helped|didn'?t\s+work)|good\s+job|well\s+done|thanks?|thank\s+you)\b",
+        re.I,
+    ),
+]
+_INSTRUCTION_PATTERNS = [
+    # Direct imperative directives that modify existing state: "get rid of that",
+    # "perform @file", "remove X", "disable Y", "turn off Z"
+    # Excludes add/fix/change/update/replace/set — those are covered by REQUEST_PATTERNS.
+    re.compile(
+        r"^\s*(remove|delete|rename|move|revert|get\s+rid\s+of|"
+        r"perform|apply|switch|enable|disable|turn\s+(on|off))\b",
+        re.I,
+    ),
+]
+_CODE_REQUEST_PATTERNS = [
+    re.compile(
+        r"^\s*(write|implement|build|create|generate|scaffold|code|make\s+a|make\s+me|"
+        r"develop|define|declare|stub|draft)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(write\s+(a|the|some)\s+(function|class|method|test|script|module|handler|"
+        r"endpoint|decorator|schema|migration|query|util|helper))\b",
+        re.I,
+    ),
+]
+_BUG_REPORT_PATTERNS = [
+    re.compile(
+        r"\b(bug|traceback|crash(ed|ing)?|broken|doesn'?t\s+work|not\s+working|"
+        r"wrong\s+output|unexpected\s+(behavior|result|output)|raises?|throws?|"
+        r"AttributeError|TypeError|ValueError|KeyError|"
+        r"ImportError|ModuleNotFoundError|RuntimeError|IndexError|NameError)\b",
+        re.I,
+    ),
+]
+_TASK_PATTERNS = [
+    re.compile(
+        r"\b(todo|to.do|to-do|task|ticket|issue|story|milestone|action\s+item|"
+        r"follow.?up|track|assign|open\s+(an?\s+)?(issue|ticket)|create\s+(an?\s+)?ticket)\b",
         re.I,
     ),
 ]
@@ -134,6 +172,18 @@ def _heuristic_classify(text: str) -> IntentCategory:
     for pattern in _QUESTION_PATTERNS:
         if pattern.search(stripped):
             return IntentCategory.QUESTION
+    for pattern in _BUG_REPORT_PATTERNS:
+        if pattern.search(stripped):
+            return IntentCategory.BUG_REPORT
+    for pattern in _CODE_REQUEST_PATTERNS:
+        if pattern.search(stripped):
+            return IntentCategory.CODE_REQUEST
+    for pattern in _TASK_PATTERNS:
+        if pattern.search(stripped):
+            return IntentCategory.TASK
+    for pattern in _INSTRUCTION_PATTERNS:
+        if pattern.search(stripped):
+            return IntentCategory.INSTRUCTION
     for pattern in _REQUEST_PATTERNS:
         if pattern.search(stripped):
             return IntentCategory.REQUEST

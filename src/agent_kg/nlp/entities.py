@@ -20,8 +20,19 @@ from typing import Any
 # Regex patterns for code-domain entities (used as fallback and supplement)
 _FILE_PATH = re.compile(r"(?:^|[\s\"'`(])([./~][\w./\-]+\.\w{1,6})(?:\s|[\"'`),]|$)")
 _PYTHON_IMPORT = re.compile(r"(?:import|from)\s+([\w.]+)")
-_CAMEL_CLASS = re.compile(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b")
+# Matches mixed-case identifiers: CamelCase (FastMCP, LanceDB, CodeKG),
+# ALL-CAPS-then-lower (SQLite), and classic PascalCase (IngestResult).
+_CAMEL_CLASS = re.compile(
+    r"\b("
+    r"[A-Z][a-z]+[A-Z]\w+"  # CamelCase: FastMCP, LanceDB, AgentKG
+    r"|[A-Z]{2,}[a-z]\w*"  # Acronym-prefix: SQLite, HTTPClient
+    r"|[A-Z][a-z]+(?:[A-Z][a-z]+)+"  # Classic PascalCase: IngestResult
+    r")\b"
+)
 _URL = re.compile(r"https?://[^\s\"'<>]+")
+
+# Absolute path prefixes that are too noisy to be useful entities
+_NOISY_PATH_PREFIXES = ("/Users/", "/home/", "/root/", "/tmp/", "/var/", "/private/")
 
 _SPACY_KIND_MAP = {
     "PERSON": "person",
@@ -84,7 +95,30 @@ _STOP_WORDS = frozenset(
         "these",
         "those",
         "not",
+        # Common filler words that slip through NER
+        "just",
+        "also",
+        "only",
+        "even",
+        "still",
+        "already",
+        "really",
+        "very",
+        "quite",
+        "rather",
+        "too",
+        "so",
+        "then",
+        "than",
+        "when",
+        "where",
+        "there",
+        "here",
+        "now",
+        "yes",
         "no",
+        "ok",
+        "okay",
     }
 )
 
@@ -101,7 +135,7 @@ def _spacy_entities(text: str) -> list[dict[str, Any]]:
         for ent in doc.ents:
             kind = _SPACY_KIND_MAP.get(ent.label_, "concept")
             label = ent.text.strip()
-            if len(label) < 2 or label.lower() in _STOP_WORDS:
+            if len(label) < 3 or label.lower() in _STOP_WORDS:
                 continue
             results.append({"label": label, "kind": kind, "source_text": ent.text})
         return results
@@ -121,15 +155,21 @@ def _regex_entities(text: str) -> list[dict[str, Any]]:
             results.append({"label": label, "kind": kind, "source_text": label})
 
     for m in _FILE_PATH.finditer(text):
-        _add(m.group(1), "file")
+        path = m.group(1)
+        # Skip noisy absolute system paths; keep short relative paths and filenames
+        if any(path.startswith(prefix) for prefix in _NOISY_PATH_PREFIXES):
+            continue
+        _add(path, "file")
     for m in _URL.finditer(text):
         _add(m.group(0)[:100], "url")
     for m in _PYTHON_IMPORT.finditer(text):
-        _add(m.group(1), "package")
+        pkg = m.group(1).split(".")[0]  # top-level package only
+        if len(pkg) >= 3:
+            _add(pkg, "package")
     for m in _CAMEL_CLASS.finditer(text):
         label = m.group(1)
         if len(label) >= 4:
-            _add(label, "function")
+            _add(label, "project")  # CamelCase = class/library name, not function
     return results
 
 

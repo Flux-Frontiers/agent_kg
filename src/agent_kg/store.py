@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -238,8 +239,6 @@ class AgentKGStore:
 
     def update_node_field(self, node_id: str, field: str, value: Any) -> None:
         """Update a single field on an existing node."""
-        from datetime import UTC, datetime  # noqa: PLC0415
-
         db = self._get_db()
         db.execute(
             f"UPDATE nodes SET {field} = ?, updated_at = ? WHERE id = ?",
@@ -266,12 +265,32 @@ class AgentKGStore:
         """Return an existing node of ``kind`` whose embedding is within
         ``threshold`` cosine similarity of ``text``, or None.
 
+        Falls back to exact-label SQLite match when the LanceDB index is
+        empty (e.g. after ``--no-embed`` ingestion), ensuring deduplication
+        works even before the first consolidation pass.
+
         Used for entity/topic deduplication during ingest.
         """
+        # Fast path: exact label match in SQLite (works even with empty LanceDB)
+        row = (
+            self._get_db()
+            .execute(
+                "SELECT * FROM nodes WHERE kind = ?"
+                " AND LOWER(TRIM(label)) = LOWER(TRIM(?)) LIMIT 1",
+                (str(kind), text),
+            )
+            .fetchone()
+        )
+        if row:
+            return Node.from_dict(dict(row))
+
+        # Semantic path: vector similarity via LanceDB
         try:
             tbl = self._get_table()
             vector = self.embed(text)
-            results = tbl.search(vector).where(f"kind = '{kind}'").limit(1).to_list()
+            results = (
+                tbl.search(vector).metric("cosine").where(f"kind = '{kind}'").limit(1).to_list()
+            )
             if not results:
                 return None
             distance = results[0].get("_distance", 1.0)
@@ -336,7 +355,7 @@ class AgentKGStore:
         try:
             tbl = self._get_table()
             vector = self.embed(query)
-            searcher = tbl.search(vector).limit(k * 3)
+            searcher = tbl.search(vector).metric("cosine").limit(k * 3)
             if kind_filter:
                 searcher = searcher.where(f"kind = '{kind_filter}'")
             results = searcher.to_list()
@@ -412,6 +431,32 @@ class AgentKGStore:
         rows = self._get_db().execute("SELECT * FROM sessions ORDER BY start_time").fetchall()
         return [dict(r) for r in rows]
 
+    def latest_open_session(self, within_hours: float = 4.0) -> dict | None:
+        """Return the most recent open session started within ``within_hours``, or None.
+
+        An "open" session has no ``end_time`` recorded (the CLI hook closed it)
+        **or** was started recently enough that the agent is likely still in the
+        same Claude Code session.  This lets the ``ingest`` command resume an
+        existing session rather than fragmenting into a new one on every hook
+        invocation.
+
+        :param within_hours: Only consider sessions started within this many hours.
+        :return: Session dict or None.
+        """
+        cutoff = (datetime.now(UTC) - timedelta(hours=within_hours)).isoformat()
+        row = (
+            self._get_db()
+            .execute(
+                """SELECT * FROM sessions
+               WHERE start_time >= ?
+               ORDER BY start_time DESC
+               LIMIT 1""",
+                (cutoff,),
+            )
+            .fetchone()
+        )
+        return dict(row) if row else None
+
     def increment_session_turns(self, session_id: str) -> None:
         """Atomically increment turn_count for a session."""
         self._get_db().execute(
@@ -472,8 +517,6 @@ class AgentKGStore:
 
 
 def _row_to_edge(r: dict) -> Edge:
-    from datetime import UTC, datetime  # noqa: PLC0415
-
     try:
         relation = EdgeRelation(r["relation"])
     except ValueError:

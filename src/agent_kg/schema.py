@@ -73,6 +73,10 @@ class IntentCategory(StrEnum):
 
     QUESTION = "question"
     REQUEST = "request"
+    INSTRUCTION = "instruction"  # direct directive: "fix X", "change Y to Z", "perform @file"
+    CODE_REQUEST = "code_request"  # explicit request to write/generate/refactor code
+    BUG_REPORT = "bug_report"  # reporting unexpected behavior, errors, or failures
+    TASK = "task"  # assigning a discrete to-do item or work item
     CORRECTION = "correction"
     CONFIRMATION = "confirmation"
     CLARIFICATION = "clarification"

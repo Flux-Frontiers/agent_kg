@@ -1,0 +1,123 @@
+{
+  "key": "9d7a859f5c7e57d64ea79e90481695944ca604ef",
+  "branch": "main",
+  "timestamp": "2026-04-05T01:15:09.447330+00:00",
+  "version": "0.7.0",
+  "metrics": {
+    "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
+    "total_nodes": 1300,
+    "total_edges": 7562,
+    "node_counts": {
+      "chunk": 223,
+      "document": 9,
+      "entity": 395,
+      "keyword": 357,
+      "section": 148,
+      "topic": 168
+    },
+    "edge_counts": {
+      "CONTAINS": 371,
+      "CO_OCCURS_WITH": 5194,
+      "HAS_KEYWORD": 833,
+      "HAS_TOPIC": 222,
+      "MENTIONS_ENTITY": 827,
+      "NEXT": 69,
+      "REFERENCES": 1,
+      "SIMILAR_TO": 45
+    },
+    "meaningful_nodes": 1291,
+    "coverage_score": 0.9133034379671151,
+    "issues_count": 0,
+    "complexity_median": 14.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:CHANGELOG.md:0007",
+      "file_path": "CHANGELOG.md",
+      "label": "Added",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:README.md:0014",
+      "file_path": "README.md",
+      "label": "CLI Reference",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:README.md:0021",
+      "file_path": "README.md",
+      "label": "Node Kinds",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md:0004",
+      "file_path": "assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md",
+      "label": "Tool-by-Tool Evaluation",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md:0007",
+      "file_path": "assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md",
+      "label": "Scorecard",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md:0009",
+      "file_path": "assessments/AgentKG_assessment_claude_sonnet_4_6_2026-04-04.md",
+      "label": "Scorecard",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:assessments/AssessmentProtocol_AgentKG.md:0014",
+      "file_path": "assessments/AssessmentProtocol_AgentKG.md",
+      "label": "Evaluation Criteria",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 15
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0000",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "chunk:0001",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 14
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0013",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 14
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0032",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Query Search Retrieval Semantic",
+      "references": 0,
+      "semantic_links": 14,
+      "total_links": 14
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 626,
+    "edges": 4337,
+    "coverage_delta": -0.033505072671182745,
+    "issues_delta": 0
+  }
+}

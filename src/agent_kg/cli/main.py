@@ -17,19 +17,25 @@ Commands:
   snapshot — Capture a snapshot
   onboard  — Run the UserProfile onboarding interview
   profile  — Show the UserProfile
+  wipe     — Erase local conversation graph and/or global user profile
+  viz      — Visualize agent and/or profile trees (terminal or browser)
 """
 
 from __future__ import annotations
 
+import getpass
 from pathlib import Path
 
 import click
 
 from agent_kg.graph import AgentKG
 
+# Default to the OS login name so --person is never required on a single-user machine.
+_DEFAULT_PERSON = getpass.getuser()
+
 _PERSON_HELP = (
-    "Person ID — profile stored at ~/.kgrag/profiles/<person>/."
-    " Use the same value across all commands."
+    "Person ID — global profile at ~/.kgrag/profiles/<person>/."
+    f" Defaults to your OS username ({_DEFAULT_PERSON})."
 )
 
 
@@ -56,7 +62,7 @@ def cli() -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -82,7 +88,7 @@ def ingest(
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -107,7 +113,7 @@ def query(query_text: str, k: int, repo: str, person: str) -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -127,7 +133,7 @@ def assemble(query_text: str, budget: int, repo: str, person: str, session: str 
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -156,7 +162,7 @@ cli.add_command(prune_cmd, name="prune")
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -180,7 +186,7 @@ def stats(repo: str, person: str) -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -195,7 +201,7 @@ def analyze(repo: str, person: str) -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -222,7 +228,7 @@ def sessions(repo: str, person: str) -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -241,7 +247,7 @@ def snapshot(repo: str, person: str, label: str | None) -> None:
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -263,7 +269,7 @@ def onboard(repo: str, person: str, update: bool, skip_optional: bool) -> None: 
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -377,7 +383,7 @@ def install_hooks(repo: str, force: bool) -> None:
 @cli.command()
 @click.option(
     "--person",
-    default="default",
+    default=_DEFAULT_PERSON,
     show_default=True,
     help=_PERSON_HELP,
 )
@@ -400,6 +406,189 @@ def init(person: str, model: str) -> None:
     _ = st.encode(["warmup"], normalize_embeddings=True)
     click.echo(f"Model ready: {model}")
     click.echo(f"\nAll set. Run 'agent-kg onboard --person {person}' to build your profile.")
+
+
+@cli.command()
+@click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
+@click.option(
+    "--person",
+    default=_DEFAULT_PERSON,
+    show_default=True,
+    help=_PERSON_HELP,
+)
+@click.option(
+    "--local", "wipe_local", is_flag=True, help="Wipe local conversation graph (.agentkg/)."
+)
+@click.option(
+    "--global",
+    "wipe_global",
+    is_flag=True,
+    help="Wipe global user profile (~/.kgrag/profiles/<person>/).",
+)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
+def wipe(repo: str, person: str, wipe_local: bool, wipe_global: bool, yes: bool) -> None:
+    """Erase the local conversation graph and/or the global user profile.
+
+    Examples::
+
+        # wipe only the local graph for this repo
+        agent-kg wipe --local --person egs
+
+        # wipe the global profile (all repos)
+        agent-kg wipe --global --person egs
+
+        # wipe everything without prompting
+        agent-kg wipe --local --global --person egs --yes
+    """
+    import shutil  # noqa: PLC0415
+
+    if not wipe_local and not wipe_global:
+        click.echo("Nothing to wipe. Use --local, --global, or both.", err=True)
+        raise SystemExit(1)
+
+    repo_root = Path(repo).resolve()
+    local_dir = repo_root / ".agentkg"
+    global_dir = Path.home() / ".kgrag" / "profiles" / person
+
+    targets = []
+    if wipe_local:
+        targets.append(("Local conversation graph", local_dir))
+    if wipe_global:
+        targets.append((f"Global user profile ({person})", global_dir))
+
+    if not yes:
+        click.echo("The following will be permanently deleted:")
+        for label, path in targets:
+            exists = "exists" if path.exists() else "does not exist"
+            click.echo(f"  {label}: {path}  [{exists}]")
+        click.confirm("Continue?", abort=True)
+
+    for label, path in targets:
+        if path.exists():
+            shutil.rmtree(path)
+            click.echo(f"Wiped: {path}")
+        else:
+            click.echo(f"Already gone: {path}")
+
+
+@cli.command()
+@click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
+@click.option("--person", default=_DEFAULT_PERSON, show_default=True, help=_PERSON_HELP)
+@click.option(
+    "--agent", "show_agent", is_flag=True, default=False, help="Show agent conversation tree."
+)
+@click.option(
+    "--profile", "show_profile", is_flag=True, default=False, help="Show UserProfile tree."
+)
+@click.option("--html", is_flag=True, help="Render as interactive HTML (opens in browser).")
+@click.option(
+    "--out", default=None, type=click.Path(), help="Write HTML to this file instead of a temp file."
+)
+@click.option(
+    "--serve", is_flag=True, help="Launch the Streamlit explorer (requires streamlit + pyvis)."
+)
+@click.option("--port", default="8501", show_default=True, help="Streamlit server port.")
+def viz(
+    repo: str,
+    person: str,
+    show_agent: bool,
+    show_profile: bool,
+    html: bool,
+    out: str | None,
+    serve: bool,
+    port: str,
+) -> None:
+    """Visualize the agent conversation and/or UserProfile trees.
+
+    Without flags, renders both trees as Rich terminal output.
+
+    Examples::
+
+        # Terminal trees (no deps)
+        agent-kg viz --person egs
+
+        # Interactive HTML for the conversation graph
+        agent-kg viz --agent --html --person egs
+
+        # Interactive HTML for the profile
+        agent-kg viz --profile --html --person egs --out profile.html
+
+        # Full Streamlit explorer
+        agent-kg viz --serve --person egs
+    """
+    import importlib.util  # noqa: PLC0415
+    import subprocess  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+
+    from agent_kg.viz import (  # noqa: PLC0415
+        build_agent_html,
+        build_profile_html,
+        render_agent_tree_rich,
+        render_profile_tree_rich,
+        write_html,
+    )
+
+    repo_root = Path(repo).resolve()
+    agent_db = repo_root / ".agentkg" / "graph.sqlite"
+    profile_db = Path.home() / ".kgrag" / "profiles" / person / "userprofile.sqlite"
+
+    # Default: show both
+    if not show_agent and not show_profile:
+        show_agent = True
+        show_profile = True
+
+    # ── Streamlit explorer ────────────────────────────────────────────────────
+    if serve:
+        if importlib.util.find_spec("streamlit") is None:
+            raise click.UsageError('streamlit is not installed. Run: pip install "agent-kg[viz]"')
+        app_path = Path(__file__).parent.parent / "app.py"
+        cmd = [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path),
+            "--server.port",
+            port,
+            "--",
+            "--repo",
+            str(repo_root),
+            "--person",
+            person,
+        ]
+        click.echo(f"Launching AgentKG Explorer on http://localhost:{port}")
+        click.echo("  Press Ctrl+C to stop.\n")
+        try:
+            subprocess.run(cmd, check=True)
+        except KeyboardInterrupt:
+            click.echo("\nStopped.")
+        return
+
+    # ── HTML output — global first, skip missing local silently ──────────────
+    if html:
+        if show_profile and profile_db.exists():
+            prof_html = build_profile_html(profile_db)
+            prof_out = (
+                Path(out)
+                if (out and not show_agent)
+                else Path.home() / ".kgrag" / "profiles" / person / "viz_profile.html"
+            )
+            write_html(prof_html, prof_out)
+            click.echo(f"Profile graph → {prof_out}")
+
+        if show_agent and agent_db.exists():
+            agent_html = build_agent_html(agent_db)
+            out_path = Path(out) if out else Path(repo_root) / ".agentkg" / "viz_agent.html"
+            write_html(agent_html, out_path)
+            click.echo(f"Agent graph → {out_path}")
+        return
+
+    # ── Rich terminal trees — global (profile) first, then local (agent) ─────
+    if show_profile:
+        render_profile_tree_rich(profile_db)
+
+    if show_agent:
+        render_agent_tree_rich(agent_db)
 
 
 @cli.command()

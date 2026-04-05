@@ -101,10 +101,14 @@ class TestIntentCategory:
         assert IntentCategory.UNKNOWN == "unknown"
 
     def test_all_categories_present(self):
-        """All eight intent categories are defined."""
+        """All twelve intent categories are defined."""
         expected = {
             "question",
             "request",
+            "instruction",
+            "code_request",
+            "bug_report",
+            "task",
             "correction",
             "confirmation",
             "clarification",
