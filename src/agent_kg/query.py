@@ -1,6 +1,3 @@
-# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
-# SPDX-License-Identifier: Elastic-2.0
-
 """query.py — Semantic query and snippet pack for AgentKG.
 
 Delegates to the LanceDB semantic index in AgentKGStore.
@@ -70,7 +67,7 @@ def pack(
     :param k: Number of snippets to return.
     :return: List of ``{node_id, kind, content, score}`` dicts.
     """
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     # Prefer summaries first (they represent compressed history)
     summaries = store.search(q, k=k // 2 + 1, kind_filter=str(NodeKind.SUMMARY))
     turns = store.search(q, k=k, kind_filter=str(NodeKind.TURN))

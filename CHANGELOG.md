@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-04-06
+
+### Changed
+
+- **`pyproject.toml` migrated to PEP 621 `[project]` standard** — metadata (`name`, `version`,
+  `description`, `authors`, `license`, `readme`, `requires-python`), dependencies, optional
+  extras, and scripts moved from deprecated `[tool.poetry.*]` keys to `[project]`,
+  `[project.optional-dependencies]`, and `[project.scripts]`; `[tool.poetry]` now only
+  holds `packages` (Poetry-specific); caret version constraints converted to PEP 440 ranges
+- **`spacy` re-promoted to required** — essential for NLP pipeline; also kept in `nlp` extra
+  for explicit opt-in installs
+- **`prune` fallback to sequential windows** — when topic clustering produces no pruneable
+  clusters (diverse conversations), prune now falls back to sequential `_MIN_CLUSTER_SIZE`
+  windows so progress is always made when there are enough cold turns (`prune.py`)
+- **`install-hooks` hook template** — removed `"async": True` from `UserPromptSubmit` and
+  `Stop` ingest hooks; removed `--no-embed` from assistant-turn ingest so embeddings are
+  written synchronously
+- **`index.py` schema inlined** — removed shared `_make_node_schema` import from `store.py`;
+  schema defined locally in `ConversationIndex._get_table()`; `warnings` suppression around
+  `table_names()` removed (no longer needed in current lancedb)
+- **`query.py` type annotation tightened** — `results` accumulator typed as
+  `list[dict[str, Any]]` (was `list[dict]`)
+
+### Added
+
+- **`viz`, `local`, `kgrag` extras** documented in README installation section; note added
+  that `pycode-kg` and `doc-kg` are GitHub-sourced (not on PyPI) with verification commands
+- **`.agentkg/` added to `.gitignore`** — prevents the repo-local conversation graph from
+  being accidentally committed
+- **`.gitignore` CodeKG patterns updated** — `.codekg/` artifact paths corrected to
+  `.pycodekg/` to match the installed package's directory name
+
+### Fixed
+
+- **`analyze` crash** — `graph.py` `analyze()` now skips the `identity` key (a dict) when
+  iterating profile summary sections, preventing the `slice(None, 5, None)` unhandled error
+- **`mcp/server.py` pylint** — fixed `R0402` (`import mcp.types` → `from mcp import types`),
+  `C0301` long lines in `agent_kg_ingest` schema, `C0116` missing docstrings on `list_tools`
+  and `call_tool`, `E0611` stale `agent_kg.profile` import (→ `agent_kg.user_profile`),
+  `W0404` duplicate lazy `Path` import (moved to module-level); server now rates 10.00/10
+- **Version bump 0.4.0 → 0.5.1** (`pyproject.toml`, `src/agent_kg/__init__.py`, `poetry.lock`)
+
 ## [0.4.0] - 2026-04-05
 
 ### Added
@@ -263,6 +305,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional NLP pipeline: spaCy-backed topic, entity, and preference extraction
 - Optional LLM summarizer backend via Anthropic API
 
-[Unreleased]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Flux-Frontiers/agent_kg/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Flux-Frontiers/agent_kg/releases/tag/v0.1.0

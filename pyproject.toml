@@ -3,13 +3,65 @@
 requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "agent-kg"
-version = "0.4.0"
+version = "0.5.1"
 description = "Conversational memory as a knowledge graph"
-authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
+authors = [{ name = "Eric G. Suchanek, PhD", email = "suchanek@mac.com" }]
 license = "Elastic-2.0"
 readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "lancedb>=0.29.0",
+    "numpy>=1.24.0",
+    "sentence-transformers>=5.2.0,<6.0.0",
+    "transformers>=4.57.6,<5.0.0",
+    "safetensors>=0.5.0,<1.0.0",
+    "torch>=2.5.1",
+    "click>=8.1.0",
+    "mcp>=1.0.0",
+    "rich>=14.0.0,<15.0.0",
+    "spacy>=3.7.0",
+]
+
+[project.optional-dependencies]
+nlp   = ["spacy>=3.7.0"]
+llm   = ["anthropic>=0.25.0"]
+local = ["httpx>=0.27.0"]
+viz   = ["pyvis>=0.3.2", "streamlit>=1.35.0"]
+kgrag = [
+    "pycode-kg @ git+https://github.com/Flux-Frontiers/pycode_kg.git",
+    "doc-kg @ git+https://github.com/Flux-Frontiers/doc_kg.git",
+]
+all = [
+    "spacy>=3.7.0",
+    "anthropic>=0.25.0",
+    "httpx>=0.27.0",
+    "pyvis>=0.3.2",
+    "streamlit>=1.35.0",
+    "pycode-kg @ git+https://github.com/Flux-Frontiers/pycode_kg.git",
+    "doc-kg @ git+https://github.com/Flux-Frontiers/doc_kg.git",
+]
+
+[project.scripts]
+agent-kg              = "agent_kg.cli.main:cli"
+agent-kg-init         = "agent_kg.cli.main:init"
+agent-kg-install-hooks = "agent_kg.cli.main:install_hooks"
+agent-kg-mcp          = "agent_kg.mcp.server:main"
+agent-kg-ingest       = "agent_kg.cli.main:ingest"
+agent-kg-query        = "agent_kg.cli.main:query"
+agent-kg-assemble     = "agent_kg.cli.main:assemble"
+agent-kg-prune        = "agent_kg.cli.main:prune_cmd"
+agent-kg-stats        = "agent_kg.cli.main:stats"
+agent-kg-analyze      = "agent_kg.cli.main:analyze"
+agent-kg-sessions     = "agent_kg.cli.main:sessions"
+agent-kg-snapshot     = "agent_kg.cli.main:snapshot"
+agent-kg-onboard      = "agent_kg.cli.main:onboard"
+agent-kg-profile      = "agent_kg.cli.main:profile"
+agent-kg-wipe         = "agent_kg.cli.main:wipe"
+agent-kg-viz          = "agent_kg.cli.main:viz"
+
+[tool.poetry]
 packages = [{ include = "agent_kg", from = "src" }]
 
 [[tool.poetry.source]]
@@ -17,58 +69,11 @@ name = "testpypi"
 url = "https://test.pypi.org/simple/"
 priority = "supplemental"
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-lancedb = ">=0.29.0"
-numpy = ">=1.24.0"
-sentence-transformers = "^5.2.0"
-transformers = "^4.57.6"
-safetensors = "^0.5.0"
-torch = ">=2.5.1"
-click = ">=8.1.0"
-mcp = ">=1.0.0"
-rich = "^14.0.0"
-spacy = { version = ">=3.7.0"}
-anthropic = { version = ">=0.25.0", optional = true }
-httpx = { version = ">=0.27.0", optional = true }
-pyvis = { version = ">=0.3.2", optional = true }
-streamlit = { version = ">=1.35.0", optional = true }
-
-code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git", optional=true}
-doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git", optional=true}
-
-
-[tool.poetry.extras]
-nlp = ["spacy"]
-llm = ["anthropic"]
-local = ["httpx"]
-viz = ["pyvis", "streamlit"]
-kgrag = ["code-kg", "doc-kg"]
-all = ["anthropic", "httpx", "pyvis", "streamlit", "code-kg", "doc-kg"]
-
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"
 pytest-cov = ">=5.0.0"
 ruff = ">=0.4.0"
 mypy = ">=1.10.0"
-
-[tool.poetry.scripts]
-agent-kg          = "agent_kg.cli.main:cli"
-agent-kg-init     = "agent_kg.cli.main:init"
-agent-kg-install-hooks = "agent_kg.cli.main:install_hooks"
-agent-kg-mcp      = "agent_kg.mcp.server:main"
-agent-kg-ingest   = "agent_kg.cli.main:ingest"
-agent-kg-query    = "agent_kg.cli.main:query"
-agent-kg-assemble = "agent_kg.cli.main:assemble"
-agent-kg-prune    = "agent_kg.cli.main:prune_cmd"
-agent-kg-stats    = "agent_kg.cli.main:stats"
-agent-kg-analyze  = "agent_kg.cli.main:analyze"
-agent-kg-sessions = "agent_kg.cli.main:sessions"
-agent-kg-snapshot = "agent_kg.cli.main:snapshot"
-agent-kg-onboard  = "agent_kg.cli.main:onboard"
-agent-kg-profile  = "agent_kg.cli.main:profile"
-agent-kg-wipe     = "agent_kg.cli.main:wipe"
-agent-kg-viz      = "agent_kg.cli.main:viz"
 
 [tool.ruff]
 line-length = 100
@@ -124,7 +129,7 @@ disable = [
 testpaths = ["tests"]
 addopts = "-v --tb=short"
 
-[tool.codekg]
+[tool.pycodekg]
 # Directories to include in the knowledge graph build and analysis.
 # When unset, all directories are indexed.
 include = ["src"]

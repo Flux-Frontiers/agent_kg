@@ -1,6 +1,3 @@
-# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
-# SPDX-License-Identifier: Elastic-2.0
-
 """mcp/server.py — MCP tool surface for AgentKG.
 
 Exposes the following tools to MCP clients (e.g. Claude Code):
@@ -68,7 +65,11 @@ _TOOLS = [
             "type": "object",
             "properties": {
                 "turn_text": {"type": "string", "description": "The turn text to ingest."},
-                "role": {"type": "string", "enum": ["user", "assistant"], "default": "user"},
+                "role": {
+                    "type": "string",
+                    "enum": ["user", "assistant"],
+                    "default": "user",
+                },
                 "repo": {
                     "type": "string",
                     "description": "Repo root path.",
@@ -199,13 +200,13 @@ _TOOLS = [
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    """Return all registered AgentKG tools."""
+    """Return the list of tools exposed by this MCP server."""
     return _TOOLS
 
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextContent]:
-    """Dispatch a tool call by name."""
+    """Dispatch an MCP tool call by name and return a TextContent result."""
     repo = arguments.get("repo", _DEFAULT_REPO)
     person_id = arguments.get("person_id", _DEFAULT_PERSON)
     session_id = arguments.get("session_id", _DEFAULT_SESSION) or None
@@ -332,21 +333,16 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
     return [types.TextContent(type="text", text=text)]
 
 
-async def _serve() -> None:
-    """Run the AgentKG MCP server on stdio."""
+async def _run() -> None:
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options(),
-        )
+        await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
 def main() -> None:
     """Start the AgentKG MCP server on stdio."""
-    import asyncio  # noqa: PLC0415
+    import asyncio  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
-    asyncio.run(_serve())
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":

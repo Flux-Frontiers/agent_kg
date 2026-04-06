@@ -1,16 +1,14 @@
-# Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
-# SPDX-License-Identifier: Elastic-2.0
-
 """index.py — ConversationIndex: LanceDB-backed semantic index for conversation nodes."""
+# pylint: disable=import-outside-toplevel
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from agent_kg.store import _make_node_schema
-
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
+
+_EMBED_DIM = 384
 
 
 class ConversationIndex:
@@ -51,16 +49,23 @@ class ConversationIndex:
     def _get_table(self, create: bool = False) -> Any:
         if self._table is not None:
             return self._table
-        import warnings  # noqa: PLC0415
-
         db = self._get_db()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            names = db.table_names()
+        names = db.table_names()
         if self.TABLE in names:
             self._table = db.open_table(self.TABLE)
         elif create:
-            self._table = db.create_table(self.TABLE, schema=_make_node_schema())
+            import pyarrow as pa  # noqa: PLC0415
+
+            schema = pa.schema(
+                [
+                    pa.field("node_id", pa.utf8()),
+                    pa.field("kind", pa.utf8()),
+                    pa.field("text", pa.utf8()),
+                    pa.field("session_id", pa.utf8()),
+                    pa.field("vector", pa.list_(pa.float32(), _EMBED_DIM)),
+                ]
+            )
+            self._table = db.create_table(self.TABLE, schema=schema)
         return self._table
 
     def add(self, nodes: list[dict]) -> int:
@@ -125,12 +130,7 @@ class ConversationIndex:
 
     def wipe(self) -> None:
         """Drop the conversation table from LanceDB."""
-        import warnings  # noqa: PLC0415
-
         db = self._get_db()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            existing = db.table_names()
-        if self.TABLE in existing:
+        if self.TABLE in db.table_names():
             db.drop_table(self.TABLE)
         self._table = None

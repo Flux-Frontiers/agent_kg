@@ -1,0 +1,123 @@
+{
+  "key": "eebbf2ab3183860e00169cb21268ebfa3d76ca32",
+  "branch": "main",
+  "timestamp": "2026-04-06T23:34:08.087604+00:00",
+  "version": "0.7.0",
+  "metrics": {
+    "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
+    "total_nodes": 1323,
+    "total_edges": 7798,
+    "node_counts": {
+      "chunk": 270,
+      "document": 10,
+      "entity": 365,
+      "keyword": 336,
+      "section": 182,
+      "topic": 160
+    },
+    "edge_counts": {
+      "CONTAINS": 452,
+      "CO_OCCURS_WITH": 4752,
+      "HAS_KEYWORD": 1003,
+      "HAS_TOPIC": 272,
+      "MENTIONS_ENTITY": 1072,
+      "NEXT": 73,
+      "REFERENCES": 1,
+      "SIMILAR_TO": 173
+    },
+    "meaningful_nodes": 1313,
+    "coverage_score": 0.9296296296296296,
+    "issues_count": 0,
+    "complexity_median": 17.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0032",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Query Search Retrieval Semantic",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 18
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0033",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Graph Traversal Node Edge",
+      "references": 0,
+      "semantic_links": 17,
+      "total_links": 18
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0000",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "chunk:0001",
+      "references": 0,
+      "semantic_links": 17,
+      "total_links": 17
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0013",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 17,
+      "total_links": 17
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0028",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "CodeRank -- Global Structural Importance",
+      "references": 0,
+      "semantic_links": 17,
+      "total_links": 17
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0030",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Configuration Loading Initialization Setup",
+      "references": 0,
+      "semantic_links": 17,
+      "total_links": 17
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0006",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Fan-In Ranking",
+      "references": 0,
+      "semantic_links": 16,
+      "total_links": 17
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0010",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Module Architecture",
+      "references": 0,
+      "semantic_links": 16,
+      "total_links": 16
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0031",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Data Persistence Storage Database",
+      "references": 0,
+      "semantic_links": 16,
+      "total_links": 16
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260405.md:0013",
+      "file_path": "analysis/agent_kg_analysis_20260405.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 16,
+      "total_links": 16
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 649,
+    "edges": 4573,
+    "coverage_delta": -0.017178881008668268,
+    "issues_delta": 0
+  }
+}

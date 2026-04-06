@@ -166,6 +166,15 @@ def prune(
     clusters = _cluster_turns_by_topic(cold_turns, store)
     pruneable = [c for c in clusters if len(c) >= _MIN_CLUSTER_SIZE]
 
+    # Fallback: if topic clustering produced no pruneable clusters (diverse conversation),
+    # use sequential windows so prune always makes progress when there are enough cold turns.
+    if not pruneable:
+        pruneable = [
+            cold_turns[i : i + _MIN_CLUSTER_SIZE]
+            for i in range(0, len(cold_turns), _MIN_CLUSTER_SIZE)
+            if len(cold_turns[i : i + _MIN_CLUSTER_SIZE]) >= _MIN_CLUSTER_SIZE
+        ]
+
     summaries_created = 0
     turns_pruned = 0
     nodes_removed = 0

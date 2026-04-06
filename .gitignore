@@ -217,11 +217,11 @@ cython_debug/
 # CodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
 # MUST include .codekg/snapshots!
 # This is the correct pattern
-.codekg/lancedb/
-.codekg/lancedb-*
-.codekg/graph.sqlite
-.codekg/graph.sqlite*
-.codekg/models
+.pycodekg/lancedb/
+.pycodekg/lancedb-*
+.pycodekg/graph.sqlite
+.pycodekg/graph.sqlite*
+.pycodekg/models
 
 # DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
 .dockg/lancedb/
@@ -230,6 +230,7 @@ cython_debug/
 .dockg/graph.sqlite*
 .dockg/models
 
+.agentkg/
 
 # Local MCP configuration (contains absolute paths)
 .mcp.json

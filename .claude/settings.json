@@ -1,33 +1,4 @@
 {
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" 2>/dev/null || true",
-            "async": true
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "MSG=$(jq -r '.last_assistant_message // empty'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; [ -n \"$MSG\" ] && agent-kg ingest \"$MSG\" --role assistant --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
-            "async": true
-          },
-          {
-            "type": "command",
-            "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
-            "async": true
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(agent-kg:*)",

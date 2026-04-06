@@ -269,10 +269,11 @@ class AgentKG:
                     lines.append(f"**Pass {sm.pruning_pass}**: {sm.text[:200]}…")
                 lines.append("")
 
-            # UserProfile summary
-            if any(profile_summary.values()):
+            # UserProfile summary (skip "identity" — it's a dict, not a list of labels)
+            list_sections = {k: v for k, v in profile_summary.items() if isinstance(v, list)}
+            if any(list_sections.values()):
                 lines.append("## UserProfile")
-                for section, items in profile_summary.items():
+                for section, items in list_sections.items():
                     if items:
                         lines.append(f"**{section.title()}**: {', '.join(items[:5])}")
                 lines.append("")

@@ -571,7 +571,6 @@ _CLAUDE_HOOKS = {
                         'agent-kg ingest "$PROMPT" --role user --repo "$REPO_ROOT" '
                         "2>/dev/null || true"
                     ),
-                    "async": True,
                 }
             ]
         }
@@ -585,9 +584,8 @@ _CLAUDE_HOOKS = {
                         "MSG=$(jq -r '.last_assistant_message // empty'); "
                         "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
                         '[ -n "$MSG" ] && agent-kg ingest "$MSG" --role assistant '
-                        '--repo "$REPO_ROOT" --no-embed 2>/dev/null || true'
+                        '--repo "$REPO_ROOT" 2>/dev/null || true'
                     ),
-                    "async": True,
                 },
                 {
                     "type": "command",

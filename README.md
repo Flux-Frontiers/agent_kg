@@ -142,8 +142,21 @@ agent-kg = {git = "https://github.com/Flux-Frontiers/agent_kg.git"}
 ```bash
 poetry install -E nlp    # spaCy NLP pipeline (richer topic/entity extraction)
 poetry install -E llm    # Anthropic summarizer backend
+poetry install -E viz    # Streamlit explorer UI + pyvis graph visualization
+poetry install -E local  # httpx for local LLM backends
+poetry install -E kgrag  # KGRAG support: pycode-kg + doc-kg (CodeKG & DocKG integration)
 poetry install -E all    # everything
 ```
+
+> **Note on `kgrag` extra:** `pycode-kg` and `doc-kg` are installed directly from GitHub.
+> They are not on PyPI. Ensure you have network access and a valid SSH/HTTPS git credential
+> when running `poetry install -E kgrag`.
+>
+> ```bash
+> # Verify after install
+> poetry run python -c "import pycode_kg; print(pycode_kg.__version__)"
+> poetry run python -c "import doc_kg; print(doc_kg.__version__)"
+> ```
 
 ---
 
