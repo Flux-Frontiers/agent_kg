@@ -1,5 +1,6 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
+# pylint: disable=import-outside-toplevel  # intentional lazy imports (lancedb, pyarrow, sentence-transformers)
 
 """store.py — SQLite + LanceDB storage for the AgentKG conversation tree."""
 
@@ -51,6 +52,12 @@ CREATE INDEX IF NOT EXISTS idx_nodes_turn_idx  ON nodes(turn_index);
 CREATE INDEX IF NOT EXISTS idx_edges_source    ON edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_edges_target    ON edges(target_id);
 CREATE INDEX IF NOT EXISTS idx_edges_relation  ON edges(relation);
+-- Prevent duplicate topic/entity nodes created by concurrent ingest processes.
+-- Only enforced for topic and entity kinds; other kinds (turn, intent, task,
+-- summary, profile nodes) use UUID primary keys and allow label collisions.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_nodes_kind_label_dedup
+    ON nodes(kind, LOWER(TRIM(label)))
+    WHERE kind IN ('topic', 'entity');
 
 CREATE TABLE IF NOT EXISTS sessions (
     id              TEXT PRIMARY KEY,
@@ -112,9 +119,43 @@ class AgentKGStore:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
             self._db = sqlite3.connect(str(self._db_path), check_same_thread=False)
             self._db.row_factory = sqlite3.Row
+            # Deduplicate before creating the unique index so that the index
+            # creation in _SCHEMA_SQL does not fail on existing duplicate rows.
+            self._migrate_dedup_before_schema()
             self._db.executescript(_SCHEMA_SQL)
             self._db.commit()
         return self._db
+
+    def _migrate_dedup_before_schema(self) -> None:
+        """Remove duplicate topic/entity rows before the unique index is created.
+
+        Keeps the row with the lexicographically smallest UUID (MIN(id)) for
+        each (kind, lower-label) pair and deletes the rest. Safe to call on
+        every open: if there are no duplicates the DELETE is a no-op.
+        """
+        db = self._db
+        assert db is not None
+        # Only run if the nodes table already exists (i.e. this is an existing DB).
+        exists = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='nodes'"
+        ).fetchone()
+        if not exists:
+            return
+        for kind in ("topic", "entity"):
+            db.execute(
+                """
+                DELETE FROM nodes
+                WHERE kind = ?
+                  AND id NOT IN (
+                      SELECT MIN(id)
+                      FROM nodes
+                      WHERE kind = ?
+                      GROUP BY LOWER(TRIM(label))
+                  )
+                """,
+                (kind, kind),
+            )
+        db.commit()
 
     def _get_table(self):
         if self._tbl is not None:

@@ -1,7 +1,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
+[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 
 **AgentKG** — Conversational Memory as a Live, Queryable Knowledge Graph
@@ -27,7 +27,7 @@ Embeddings use `all-MiniLM-L6-v2` (384-dim) via `sentence-transformers` + LanceD
 
 ## Features
 
-- **Incremental ingest** — every turn indexed in real-time; topics, entities, and intents extracted automatically
+- **Incremental ingest** — every turn indexed in real-time; topics, entities, and intents extracted automatically via spaCy + keyword fallback
 - **Hybrid query** — semantic seeding (LanceDB) + structural expansion (graph traversal)
 - **Global UserProfile tree** — preference, expertise, style, commitment, interest, and context nodes accumulated across all repos
 - **Structured onboarding** — four-phase interview populates the profile on first use
@@ -36,6 +36,7 @@ Embeddings use `all-MiniLM-L6-v2` (384-dim) via `sentence-transformers` + LanceD
 - **KG Context Pruning** — old turns compressed into Summary nodes when the graph grows large
 - **Temporal snapshots** — point-in-time JSON snapshots for diffing session state
 - **MCP server** — exposes the full query pipeline as structured tools for AI agent integration
+- **Script-based hooks** — three Claude Code hooks (UserPromptSubmit, Stop, PreCompact) deployed as shell scripts via `install-hooks`
 
 ---
 
@@ -91,6 +92,7 @@ username and is only needed for profile-scoped commands (`init`, `onboard`, `pro
 | Command | Description |
 |---|---|
 | `agent-kg init` | Download embedding model and create profile directory (run first) |
+| `agent-kg install-hooks` | Deploy hook scripts and wire Claude Code settings.json |
 | `agent-kg onboard` | Run the structured UserProfile onboarding interview |
 | `agent-kg profile` | Show the UserProfile as Markdown |
 | `agent-kg ingest` | Add a turn to the conversation graph |
@@ -140,23 +142,19 @@ agent-kg = {git = "https://github.com/Flux-Frontiers/agent_kg.git"}
 ### Optional extras
 
 ```bash
-poetry install -E nlp    # spaCy NLP pipeline (richer topic/entity extraction)
 poetry install -E llm    # Anthropic summarizer backend
 poetry install -E viz    # Streamlit explorer UI + pyvis graph visualization
 poetry install -E local  # httpx for local LLM backends
-poetry install -E kgrag  # KGRAG support: pycode-kg + doc-kg (CodeKG & DocKG integration)
-poetry install -E all    # everything
+poetry install -E all    # everything above
 ```
 
-> **Note on `kgrag` extra:** `pycode-kg` and `doc-kg` are installed directly from GitHub.
-> They are not on PyPI. Ensure you have network access and a valid SSH/HTTPS git credential
-> when running `poetry install -E kgrag`.
->
-> ```bash
-> # Verify after install
-> poetry run python -c "import pycode_kg; print(pycode_kg.__version__)"
-> poetry run python -c "import doc_kg; print(doc_kg.__version__)"
-> ```
+spaCy is a **required** dependency (not an extra) — it is always installed and drives topic and entity extraction. The `en_core_web_sm` model must be downloaded separately:
+
+```bash
+python -m spacy download en_core_web_sm
+```
+
+Without the model, extraction falls back to keyword/regex heuristics automatically.
 
 ---
 
@@ -190,6 +188,7 @@ poetry install -E all    # everything
 | `interest` | Topics the user cares about (profile) |
 | `style` | Formatting/docstring/verbosity preferences (profile) |
 | `context` | Role, machine, projects context (profile) |
+| `education` | Educational background entries (profile) |
 
 ---
 
@@ -217,32 +216,40 @@ Configure in `.mcp.json` (Claude Code / Kilo Code):
 
 ## Hooks (Auto-Ingest)
 
-Add these hooks to `.claude/settings.json` to ingest every prompt automatically:
+AgentKG ships three Claude Code hook scripts that are deployed by the installer:
 
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{
-      "hooks": [{
-        "type": "command",
-        "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
-        "async": true
-      }]
-    }],
-    "Stop": [{
-      "hooks": [{
-        "type": "command",
-        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
-        "async": true
-      }]
-    }]
-  }
-}
+| Hook | Script | What it does |
+|---|---|---|
+| `UserPromptSubmit` | `agent_kg_user_prompt_hook.sh` | Ingests each user turn with embeddings |
+| `Stop` | `agent_kg_stop_hook.sh` | Ingests assistant turn; runs `prune` async every 20 exchanges; snapshots |
+| `PreCompact` | `agent_kg_precompact_hook.sh` | Runs `prune` + snapshot **synchronously** before context compaction — ensures no turns are lost |
+
+### Install
+
+```bash
+# Deploy scripts to ~/.agentkg/hooks/ and wire into ~/.claude/settings.json (all repos)
+agent-kg install-hooks --global
+
+# Or wire into .claude/settings.json for this repo only
+agent-kg install-hooks --claude
+
+# Force-overwrite existing hooks
+agent-kg install-hooks --global --force
 ```
 
-- `PROMPT=$(jq -r '.prompt')` captures the **full** multiline prompt (not just the first line)
-- `--no-embed` defers embedding to a later consolidate pass — keeps hooks fast
-- The Stop hook captures a metrics snapshot instead of injecting a synthetic turn
+The installer:
+1. Copies the three `.sh` scripts from the package into `~/.agentkg/hooks/` (executable)
+2. Merges `UserPromptSubmit`, `Stop`, and `PreCompact` entries into the target `settings.json`
+
+The scripts are portable — they use `git rev-parse --show-toplevel` to locate the repo and only fire when a `.agentkg/` directory is present.
+
+### Hook state and logs
+
+```
+~/.agentkg/hook_state/
+  hook.log                          # timestamped log of all hook activity
+  <session_id>_last_consolidate     # exchange counter for periodic prune
+```
 
 ---
 
@@ -252,34 +259,42 @@ Add these hooks to `.claude/settings.json` to ingest every prompt automatically:
 agent_kg/
 ├── README.md
 ├── pyproject.toml
+├── hooks/                            # reference copies of hook scripts
+│   ├── agent_kg_user_prompt_hook.sh
+│   ├── agent_kg_stop_hook.sh
+│   └── agent_kg_precompact_hook.sh
 ├── scripts/
-│   └── generate_wiki.py      # GitHub wiki generator
+│   └── generate_wiki.py              # GitHub wiki generator
 ├── src/
 │   └── agent_kg/
 │       ├── __init__.py
-│       ├── graph.py          # AgentKG orchestrator
-│       ├── store.py          # SQLite + LanceDB storage
-│       ├── index.py          # LanceDB semantic indexing
-│       ├── ingest.py         # Phase 1 incremental turn ingest
-│       ├── user_profile.py   # Global UserProfile tree
-│       ├── onboard.py        # Structured onboarding interview
-│       ├── session.py        # Session lifecycle
-│       ├── query.py          # Hybrid semantic + graph query
-│       ├── assemble.py       # Token-budgeted context assembly
-│       ├── prune.py          # KG Context Pruning
-│       ├── consolidate.py    # Deferred embedding consolidation
-│       ├── summarize.py      # LLM-backed summarization
-│       ├── snapshots.py      # Point-in-time snapshot capture
-│       ├── schema.py         # Node/Edge dataclasses
-│       ├── kg.py             # High-level KG facade
-│       ├── app.py            # Streamlit explorer UI
-│       ├── viz.py            # Visualization helpers (Rich + pyvis)
+│       ├── graph.py                  # AgentKG orchestrator
+│       ├── store.py                  # SQLite + LanceDB storage
+│       ├── index.py                  # LanceDB semantic indexing
+│       ├── ingest.py                 # Phase 1 incremental turn ingest
+│       ├── user_profile.py           # Global UserProfile tree
+│       ├── onboard.py                # Structured onboarding interview
+│       ├── session.py                # Session lifecycle
+│       ├── query.py                  # Hybrid semantic + graph query
+│       ├── assemble.py               # Token-budgeted context assembly
+│       ├── prune.py                  # KG Context Pruning
+│       ├── consolidate.py            # Deferred embedding consolidation
+│       ├── summarize.py              # LLM-backed summarization
+│       ├── snapshots.py              # Point-in-time snapshot capture
+│       ├── schema.py                 # Node/Edge dataclasses
+│       ├── kg.py                     # High-level KG facade
+│       ├── app.py                    # Streamlit explorer UI
+│       ├── viz.py                    # Visualization helpers (Rich + pyvis)
+│       ├── hooks/                    # bundled hook scripts (deployed by install-hooks)
+│       │   ├── agent_kg_user_prompt_hook.sh
+│       │   ├── agent_kg_stop_hook.sh
+│       │   └── agent_kg_precompact_hook.sh
 │       ├── cli/
-│       │   ├── main.py       # Click CLI entry points
+│       │   ├── main.py               # Click CLI entry points
 │       │   └── __init__.py
 │       ├── mcp/
-│       │   └── server.py     # MCP server
-│       └── nlp/              # NLP pipeline (optional)
+│       │   └── server.py             # MCP server
+│       └── nlp/                      # NLP pipeline (spaCy + regex fallback)
 │           ├── entities.py
 │           ├── intent.py
 │           ├── preferences.py

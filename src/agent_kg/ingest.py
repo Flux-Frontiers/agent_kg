@@ -244,11 +244,15 @@ def ingest_turn(
     # 4. Topic extraction + dedup
     # ------------------------------------------------------------------
     topic_labels = extract_topics(nlp_text)
+    seen_topic_labels: set[str] = set()
     for label in topic_labels:
+        key = label.lower().strip()
+        if key in seen_topic_labels:
+            continue
+        seen_topic_labels.add(key)
         # Try to merge with existing topic
         existing = store.find_similar_node(label, NodeKind.TOPIC, threshold=0.88)
         if existing:
-            # Update last_seen
             store.update_node_field(existing.id, "last_seen", now.isoformat())
             topic_node = existing
         else:
@@ -275,8 +279,13 @@ def ingest_turn(
     # 5. Entity extraction + dedup
     # ------------------------------------------------------------------
     entities = extract_entities(nlp_text)
+    seen_entity_labels: set[str] = set()
     for ent in entities:
         label = ent["label"]
+        key = label.lower().strip()
+        if key in seen_entity_labels:
+            continue
+        seen_entity_labels.add(key)
         kind_str = ent.get("kind", "concept")
         existing = store.find_similar_node(label, NodeKind.ENTITY, threshold=0.90)
         if existing:

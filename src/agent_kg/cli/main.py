@@ -1,5 +1,6 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
+# pylint: disable=import-outside-toplevel  # intentional lazy imports throughout Click CLI
 
 """agent_kg CLI — command-line interface for AgentKG.
 
@@ -558,48 +559,59 @@ def profile_remove(
     kg.close()
 
 
-# Claude Code hooks block — merged into .claude/settings.json by install-hooks --claude
-_CLAUDE_HOOKS = {
-    "UserPromptSubmit": [
-        {
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": (
-                        "PROMPT=$(jq -r '.prompt'); "
-                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
-                        'agent-kg ingest "$PROMPT" --role user --repo "$REPO_ROOT" '
-                        "2>/dev/null || true"
-                    ),
-                }
-            ]
-        }
-    ],
-    "Stop": [
-        {
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": (
-                        "MSG=$(jq -r '.last_assistant_message // empty'); "
-                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
-                        '[ -n "$MSG" ] && agent-kg ingest "$MSG" --role assistant '
-                        '--repo "$REPO_ROOT" 2>/dev/null || true'
-                    ),
-                },
-                {
-                    "type": "command",
-                    "command": (
-                        "REPO_ROOT=\"$(git rev-parse --show-toplevel 2>/dev/null || echo '.')\"; "
-                        'agent-kg snapshot --repo "$REPO_ROOT" --label "session-end" '
-                        "2>/dev/null || true"
-                    ),
-                    "async": True,
-                },
-            ]
-        }
-    ],
-}
+# Directory where hook scripts are deployed on the user's machine.
+_HOOKS_DEPLOY_DIR = Path.home() / ".agentkg" / "hooks"
+
+# Scripts bundled inside the package (src/agent_kg/hooks/).
+_HOOK_SCRIPTS = [
+    "agent_kg_user_prompt_hook.sh",
+    "agent_kg_stop_hook.sh",
+    "agent_kg_precompact_hook.sh",
+]
+
+
+def _hooks_entry(script_name: str, timeout: int | None = None) -> dict:
+    """Build a Claude Code hook entry pointing to a deployed script."""
+    entry: dict = {"type": "command", "command": str(_HOOKS_DEPLOY_DIR / script_name)}
+    if timeout is not None:
+        entry["timeout"] = timeout
+    return entry
+
+
+def _claude_hooks(deploy_dir: Path) -> dict:
+    """Return the Claude Code hooks block pointing to deployed scripts."""
+    return {
+        "UserPromptSubmit": [
+            {
+                "hooks": [
+                    {"type": "command", "command": str(deploy_dir / "agent_kg_user_prompt_hook.sh")}
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": str(deploy_dir / "agent_kg_stop_hook.sh"),
+                        "timeout": 30,
+                    }
+                ]
+            }
+        ],
+        "PreCompact": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": str(deploy_dir / "agent_kg_precompact_hook.sh"),
+                        "timeout": 60,
+                    }
+                ]
+            }
+        ],
+    }
+
 
 _PRE_COMMIT_HOOK = """\
 #!/usr/bin/env bash
@@ -663,12 +675,12 @@ exit 0
 @click.option(
     "--repo", default=".", type=click.Path(exists=True), show_default=True, help="Repository root."
 )
-@click.option("--force", is_flag=True, help="Overwrite an existing pre-commit hook.")
+@click.option("--force", is_flag=True, help="Overwrite existing hooks.")
 @click.option(
     "--claude",
     "claude_hooks",
     is_flag=True,
-    help="Also install Claude Code auto-ingest hooks into .claude/settings.json.",
+    help="Install Claude Code hooks into .claude/settings.json (this repo).",
 )
 @click.option(
     "--global",
@@ -677,49 +689,62 @@ exit 0
     help="Install Claude Code hooks into ~/.claude/settings.json (all repos).",
 )
 def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool) -> None:
-    """Install the AgentKG pre-commit git hook and/or Claude Code auto-ingest hooks.
+    """Install AgentKG hooks: git pre-commit and/or Claude Code auto-ingest.
 
-    Git pre-commit hook (default):
-      1. Rebuilds local CodeKG index if codekg is installed
-      2. Rebuilds local DocKG index if dockg is installed and docs/ exists
-      3. Captures metrics snapshots for both KGs keyed by tree hash
-      4. Stages both snapshot directories atomically
-      5. Runs pre-commit framework checks (ruff, mypy, detect-secrets, etc.)
+    Git pre-commit hook (always installed unless --claude/--global only):
+      Rebuilds CodeKG/DocKG indices and captures snapshots before each commit.
+      Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...
 
     Claude Code hooks (--claude or --global):
-      Installs UserPromptSubmit + Stop hooks that auto-ingest every user and
-      assistant turn into the AgentKG conversation graph.  Use --claude for
-      project-level (.claude/settings.json) or --global for all repos
-      (~/.claude/settings.json).
+      Deploys three shell scripts to ~/.agentkg/hooks/ then wires them into
+      the target settings.json:
+
+        UserPromptSubmit  — ingests every user turn (with embeddings)
+        Stop              — ingests assistant turn; prunes every 20 exchanges;
+                            snapshots asynchronously
+        PreCompact        — prunes + snapshots synchronously before context
+                            compaction so no turns are lost
+
+      Use --claude for this repo only, --global for all repos.
     """
+    import importlib.resources  # noqa: PLC0415
     import json  # noqa: PLC0415
     import stat  # noqa: PLC0415
 
     repo_root = Path(repo).resolve()
-
-    # ── Git pre-commit hook ───────────────────────────────────────────────────
     git_dir = repo_root / ".git"
-    if not git_dir.is_dir():
-        click.echo(f"Error: {repo_root} is not a git repository.", err=True)
-        raise SystemExit(1)
 
-    hooks_dir = git_dir / "hooks"
-    hooks_dir.mkdir(exist_ok=True)
-    hook_path = hooks_dir / "pre-commit"
+    # ── Deploy hook scripts to ~/.agentkg/hooks/ ─────────────────────────────
+    if claude_hooks or global_hooks:
+        deploy_dir = _HOOKS_DEPLOY_DIR
+        deploy_dir.mkdir(parents=True, exist_ok=True)
 
-    if hook_path.exists() and not force:
-        click.echo(f"Hook already exists: {hook_path}")
-        click.echo("Use --force to overwrite.")
-        raise SystemExit(1)
+        pkg_hooks = importlib.resources.files("agent_kg") / "hooks"
+        deployed: list[str] = []
+        skipped: list[str] = []
+        for script_name in _HOOK_SCRIPTS:
+            dest = deploy_dir / script_name
+            if dest.exists() and not force:
+                skipped.append(script_name)
+                continue
+            script_data = (pkg_hooks / script_name).read_bytes()
+            dest.write_bytes(script_data)
+            mode = dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+            dest.chmod(mode)
+            deployed.append(script_name)
 
-    hook_path.write_text(_PRE_COMMIT_HOOK)
-    mode = hook_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-    hook_path.chmod(mode)
-    click.echo(f"OK Installed pre-commit hook: {hook_path}")
-    click.echo("  CodeKG + DocKG indices will be rebuilt before each commit.")
-    click.echo("  Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...")
+        if deployed:
+            click.echo(f"OK Deployed {len(deployed)} hook script(s) to: {deploy_dir}")
+            for s in deployed:
+                click.echo(f"   {s}")
+        if skipped:
+            click.echo(
+                f"  Skipped {len(skipped)} already-present script(s) (use --force to overwrite):"
+            )
+            for s in skipped:
+                click.echo(f"   {s}")
 
-    # ── Claude Code hooks ─────────────────────────────────────────────────────
+    # ── Claude Code settings.json ─────────────────────────────────────────────
     targets: list[Path] = []
     if global_hooks:
         targets.append(Path.home() / ".claude" / "settings.json")
@@ -737,20 +762,47 @@ def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool
                 continue
 
         existing_hooks = existing.setdefault("hooks", {})
+        hook_block = _claude_hooks(_HOOKS_DEPLOY_DIR)
         updated = False
-        for event, entries in _CLAUDE_HOOKS.items():
-            if event not in existing_hooks:
+        for event, entries in hook_block.items():
+            if event not in existing_hooks or force:
                 existing_hooks[event] = entries
                 updated = True
             else:
-                click.echo(f"  {event} hook already present in {settings_path} — skipping.")
+                click.echo(
+                    f"  {event} already in {settings_path.name} — skipping (--force to overwrite)."
+                )
 
-        if updated or not settings_path.exists():
+        if updated:
             settings_path.write_text(json.dumps(existing, indent=2) + "\n")
             click.echo(f"OK Claude Code hooks written to: {settings_path}")
-            click.echo("  Turns will be auto-ingested on UserPromptSubmit and Stop.")
+            click.echo("  UserPromptSubmit + Stop + PreCompact wired to ~/.agentkg/hooks/")
         else:
             click.echo(f"  No changes needed in {settings_path}.")
+
+    # ── Git pre-commit hook ───────────────────────────────────────────────────
+    if claude_hooks or global_hooks:
+        # If only doing Claude hooks, skip git hook unless --repo was explicitly set
+        if repo == ".":
+            return
+
+    if not git_dir.is_dir():
+        click.echo(f"Error: {repo_root} is not a git repository.", err=True)
+        raise SystemExit(1)
+
+    git_hooks_dir = git_dir / "hooks"
+    git_hooks_dir.mkdir(exist_ok=True)
+    hook_path = git_hooks_dir / "pre-commit"
+
+    if hook_path.exists() and not force:
+        click.echo(f"  pre-commit hook already exists: {hook_path} (--force to overwrite).")
+        return
+
+    hook_path.write_text(_PRE_COMMIT_HOOK)
+    mode = hook_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    hook_path.chmod(mode)
+    click.echo(f"OK Installed git pre-commit hook: {hook_path}")
+    click.echo("  Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...")
 
 
 @cli.command()
