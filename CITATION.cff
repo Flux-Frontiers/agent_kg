@@ -1,0 +1,28 @@
+cff-version: "1.2.0"
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "AgentKG: Conversational Memory as a Knowledge Graph"
+abstract: >
+  AgentKG stores and retrieves conversational AI agent memory as a live,
+  queryable knowledge graph. It provides persistent, structured memory for
+  AI agents with semantic search, topic clustering, entity tracking, and
+  MCP integration — enabling agents to recall prior context, build knowledge
+  over time, and reason over their interaction history.
+authors:
+  - family-names: Suchanek
+    given-names: "Eric G., PhD"
+    orcid: "https://orcid.org/0009-0009-0891-1507"
+    email: suchanek@flux-frontiers.com
+    affiliation: "Flux-Frontiers"
+version: "0.5.1"
+date-released: "2026-04-24"
+license-url: "https://www.elastic.co/licensing/elastic-license"
+repository-code: "https://github.com/Flux-Frontiers/agent_kg"
+url: "https://github.com/Flux-Frontiers/agent_kg"
+keywords:
+  - knowledge-graph
+  - agent-memory
+  - conversational-ai
+  - semantic-search
+  - mcp
+  - rag

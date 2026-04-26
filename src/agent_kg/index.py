@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-DEFAULT_MODEL = "all-MiniLM-L6-v2"
+from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL  # noqa: F401 — re-exported
 
 _EMBED_DIM = 384
 

@@ -12,22 +12,33 @@ repos:
         exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.codekg/|^\.dockg/'
       - id: debug-statements
 
-  # Pylint code quality checking
-  - repo: https://github.com/PyCQA/pylint
-    rev: v4.0.4
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
     hooks:
-      - id: pylint
-        args: ['--rcfile=pyproject.toml']
-        files: '^src/'
+      - id: ruff
+        args: [--fix]
+        exclude: '^\.claude/'
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        exclude: '^\.claude/'
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.(agentkg|codekg|dockg)/snapshots/.*']
 
   - repo: local
     hooks:
-      - id: poetry-check
-        name: poetry check
-        entry: poetry check --lock
+      - id: pylint
+        name: pylint
+        entry: poetry run pylint src/
         language: system
         pass_filenames: false
-        always_run: true
+        args: ['--rcfile=pyproject.toml', '--jobs=12']
       - id: mypy
         name: mypy
         entry: poetry run mypy src/
@@ -40,16 +51,3 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline', '--exclude-files', '(\.agentkg|\.codekg|\.dockg)/.*']
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format

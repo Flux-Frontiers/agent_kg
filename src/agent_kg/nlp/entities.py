@@ -1,5 +1,6 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
+# pylint: disable=import-outside-toplevel
 
 """entities.py — Named entity extraction for AgentKG Turn nodes.
 

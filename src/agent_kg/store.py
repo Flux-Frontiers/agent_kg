@@ -6,12 +6,40 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import UTC, datetime, timedelta
+
+os.environ.setdefault("TQDM_DISABLE", "1")
 from pathlib import Path
 from typing import Any
 
+from kg_utils.embed import DEFAULT_MODEL as _EMBED_MODEL
+from kg_utils.embed import KNOWN_MODELS, resolve_model_path
+
 from agent_kg.schema import Edge, EdgeRelation, Node, NodeKind
+
+
+def _load_sentence_transformer(model_name: str):
+    """Load a SentenceTransformer, preferring the local kg_utils cache.
+
+    Checks ``~/.kgrag/models/<model_name>/`` (via :func:`~kg_utils.embed.resolve_model_path`)
+    before falling back to the HuggingFace hub download.  This ensures that a
+    model pre-downloaded by ``pycodekg download-model`` or a prior ``agent-kg init``
+    is used directly without a network round-trip.
+
+    The safetensors weight-loading progress bar is suppressed — it fires on every
+    load (local or remote) and is noise in a CLI context.
+
+    :param model_name: HuggingFace repo ID or known short alias (e.g. ``"bge-small"``).
+    :return: Loaded :class:`~sentence_transformers.SentenceTransformer` instance.
+    """
+    from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+
+    local = resolve_model_path(model_name)
+    model_path = str(local) if local.exists() else KNOWN_MODELS.get(model_name, model_name)
+    return SentenceTransformer(model_path)
+
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS nodes (
@@ -70,7 +98,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 """
 
 _EMBED_DIM = 384
-_EMBED_MODEL = "all-MiniLM-L6-v2"
 
 
 def _make_node_schema() -> Any:
@@ -182,9 +209,7 @@ class AgentKGStore:
 
     def _get_embedder(self):
         if self._embedder is None:
-            from sentence_transformers import SentenceTransformer  # noqa: PLC0415
-
-            self._embedder = SentenceTransformer(self._embed_model_name)
+            self._embedder = _load_sentence_transformer(self._embed_model_name)
         return self._embedder
 
     def embed(self, text: str) -> list[float]:

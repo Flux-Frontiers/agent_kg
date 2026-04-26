@@ -3,6 +3,7 @@
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
 [![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
+[![DOI](https://zenodo.org/badge/1186774406.svg)](https://zenodo.org/badge/latestdoi/1186774406)
 
 **AgentKG** — Conversational Memory as a Live, Queryable Knowledge Graph
 

@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-26
+
+### Added
+
+- **Script-based Claude Code hooks** — three shell scripts deployed by `install-hooks` replace
+  fragile inline one-liners: `agent_kg_user_prompt_hook.sh` (UserPromptSubmit), `agent_kg_stop_hook.sh`
+  (Stop — periodic prune every 20 exchanges + async snapshot), `agent_kg_precompact_hook.sh`
+  (PreCompact — synchronous prune + snapshot before context compaction so no turns are lost)
+- **`PreCompact` hook** — new Claude Code hook event wired by `install-hooks --global/--claude`;
+  runs `agent-kg prune --force` and `agent-kg snapshot` synchronously before every context compaction
+- **Periodic mid-session consolidation** — Stop hook counts human exchanges via `transcript_path`
+  and triggers `agent-kg prune` asynchronously every `CONSOLIDATE_INTERVAL` (20) exchanges
+- **`_load_sentence_transformer()`** — module-level helper in `store.py` that checks
+  `~/.kgrag/models/<model>/` (via `kg_utils.embed.resolve_model_path`) before falling back to
+  HuggingFace; shared by `_get_embedder` and `agent-kg init`
+- **`TQDM_DISABLE=1`** set at `store.py` module level — silences the safetensors weight-loading
+  progress bar on every model load (local or remote)
+- **`CITATION.cff`** — software citation metadata (CFF 1.2.0) with ORCID, Zenodo DOI badge added
+  to README
+
+### Changed
+
+- **`install-hooks`** deploys bundled `.sh` scripts from `src/agent_kg/hooks/` to `~/.agentkg/hooks/`
+  and wires `UserPromptSubmit`, `Stop`, and `PreCompact` entries into the target `settings.json`;
+  `--force` overwrites existing scripts and hook entries
+- **`agent-kg init`** uses `_load_sentence_transformer` (local-cache-first) and saves newly
+  downloaded models to `~/.kgrag/models/` so subsequent runs are fully offline
+- **Default embed model** centralised — `graph.py`, `store.py`, and `cli/main.py` all derive the
+  default from `kg_utils.embed.DEFAULT_MODEL` (`BAAI/bge-small-en-v1.5`) instead of
+  hardcoded `"all-MiniLM-L6-v2"` strings
+- **`spacy` removed from `[tool.poetry.extras]`** — it was silently treated as optional by Poetry
+  even though it was listed as a required dep; removing it from extras ensures `poetry install`
+  always installs it; `en_core_web_sm` model download noted in README
+
+### Fixed
+
+- **spaCy topic extraction** — `_spacy_topics` now drives extraction when `en_core_web_sm` is
+  available; code-domain keywords always supplemented on top; bigrams only fire when spaCy
+  unavailable AND no keywords found; `_STOP_TOPICS` expanded to filter articles/determiners
+  that spaCy returns as noun chunks
+- **Entity dedup** — `seen_entity_labels` / `seen_topic_labels` sets added inside `ingest_turn`
+  loop prevent within-call duplicates; `UNIQUE INDEX` on `(kind, LOWER(TRIM(label)))` for
+  topic/entity rows enforces uniqueness at DB level; `_migrate_dedup_before_schema()` cleans
+  pre-existing duplicates on every DB open before the index is created
+- **`pylint` 10/10** — `# pylint: disable=import-outside-toplevel` added at module level in
+  `cli/main.py`, `store.py`, `nlp/topics.py`, `nlp/entities.py`, `nlp/intent.py`, `app.py`,
+  `viz.py`, `onboard.py`, `summarize.py`, `user_profile.py`, and `mcp/server.py` to silence
+  C0415 for all intentional lazy imports across the full codebase
+- **Pre-commit hooks aligned with `pycode_kg`** — replaced PyCQA/pylint hub hook with local
+  `poetry run pylint src/ --rcfile=pyproject.toml --jobs=12`; moved ruff before detect-secrets;
+  added `exclude: '^\.claude/'`, `pass_filenames: false`, `always_run: true` to both ruff hooks;
+  removed `poetry-check` hook; tightened detect-secrets exclude to `snapshots/.*` only
+- **CI workflow aligned with `pycode_kg`** — added `workflow_dispatch:` trigger for manual runs;
+  changed test step to `pytest -m "not integration"` to skip long-running integration tests in CI
+
 ## [0.5.1] - 2026-04-06
 
 ### Changed

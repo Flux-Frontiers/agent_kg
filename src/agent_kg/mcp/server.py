@@ -37,6 +37,7 @@ Configuration via environment:
   AGENTKG_PERSON    — default person ID (default: "default")
   AGENTKG_SESSION   — default session UUID (optional)
 """
+# pylint: disable=import-outside-toplevel
 
 from __future__ import annotations
 

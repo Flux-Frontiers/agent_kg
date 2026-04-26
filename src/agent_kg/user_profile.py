@@ -1,5 +1,6 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
+# pylint: disable=import-outside-toplevel
 
 """profile.py — UserProfile tree: globally persistent personal knowledge.
 

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=line-too-long  # regex pattern strings cannot be split
+# pylint: disable=line-too-long,import-outside-toplevel
 
 """intent.py — Intent classification for AgentKG Turn nodes.
 

@@ -1,113 +1,173 @@
-# agent_kg - Conversational Memory as a Knowledge Graph
-#
-# AgentKG captures Claude Code conversation turns, extracts entities, topics,
-# and semantic embeddings, and stores them in a queryable LanceDB knowledge
-# graph. It provides a CLI, MCP server, and hooks integration so every
-# Claude session automatically enriches the graph.
-#
-# Key Features:
-# - Automatic ingestion via Claude Code pre/post-turn hooks
-# - Semantic + keyword hybrid search over conversation history
-# - Session, entity, and topic graph traversal
-# - MCP (Model Context Protocol) server integration
-# - User profile and onboarding support
-# - Snapshot and visualization commands
+# pyproject.toml — AgentKG package configuration (PEP 621)
 #
 # Author: Eric G. Suchanek, PhD
-# Last Revision: 2026-04-06
+# Last Revision: 2026-04-26
 #
+# Build system : Poetry 2.x with PEP 621 [project] table
+#
+# Quick install (pip)
+# -------------------
+#   pip install -e ".[dev]"             core + dev tools (pytest, ruff, mypy, etc.)
+#   pip install -e ".[llm]"             core + Anthropic LLM summarizer
+#   pip install -e ".[viz]"             core + Streamlit/PyVis visualizer
+#   pip install -e ".[kgdeps]"          core + KG integrations (pycode-kg, doc-kg)
+#   pip install -e ".[all]"             everything above
+#   pip install -e "."                  core runtime only
+#
+# Quick install (poetry)
+# ----------------------
+#   poetry install --all-extras         everything
+#   poetry install --extras "dev"       core + dev tools only
+#   poetry install --extras "llm"       core + Anthropic LLM summarizer only
+#   poetry install --extras "viz"       core + Streamlit/PyVis visualizer only
+#   poetry install --extras "kgdeps"    core + KG integrations only
+#   poetry install                      core runtime only
+#
+# First-time setup
+# ----------------
+#   python -m venv .venv
+#   source .venv/bin/activate       # Windows: .venv\Scripts\activate
+#   pip install -e ".[dev]"
+#
+# Run tests
+# ---------
+#   pytest                          uses pytest.ini (testpaths = tests/)
+#   pytest -m "not slow"            skip slow tests
+#   pytest --cov=agent_kg           with coverage
+#
+# Build KG indices (after code changes)
+# --------------------------------------
+#   pycodekg build --repo .
 
-
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [[tool.poetry.source]]
 name = "testpypi"
 url = "https://test.pypi.org/simple/"
 priority = "supplemental"
 
-[build-system]
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.poetry]
+packages = [{ include = "agent_kg", from = "src" }]
+
+[tool.poetry.group.dev.dependencies]
+detect-secrets = ">=1.5.0"
+mypy           = ">=1.10.0"
+pdoc           = ">=14.0.0"
+pre-commit     = ">=4.5.1"
+pylint         = ">=4.0.5"
+pytest         = ">=8.0.0"
+pytest-cov     = ">=5.0.0"
+ruff           = ">=0.4.0"
+
+# ---------------------------------------------------------------------------
+# PEP 621 project metadata
+# ---------------------------------------------------------------------------
+[project]
 name = "agent-kg"
-version = "0.5.1"
+version = "0.6.0"
 description = "Conversational memory as a knowledge graph"
-authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
-license = "Elastic-2.0"
 readme = "README.md"
-homepage = "https://github.com/Flux-Frontiers/agent_kg"
-repository = "https://github.com/Flux-Frontiers/agent_kg"
+license = "Elastic-2.0"
+authors = [
+    { name = "Eric G. Suchanek, PhD", email = "suchanek@mac.com" }
+]
 keywords = ["knowledge-graph", "conversation-memory", "lancedb", "mcp", "semantic-search", "claude"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-packages = [{ include = "agent_kg", from = "src" }]
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "click>=8.1.0,<9",
+    "kg-utils @ git+https://github.com/Flux-Frontiers/KG_utils.git",
+    "lancedb>=0.29.0",
+    "mcp>=1.0.0",
+    "numpy>=1.24.0",
+    "rich>=14.0.0",
+    "safetensors>=0.5.0",
+    "sentence-transformers>=5.2.0",
+    "spacy>=3.7.0",
+    "torch>=2.5.1",
+    "transformers>=4.57.6",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"
-lancedb = ">=0.29.0"
-numpy = ">=1.24.0"
-sentence-transformers = "^5.2.0"
-transformers = "^4.57.6"
-safetensors = "^0.5.0"
-torch = ">=2.5.1"
-click = ">=8.1.0"
-mcp = ">=1.0.0"
-rich = "^14.0.0"
-spacy = ">=3.7.0"
-anthropic = { version = ">=0.25.0", optional = true }
-httpx = { version = ">=0.27.0", optional = true }
-pyvis = { version = ">=0.3.2", optional = true }
-streamlit = { version = ">=1.35.0", optional = true }
+[project.optional-dependencies]
+dev = [
+    "detect-secrets>=1.5.0",
+    "mypy>=1.10.0",
+    "pdoc>=14.0.0",
+    "pre-commit>=4.5.1",
+    "pylint>=4.0.5",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+]
+llm = [
+    "anthropic>=0.25.0",
+]
+local = [
+    "httpx>=0.27.0",
+]
+viz = [
+    "pyvis>=0.3.2",
+    "streamlit>=1.35.0",
+]
+# pycode-kg and doc-kg are on PyPI; install kgdeps for local KG integration
+kgdeps = [
+    "doc-kg>=0.11.0",
+    "pycode-kg>=0.16.0",
+]
+all = [
+    "anthropic>=0.25.0",
+    "detect-secrets>=1.5.0",
+    "doc-kg>=0.11.0",
+    "httpx>=0.27.0",
+    "mypy>=1.10.0",
+    "pdoc>=14.0.0",
+    "pre-commit>=4.5.1",
+    "pylint>=4.0.5",
+    "pycode-kg>=0.16.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pyvis>=0.3.2",
+    "ruff>=0.4.0",
+    "streamlit>=1.35.0",
+]
 
-[tool.poetry.extras]
-llm   = ["anthropic"]
-local = ["httpx"]
-viz   = ["pyvis", "streamlit"]
-all   = ["anthropic", "httpx", "pyvis", "streamlit"]
+[project.urls]
+Homepage   = "https://github.com/Flux-Frontiers/agent_kg"
+Repository = "https://github.com/Flux-Frontiers/agent_kg"
 
-[tool.poetry.group.kgdeps]
-# Local development only — not installed in CI.
-# Install with: poetry install --with kgdeps
-optional = true
-
-[tool.poetry.group.kgdeps.dependencies]
-pycode-kg = { git = "https://github.com/Flux-Frontiers/pycode_kg.git" }
-doc-kg    = { git = "https://github.com/Flux-Frontiers/doc_kg.git" }
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=8.0.0"
-pytest-cov = ">=5.0.0"
-ruff = ">=0.4.0"
-mypy = ">=1.10.0"
-pre-commit = "^4.5.1"
-detect-secrets = "^1.5.0"
-pylint = "^4.0.5"
-pdoc = ">=14.0.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 agent-kg               = "agent_kg.cli.main:cli"
+agent-kg-analyze       = "agent_kg.cli.main:analyze"
+agent-kg-assemble      = "agent_kg.cli.main:assemble"
 agent-kg-init          = "agent_kg.cli.main:init"
 agent-kg-install-hooks = "agent_kg.cli.main:install_hooks"
-agent-kg-mcp           = "agent_kg.mcp.server:main"
 agent-kg-ingest        = "agent_kg.cli.main:ingest"
-agent-kg-query         = "agent_kg.cli.main:query"
-agent-kg-assemble      = "agent_kg.cli.main:assemble"
-agent-kg-prune         = "agent_kg.cli.main:prune_cmd"
-agent-kg-stats         = "agent_kg.cli.main:stats"
-agent-kg-analyze       = "agent_kg.cli.main:analyze"
-agent-kg-sessions      = "agent_kg.cli.main:sessions"
-agent-kg-snapshot      = "agent_kg.cli.main:snapshot"
+agent-kg-mcp           = "agent_kg.mcp.server:main"
 agent-kg-onboard       = "agent_kg.cli.main:onboard"
 agent-kg-profile       = "agent_kg.cli.main:profile"
-agent-kg-wipe          = "agent_kg.cli.main:wipe"
+agent-kg-prune         = "agent_kg.cli.main:prune_cmd"
+agent-kg-query         = "agent_kg.cli.main:query"
+agent-kg-sessions      = "agent_kg.cli.main:sessions"
+agent-kg-snapshot      = "agent_kg.cli.main:snapshot"
+agent-kg-stats         = "agent_kg.cli.main:stats"
 agent-kg-viz           = "agent_kg.cli.main:viz"
+agent-kg-wipe          = "agent_kg.cli.main:wipe"
 
+# ---------------------------------------------------------------------------
+# Tool configuration
+# ---------------------------------------------------------------------------
 [tool.ruff]
-line-length = 100
+line-length    = 100
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -115,48 +175,51 @@ select = ["E", "F", "W", "I", "UP"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.13"
-strict = false
+python_version         = "3.12"
+strict                 = false
 ignore_missing_imports = true
-mypy_path = "src"
+mypy_path              = "src"
 explicit_package_bases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts   = "-v --tb=short"
 
 [tool.pylint.messages_control]
 disable = ["all"]
 enable = [
-    "cyclic-import",           # R0401
-    "broad-exception-caught",  # W0718
-    "cell-var-from-loop",      # W0640
-    "undefined-variable",      # E0602
-    "import-outside-toplevel", # C0415
+    "broad-exception-caught",   # W0718
+    "cell-var-from-loop",       # W0640
+    "cyclic-import",            # R0401
+    "import-outside-toplevel",  # C0415
+    "undefined-variable",       # E0602
 ]
 
+# ---------------------------------------------------------------------------
+# PyCodeKG / DocKG index configuration
+# ---------------------------------------------------------------------------
 [tool.pycodekg]
-# Directories to include in the knowledge graph build and analysis.
-# When unset, all directories are indexed.
 include = ["src"]
-# Directories to exclude at every depth during the file walk.
-# Combined with the built-in SKIP_DIRS (.git, .venv, __pycache__, etc.).
-# exclude = ["tests", "benchmarks"]
 
 [tool.dockg]
-# Exclude directories from the knowledge graph by default.
-exclude = ["bundles", "dist", "books"]
+exclude = [
+    ".agentkg", ".dockg", ".pycodekg", ".git", ".mypy_cache", ".pytest_cache", ".venv",
+    "__pycache__", "bundles", "dist", "venv",
+]
 
+# ---------------------------------------------------------------------------
+# Poe tasks
+# ---------------------------------------------------------------------------
 [tool.poe.tasks.docs]
-help = "Generate project documentation and user guide PDFs"
+help     = "Generate project documentation and user guide PDFs"
 sequence = [
-  { shell = "cd src && pdoc --o ../docs --logo ./logo.png agent_kg" },
+    { shell = "cd src && pdoc --o ../docs --logo ./logo.png agent_kg" },
 ]
 
 [tool.poe.tasks.wiki]
 help = "Generate and publish GitHub wiki from docs/"
-cmd = "python scripts/generate_wiki.py"
+cmd  = "python scripts/generate_wiki.py"
 
 [tool.poe.tasks.wiki-preview]
 help = "Preview wiki generation without publishing"
-cmd = "python scripts/generate_wiki.py --dry-run"
+cmd  = "python scripts/generate_wiki.py --dry-run"

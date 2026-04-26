@@ -31,6 +31,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from kg_utils.embed import DEFAULT_MODEL
+
 from agent_kg import assemble, consolidate, prune, query, snapshots
 from agent_kg.ingest import IngestResult, ingest_turn
 from agent_kg.onboard import apply_implicit_update
@@ -98,7 +100,7 @@ class AgentKG:
         self._store = AgentKGStore(
             db_path=self._db_path,
             lancedb_dir=self._lancedb_dir,
-            embed_model=embed_model or "all-MiniLM-L6-v2",
+            embed_model=embed_model or DEFAULT_MODEL,
         )
         self._profile = UserProfileStore(self._profile_dir)
         self._session = Session.open(self._store, session_id=session_id)

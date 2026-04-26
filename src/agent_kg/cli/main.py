@@ -30,6 +30,7 @@ import getpass
 from pathlib import Path
 
 import click
+from kg_utils.embed import DEFAULT_MODEL as _DEFAULT_EMBED_MODEL
 
 from agent_kg.graph import AgentKG
 
@@ -814,20 +815,34 @@ def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool
 )
 @click.option(
     "--model",
-    default="all-MiniLM-L6-v2",
+    default=_DEFAULT_EMBED_MODEL,
     show_default=True,
     help="Sentence-transformers model to pre-download.",
 )
 def init(person: str, model: str) -> None:
     """Initialize AgentKG: download the embedding model and create the profile directory."""
-    from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+    from kg_utils.embed import KNOWN_MODELS, resolve_model_path  # noqa: PLC0415
+
+    from agent_kg.store import _load_sentence_transformer  # noqa: PLC0415
 
     profile_dir = Path.home() / ".kgrag" / "profiles" / person
     profile_dir.mkdir(parents=True, exist_ok=True)
     click.echo(f"Profile directory: {profile_dir}")
 
-    click.echo(f"Downloading embedding model '{model}' (cached after first run)...")
-    st = SentenceTransformer(model)
+    local = resolve_model_path(model)
+    if local.exists():
+        click.echo(f"Embedding model '{model}' found in local cache: {local}")
+    else:
+        hf_name = KNOWN_MODELS.get(model, model)
+        click.echo(f"Downloading embedding model '{hf_name}'...")
+
+    st = _load_sentence_transformer(model)
+
+    if not local.exists():
+        # Persist to kg_utils cache so future loads are offline
+        st.save(str(local))
+        click.echo(f"Model saved to local cache: {local}")
+
     _ = st.encode(["warmup"], normalize_embeddings=True)
     click.echo(f"Model ready: {model}")
     click.echo(f"\nAll set. Run 'agent-kg onboard --person {person}' to build your profile.")
