@@ -181,6 +181,10 @@ ignore_missing_imports = true
 mypy_path              = "src"
 explicit_package_bases = true
 
+[[tool.mypy.overrides]]
+module = ["rich.*"]
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts   = "-v --tb=short"

@@ -632,17 +632,17 @@ cd "$REPO_ROOT"
 TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# Rebuild CodeKG index if codekg is available.
-if command -v codekg &>/dev/null || [ -x "$REPO_ROOT/.venv/bin/codekg" ]; then
-    CODEKG="${REPO_ROOT}/.venv/bin/codekg"
-    [ -x "$CODEKG" ] || CODEKG="codekg"
-    "$CODEKG" build --repo "$REPO_ROOT" || exit 1
-    "$CODEKG" snapshot save \\
+# Rebuild PyCodeKG index if pycodekg is available.
+if command -v pycodekg &>/dev/null || [ -x "$REPO_ROOT/.venv/bin/pycodekg" ]; then
+    PYCODEKG="${REPO_ROOT}/.venv/bin/pycodekg"
+    [ -x "$PYCODEKG" ] || PYCODEKG="pycodekg"
+    "$PYCODEKG" build --repo "$REPO_ROOT" || exit 1
+    "$PYCODEKG" snapshot save \\
         --repo "$REPO_ROOT" \\
         --tree-hash "$TREE_HASH" \\
         --branch "$BRANCH" \\
-      || { echo "[codekg] snapshot skipped (run 'codekg build' to initialize)" >&2; }
-    git add .codekg/snapshots/ 2>/dev/null || true
+      || { echo "[pycodekg] snapshot skipped (run 'pycodekg build' to initialize)" >&2; }
+    git add .pycodekg/snapshots/ 2>/dev/null || true
 fi
 
 # Rebuild DocKG index if dockg is available and a docs directory exists.

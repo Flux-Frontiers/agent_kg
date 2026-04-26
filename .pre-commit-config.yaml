@@ -9,7 +9,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1000]
-        exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.codekg/|^\.dockg/'
+        exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.pycodekg/|^\.codekg/|^\.dockg/'
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -29,7 +29,7 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.(agentkg|codekg|dockg)/snapshots/.*']
+        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.(agentkg|pycodekg|codekg|dockg)/snapshots/.*']
 
   - repo: local
     hooks:

@@ -1,0 +1,149 @@
+{
+  "format": "1.0",
+  "last_update": "2026-04-26T22:28:44.547413+00:00",
+  "snapshots": [
+    {
+      "key": "00a7e2232464ab2430183109a3af280dde492b53",
+      "branch": "main",
+      "timestamp": "2026-04-26T22:27:10.920752+00:00",
+      "version": "0.16.0",
+      "file": "00a7e2232464ab2430183109a3af280dde492b53.json",
+      "metrics": {
+        "db_path": ".pycodekg/graph.sqlite",
+        "total_nodes": 3225,
+        "meaningful_nodes": 226,
+        "total_edges": 3301,
+        "node_counts": {
+          "class": 15,
+          "function": 90,
+          "method": 94,
+          "module": 27,
+          "symbol": 2999
+        },
+        "edge_counts": {
+          "ATTR_ACCESS": 1026,
+          "CALLS": 1060,
+          "CONTAINS": 199,
+          "IMPORTS": 180,
+          "INHERITS": 4,
+          "RESOLVES_TO": 832
+        },
+        "module_count": 27,
+        "class_count": 15,
+        "function_count": 90,
+        "method_count": 94,
+        "docstring_coverage": 0.7959999999999999,
+        "snapshot_count": 0,
+        "critical_issues": 3,
+        "complexity_median": 6,
+        "module_node_counts": {
+          "src/agent_kg/__init__.py": 4,
+          "src/agent_kg/app.py": 218,
+          "src/agent_kg/assemble.py": 52,
+          "src/agent_kg/cli/__init__.py": 1,
+          "src/agent_kg/cli/main.py": 376,
+          "src/agent_kg/consolidate.py": 40,
+          "src/agent_kg/graph.py": 170,
+          "src/agent_kg/index.py": 87,
+          "src/agent_kg/ingest.py": 147,
+          "src/agent_kg/kg.py": 2,
+          "src/agent_kg/mcp/__init__.py": 1,
+          "src/agent_kg/mcp/server.py": 89,
+          "src/agent_kg/nlp/__init__.py": 2,
+          "src/agent_kg/nlp/entities.py": 59,
+          "src/agent_kg/nlp/intent.py": 74,
+          "src/agent_kg/nlp/preferences.py": 66,
+          "src/agent_kg/nlp/topics.py": 57,
+          "src/agent_kg/onboard.py": 44,
+          "src/agent_kg/prune.py": 152,
+          "src/agent_kg/query.py": 46,
+          "src/agent_kg/schema.py": 114,
+          "src/agent_kg/session.py": 65,
+          "src/agent_kg/snapshots.py": 53,
+          "src/agent_kg/store.py": 333,
+          "src/agent_kg/summarize.py": 59,
+          "src/agent_kg/user_profile.py": 248,
+          "src/agent_kg/viz.py": 186
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": null
+      }
+    },
+    {
+      "key": "8c941563846468df234e51e49a8d8868dcfa5830",
+      "branch": "main",
+      "timestamp": "2026-04-26T22:28:44.546985+00:00",
+      "version": "0.16.0",
+      "file": "8c941563846468df234e51e49a8d8868dcfa5830.json",
+      "metrics": {
+        "db_path": ".pycodekg/graph.sqlite",
+        "total_nodes": 3225,
+        "meaningful_nodes": 226,
+        "total_edges": 3301,
+        "node_counts": {
+          "class": 15,
+          "function": 90,
+          "method": 94,
+          "module": 27,
+          "symbol": 2999
+        },
+        "edge_counts": {
+          "ATTR_ACCESS": 1026,
+          "CALLS": 1060,
+          "CONTAINS": 199,
+          "IMPORTS": 180,
+          "INHERITS": 4,
+          "RESOLVES_TO": 832
+        },
+        "module_count": 27,
+        "class_count": 15,
+        "function_count": 90,
+        "method_count": 94,
+        "docstring_coverage": 0.7959999999999999,
+        "snapshot_count": 1,
+        "critical_issues": 3,
+        "complexity_median": 6,
+        "module_node_counts": {
+          "src/agent_kg/__init__.py": 4,
+          "src/agent_kg/app.py": 218,
+          "src/agent_kg/assemble.py": 52,
+          "src/agent_kg/cli/__init__.py": 1,
+          "src/agent_kg/cli/main.py": 376,
+          "src/agent_kg/consolidate.py": 40,
+          "src/agent_kg/graph.py": 170,
+          "src/agent_kg/index.py": 87,
+          "src/agent_kg/ingest.py": 147,
+          "src/agent_kg/kg.py": 2,
+          "src/agent_kg/mcp/__init__.py": 1,
+          "src/agent_kg/mcp/server.py": 89,
+          "src/agent_kg/nlp/__init__.py": 2,
+          "src/agent_kg/nlp/entities.py": 59,
+          "src/agent_kg/nlp/intent.py": 74,
+          "src/agent_kg/nlp/preferences.py": 66,
+          "src/agent_kg/nlp/topics.py": 57,
+          "src/agent_kg/onboard.py": 44,
+          "src/agent_kg/prune.py": 152,
+          "src/agent_kg/query.py": 46,
+          "src/agent_kg/schema.py": 114,
+          "src/agent_kg/session.py": 65,
+          "src/agent_kg/snapshots.py": 53,
+          "src/agent_kg/store.py": 333,
+          "src/agent_kg/summarize.py": 59,
+          "src/agent_kg/user_profile.py": 248,
+          "src/agent_kg/viz.py": 186
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 0,
+          "coverage_delta": 0.0,
+          "critical_issues_delta": 0
+        }
+      }
+    }
+  ]
+}
