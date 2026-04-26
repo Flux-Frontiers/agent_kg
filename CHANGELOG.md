@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`kgmodule-utils` replaces `kg-utils` git dep** — dependency switched from
+  `kg-utils @ git+https://github.com/Flux-Frontiers/KG_utils.git` to
+  `kgmodule-utils>=0.2.0` on PyPI; removes the git-install requirement and
+  enables clean `pip install agent-kg` from PyPI
+- **pytest `pythonpath = ["src"]`** added to `[tool.pytest.ini_options]` so
+  `import agent_kg` resolves without `pip install -e .` in test environments
+- **KG snapshots refreshed** — `.pycodekg` and `.dockg` snapshots updated to
+  reflect current codebase state post-0.6.0 changes
+
 ## [0.6.0] - 2026-04-26
 
 ### Added

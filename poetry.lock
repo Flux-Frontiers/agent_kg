@@ -1665,20 +1665,16 @@ files = [
 ]
 
 [[package]]
-name = "kg-utils"
-version = "0.1.0"
+name = "kgmodule-utils"
+version = "0.2.0"
 description = "Shared types and snapshot infrastructure for the KGModule SDK"
 optional = false
-python-versions = ">=3.12,<3.14"
+python-versions = "<3.14,>=3.12"
 groups = ["main"]
-files = []
-develop = false
-
-[package.source]
-type = "git"
-url = "https://github.com/Flux-Frontiers/KG_utils.git"
-reference = "HEAD"
-resolved_reference = "b19b2f7acc1c1e56c155eab190a1a9ebafd06f0e"
+files = [
+    {file = "kgmodule_utils-0.2.0-py3-none-any.whl", hash = "sha256:94de2ae1b526de75b0db4e3c2b9d29d5413220bd6e03e4c53b88e6fd6170e7d9"},
+    {file = "kgmodule_utils-0.2.0.tar.gz", hash = "sha256:445fbd2f6506d66727e42217fb57dc8426108a0cb1d14983ff8e2535e1f5edf9"},
+]
 
 [[package]]
 name = "lance-namespace"
@@ -5412,4 +5408,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "14b69fc00af919f0d4ee934985986c58cedf5ad55c6f57463c89fa64363fde15"
+content-hash = "68c1a892b1ee9b28bce6e612da1a2c3c97896cd81328d6b4e8b51a852d1bd038"

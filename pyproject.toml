@@ -86,7 +86,7 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "kg-utils @ git+https://github.com/Flux-Frontiers/KG_utils.git",
+    "kgmodule-utils>=0.2.0",
     "lancedb>=0.29.0",
     "mcp>=1.0.0",
     "numpy>=1.24.0",
@@ -186,8 +186,9 @@ module = ["rich.*"]
 follow_imports = "skip"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts   = "-v --tb=short"
+testpaths  = ["tests"]
+addopts    = "-v --tb=short"
+pythonpath = ["src"]
 
 [tool.pylint.messages_control]
 disable = ["all"]
