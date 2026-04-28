@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `.github/workflows/publish.yml`: Added `poetry publish` step (via `PYPI_TOKEN` secret) so tag pushes auto-publish to PyPI; fixed stale release title `CodeKG` → `AgentKG`.
+- `.claude/commands/release.md`: Replaced stale `codekg-build-sqlite/lancedb --wipe` with `.venv/bin/pycodekg build`; corrected `.codekg/` → `.pycodekg/snapshots/`.
+- `.claude/skills/dockg/SKILL.md`: Corrected build CLI semantics (default = full wipe-and-rebuild; `--update` = incremental); removed non-existent `--wipe` flag; updated embedding model to `BAAI/bge-small-en-v1.5`; added multipass pipeline docs.
+- `README.md`: Version badge corrected from `0.5.1` → `0.6.0`.
+
 - **`kgmodule-utils` replaces `kg-utils` git dep** — dependency switched from
   `kg-utils @ git+https://github.com/Flux-Frontiers/KG_utils.git` to
   `kgmodule-utils>=0.2.0` on PyPI; removes the git-install requirement and
