@@ -7,7 +7,7 @@ You will create a new versioned release by promoting the `[Unreleased]` section 
 ## Step 0: Gather Release Context
 
 1. Read `CHANGELOG.md` in full.
-2. Read `pyproject.toml` and `src/code_kg/__init__.py` to find the current version string.
+2. Read `pyproject.toml` and `src/agent_kg/__init__.py` to find the current version string.
 3. Run `git status` and `git log --oneline -10` to understand the state of the working tree.
 4. Confirm there is content under `## [Unreleased]`; if the section is empty, stop and tell the user there is nothing to release.
 
@@ -35,7 +35,7 @@ You will create a new versioned release by promoting the `[Unreleased]` section 
 Update the version string in **both** of the following files:
 
 - `pyproject.toml` — the `version = "..."` field under `[tool.poetry]`
-- `src/code_kg/__init__.py` — the `__version__` assignment
+- `src/agent_kg/__init__.py` — the `__version__` assignment
 
 Set both to the new version string (without the `v` prefix).
 
@@ -66,26 +66,26 @@ Do not summarise or rewrite the changelog content — copy it exactly.
 In `README.md`, find the version badge line:
 
 ```
-[![Version](https://img.shields.io/badge/version-<current_version>-blue.svg)](https://github.com/Flux-Frontiers/code_kg/releases)
+[![Version](https://img.shields.io/badge/version-<current_version>-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 ```
 
 Replace `<current_version>` with `<new_version>` (e.g. `0.2.3` → `0.2.4`).
 
 ---
 
-## Step 4c: Generate Versioned CodeKG Analysis
+## Step 4c: Generate Versioned PyCodeKG Analysis
 
-1. Rebuild the CodeKG index against the current source:
+1. Rebuild the PyCodeKG index against the current source:
    ```bash
    .venv/bin/pycodekg build --repo .
    ```
 2. Run the thorough analysis:
    ```bash
-   poetry run codekg-analyze --repo . --output docs/analysis_v<new_version>.md
+   poetry run pycodekg-analyze --repo . --output docs/analysis_v<new_version>.md
    ```
    If the `--output` flag is not available, run the analysis and write stdout to the file:
    ```bash
-   poetry run codekg-analyze --repo . > docs/analysis_v<new_version>.md
+   poetry run pycodekg-analyze --repo . > docs/analysis_v<new_version>.md
    ```
 3. Open `docs/analysis_v<new_version>.md` and ensure the header contains:
    ```
@@ -97,7 +97,7 @@ Replace `<current_version>` with `<new_version>` (e.g. `0.2.3` → `0.2.4`).
 5. Stage the generated artifacts — the rebuild and analysis both produce new files:
    ```bash
    git add docs/analysis_v<new_version>.md
-   git add .codekg/
+   git add .pycodekg/
    ```
    If an old analysis file was deleted, also run `git rm docs/analysis_v<old_version>.md`.
 
@@ -109,7 +109,7 @@ Replace `<current_version>` with `<new_version>` (e.g. `0.2.3` → `0.2.4`).
    - `CHANGELOG.md`
    - `release-notes.md`
    - `pyproject.toml`
-   - `src/code_kg/__init__.py`
+   - `src/agent_kg/__init__.py`
    - `README.md`
    - `docs/analysis_v<new_version>.md`
 2. Create a commit with message:

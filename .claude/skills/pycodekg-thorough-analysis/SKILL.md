@@ -1,8 +1,8 @@
-# CodeKG Thorough Repository Analysis Skill
+# PyCodeKG Thorough Repository Analysis Skill
 
 ## Overview
 
-Performs comprehensive architectural analysis of any Python repository using CodeKG's graph traversal capabilities. Extracts metrics like:
+Performs comprehensive architectural analysis of any Python repository using PyCodeKG's graph traversal capabilities. Extracts metrics like:
 - **Complexity hotspots** (highest fan-in/fan-out functions)
 - **Architectural patterns** (core modules, integration points, bottlenecks)
 - **Dependency analysis** (cyclic deps, tight coupling, layering violations)
@@ -11,8 +11,8 @@ Performs comprehensive architectural analysis of any Python repository using Cod
 ## Trigger Phrases
 
 - "analyze this repository thoroughly"
-- "give me a complete codekg analysis"
-- "codekg deep dive"
+- "give me a complete pycodekg analysis"
+- "pycodekg deep dive"
 - "repository architecture report"
 - "find hotspots in this codebase"
 
@@ -93,12 +93,12 @@ Compile findings into:
 ```bash
 # Runs all 8 analysis phases and writes both outputs automatically:
 #   Markdown report → <repo>_analysis_<YYYYMMDD>.md  (cwd)
-#   JSON snapshot   → ~/.claude/codekg_analysis_latest.json
-codekg analyze /path/to/repo
+#   JSON snapshot   → ~/.claude/pycodekg_analysis_latest.json
+pycodekg analyze /path/to/repo
 ```
 
 ### 2. Read the JSON snapshot
-The JSON at `~/.claude/codekg_analysis_latest.json` contains all pre-computed metrics — no need to manually chain MCP calls. Schema:
+The JSON at `~/.claude/pycodekg_analysis_latest.json` contains all pre-computed metrics — no need to manually chain MCP calls. Schema:
 
 ```json
 {
@@ -131,7 +131,7 @@ The JSON at `~/.claude/codekg_analysis_latest.json` contains all pre-computed me
 
 Structure:
 ```markdown
-# CodeKG Repository Analysis Report
+# PyCodeKG Repository Analysis Report
 
 ## Quick Stats
 - Total functions/classes
@@ -198,31 +198,31 @@ Structure:
 
 **File Output (always written):**
 - Markdown report — `<repo>_analysis_<YYYYMMDD>.md` in cwd (override with `--output`)
-- JSON snapshot — `~/.claude/codekg_analysis_latest.json` (override with `--json`)
+- JSON snapshot — `~/.claude/pycodekg_analysis_latest.json` (override with `--json`)
 
 ## Example Invocations
 
 ```bash
 # Analyze current directory (writes .md + .json automatically)
-codekg analyze .
+pycodekg analyze .
 
 # Analyze specific path
-codekg analyze /path/to/repo
+pycodekg analyze /path/to/repo
 
 # Custom Markdown report path
-codekg analyze /path/to/repo --output /tmp/analysis.md
+pycodekg analyze /path/to/repo --output /tmp/analysis.md
 
 # Custom JSON snapshot path
-codekg analyze /path/to/repo --json /tmp/analysis.json
+pycodekg analyze /path/to/repo --json /tmp/analysis.json
 
 # Both custom paths
-codekg analyze /path/to/repo -o /tmp/report.md -j /tmp/metrics.json
+pycodekg analyze /path/to/repo -o /tmp/report.md -j /tmp/metrics.json
 
 # Non-default SQLite / LanceDB paths
-codekg analyze /path/to/repo --db /path/to/graph.sqlite --lancedb /path/to/lancedb
+pycodekg analyze /path/to/repo --db /path/to/graph.sqlite --lancedb /path/to/lancedb
 
 # Suppress Rich console table (CI / pipe use)
-codekg analyze /path/to/repo --quiet
+pycodekg analyze /path/to/repo --quiet
 ```
 
 ## Skill Output Example
@@ -230,7 +230,7 @@ codekg analyze /path/to/repo --quiet
 For a repository like **personal_agent**:
 
 ```
-📊 CodeKG Repository Analysis
+📊 PyCodeKG Repository Analysis
 ═══════════════════════════════
 
 Baseline Metrics:
@@ -313,7 +313,7 @@ Reusable Patterns:
 ✅ **Actionable** — Identifies specific functions/modules to review
 ✅ **Visual** — Color-coded risk levels, ASCII diagrams
 ✅ **Fast** — Caches results, progresses through queries
-✅ **Reusable** — Works on any Python codebase with CodeKG
+✅ **Reusable** — Works on any Python codebase with PyCodeKG
 ✅ **Extensible** — Easy to add custom analysis dimensions
 
 ## Edge Cases

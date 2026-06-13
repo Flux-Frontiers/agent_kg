@@ -7,7 +7,7 @@
       ],
       "env": {
         "MEMORY_PATH": "/Users/egs/.claude/memory",
-        "WORKSPACE_ID": "code_kg"
+        "WORKSPACE_ID": "agent_kg"
       }
     },
     "skills-copilot": {
@@ -26,21 +26,21 @@
       ],
       "env": {
         "TASK_DB_PATH": "/Users/egs/.claude/tasks",
-        "WORKSPACE_ID": "code_kg"
+        "WORKSPACE_ID": "agent_kg"
       }
     },
-    "codekg": {
-      "command": ".venv/bin/codekg",
+    "pycodekg": {
+      "command": ".venv/bin/pycodekg",
       "args": [
         "mcp",
-        "--repo", "/Users/egs/repos/code_kg"
+        "--repo", "/Users/egs/repos/agent_kg"
       ]
     },
     "dockg": {
       "command": ".venv/bin/dockg",
       "args": [
         "mcp",
-        "--repo", "/Users/egs/repos/code_kg"
+        "--repo", "/Users/egs/repos/agent_kg"
       ]
     }
   }

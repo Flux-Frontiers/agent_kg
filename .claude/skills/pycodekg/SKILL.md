@@ -1,39 +1,39 @@
 ---
-name: codekg
-description: Expert knowledge for installing, configuring, and using the CodeKG MCP server — a hybrid semantic + structural knowledge graph for Python codebases. Use this skill when the user asks about: setting up CodeKG in a project, adding code-kg as a Poetry dependency, building the SQLite or LanceDB knowledge graph, configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, configuring Cline MCP settings, using the codekg CLI (codekg build, codekg build-sqlite, codekg build-lancedb, codekg mcp, codekg query, codekg pack, codekg analyze, codekg centrality, codekg viz, codekg viz3d, codekg viz-timeline, codekg explain, codekg snapshot, codekg architecture, codekg download-model, codekg install-hooks), using the graph_stats / query_codebase / pack_snippets / get_node / list_nodes / callers / explain / centrality / bridge_centrality / framework_nodes / analyze_repo / rank_nodes / query_ranked / explain_rank / snapshot_list / snapshot_show / snapshot_diff MCP tools, or troubleshooting CodeKG errors.
+name: pycodekg
+description: Expert knowledge for installing, configuring, and using the PyCodeKG MCP server — a hybrid semantic + structural knowledge graph for Python codebases. Use this skill when the user asks about: setting up PyCodeKG in a project, adding pycode-kg as a Poetry dependency, building the SQLite or LanceDB knowledge graph, configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, configuring Cline MCP settings, using the pycodekg CLI (pycodekg build, pycodekg build-sqlite, pycodekg build-lancedb, pycodekg mcp, pycodekg query, pycodekg pack, pycodekg analyze, pycodekg centrality, pycodekg viz, pycodekg viz3d, pycodekg viz-timeline, pycodekg explain, pycodekg snapshot, pycodekg architecture, pycodekg download-model, pycodekg install-hooks), using the graph_stats / query_codebase / pack_snippets / get_node / list_nodes / callers / explain / centrality / bridge_centrality / framework_nodes / analyze_repo / rank_nodes / query_ranked / explain_rank / snapshot_list / snapshot_show / snapshot_diff MCP tools, or troubleshooting PyCodeKG errors.
 ---
 
-# CodeKG Skill
+# PyCodeKG Skill
 
-> **Use CodeKG first — before grep, Glob, or file reads.**
+> **Use PyCodeKG first — before grep, Glob, or file reads.**
 >
-> Grep and file search find text. CodeKG understands code. It knows what calls what, what inherits from what, which modules are imported where, and surfaces the most semantically relevant source snippets in a single query. One `pack_snippets` call replaces five rounds of grep-and-read and gives the agent real structural insight into the codebase — not just line matches.
+> Grep and file search find text. PyCodeKG understands code. It knows what calls what, what inherits from what, which modules are imported where, and surfaces the most semantically relevant source snippets in a single query. One `pack_snippets` call replaces five rounds of grep-and-read and gives the agent real structural insight into the codebase — not just line matches.
 
-CodeKG indexes Python repos into a hybrid knowledge graph (SQLite + LanceDB) and exposes it as MCP tools for AI agents.
+PyCodeKG indexes Python repos into a hybrid knowledge graph (SQLite + LanceDB) and exposes it as MCP tools for AI agents.
 
 ## Installation (Poetry)
 
 ```bash
 # With MCP server support
-poetry add "code-kg[mcp] @ git+https://github.com/Flux-Frontiers/code_kg.git"
+poetry add "pycode-kg[mcp] @ git+https://github.com/Flux-Frontiers/pycode_kg.git"
 ```
 
 Adds to `pyproject.toml`:
 ```toml
-code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git", extras = ["mcp"] }
+pycode-kg = { git = "https://github.com/Flux-Frontiers/pycode_kg.git", extras = ["mcp"] }
 ```
 
 ## Build the Knowledge Graph
 
 ```bash
 # Step 1 — SQLite graph
-codekg build-sqlite --repo .
+pycodekg build-sqlite --repo .
 
 # Step 2 — LanceDB vector index
-codekg build-lancedb --repo .
+pycodekg build-lancedb --repo .
 ```
 
-> **Common mistake:** `codekg build-lancedb` uses `--sqlite`, not `--db`, when specifying a non-default path.
+> **Common mistake:** `pycodekg build-lancedb` uses `--sqlite`, not `--db`, when specifying a non-default path.
 
 Add `--wipe` to either command to rebuild from scratch.
 
@@ -43,28 +43,25 @@ The knowledge graph is a snapshot of the codebase at build time. It does **not**
 
 ### When to rebuild
 
-| Change | Action |
+| Change | Command |
 |---|---|
-| Added / renamed / deleted functions, classes, or modules | Full rebuild (`--wipe`) |
-| Large refactor touching many files | Full rebuild (`--wipe`) |
-| Minor edits within existing functions | Incremental rebuild (no `--wipe`) is usually sufficient |
-| New file added to the repo | Incremental rebuild is sufficient |
+| Added / renamed / deleted functions, classes, or modules | `pycodekg build` (full wipe) |
+| Large refactor touching many files | `pycodekg build` (full wipe) |
+| Minor edits within existing functions | `pycodekg update` (incremental upsert) |
+| New file added to the repo | `pycodekg update` (incremental upsert) |
 
-> **Why `--wipe` matters:** Without it, deleted or renamed nodes remain in the index as phantom entries. LanceDB upserts by node ID so renamed nodes leave behind orphans; `--wipe` clears them.
+> **Why `pycodekg build` always wipes:** Deleted or renamed nodes would otherwise remain as phantom entries. LanceDB upserts by node ID, so renamed nodes leave behind orphans. `pycodekg build` clears both stores unconditionally; use `pycodekg update` only when you're sure no nodes were deleted or renamed.
 
-### Full rebuild (recommended after significant changes)
+### Full rebuild
 
 ```bash
-codekg build-sqlite  --repo . --wipe
-codekg build-lancedb --repo . --wipe
+pycodekg build --repo .
 ```
 
-### Incremental rebuild (minor additions only)
+### Incremental upsert (minor additions only)
 
 ```bash
-# omit --wipe to upsert without clearing
-codekg build-sqlite  --repo .
-codekg build-lancedb --repo .
+pycodekg update --repo .
 ```
 
 ### Using the installer script
@@ -74,7 +71,7 @@ codekg build-lancedb --repo .
 bash scripts/install-skill.sh --wipe
 
 # Or via curl if not running from a local clone
-curl -fsSL https://raw.githubusercontent.com/Flux-Frontiers/code_kg/main/scripts/install-skill.sh \
+curl -fsSL https://raw.githubusercontent.com/Flux-Frontiers/pycode_kg/main/scripts/install-skill.sh \
   | bash -s -- --wipe
 ```
 
@@ -86,33 +83,33 @@ Beyond build/query/viz, the full command set:
 
 | Command | Purpose |
 |---|---|
-| `codekg build` | Full pipeline: SQLite + LanceDB in one step |
-| `codekg centrality` | Compute Structural Importance Ranking (SIR) over the graph |
-| `codekg explain <NODE_ID>` | Natural-language explanation of a code node by ID |
-| `codekg snapshot save <version>` | Capture metrics snapshot (commit, branch, version) |
-| `codekg snapshot list` | List all snapshots in reverse chronological order |
-| `codekg snapshot show <commit>` | Full details for a single snapshot |
-| `codekg snapshot diff <a> <b>` | Compare two snapshots side-by-side |
-| `codekg viz-timeline` | Temporal metrics evolution chart (2d or 3d) |
-| `codekg architecture [<repo>]` | Generate Markdown/JSON architecture description |
-| `codekg download-model` | Pre-download embedding model for offline use |
-| `codekg install-hooks` | Install post-commit git hook for automatic snapshots |
+| `pycodekg build` | Full pipeline: SQLite + LanceDB in one step |
+| `pycodekg centrality` | Compute Structural Importance Ranking (SIR) over the graph |
+| `pycodekg explain <NODE_ID>` | Natural-language explanation of a code node by ID |
+| `pycodekg snapshot save <version>` | Capture metrics snapshot (commit, branch, version) |
+| `pycodekg snapshot list` | List all snapshots in reverse chronological order |
+| `pycodekg snapshot show <commit>` | Full details for a single snapshot |
+| `pycodekg snapshot diff <a> <b>` | Compare two snapshots side-by-side |
+| `pycodekg viz-timeline` | Temporal metrics evolution chart (2d or 3d) |
+| `pycodekg architecture [<repo>]` | Generate Markdown/JSON architecture description |
+| `pycodekg download-model` | Pre-download embedding model for offline use |
+| `pycodekg install-hooks` | Install post-commit git hook for automatic snapshots |
 
 ## Offline Setup
 
-If you need to use CodeKG without network access (e.g., in CI, air-gapped nets, or to avoid HuggingFace rate limits):
+If you need to use PyCodeKG without network access (e.g., in CI, air-gapped nets, or to avoid HuggingFace rate limits):
 
 ```bash
 # Download the embedding model locally
-codekg download-model
+pycodekg download-model
 ```
 
-This saves the model to `.codekg/models/<model-name>/`. Subsequent runs of `build-lancedb` and `codekg query` will use the cached local copy without any network access.
+This saves the model to `.pycodekg/models/<model-name>/`. Subsequent runs of `build-lancedb` and `pycodekg query` will use the cached local copy without any network access.
 
-Alternatively, set `CODEKG_MODEL_DIR` to cache elsewhere:
+Alternatively, set `PYCODEKG_MODEL_DIR` to cache elsewhere:
 ```bash
-export CODEKG_MODEL_DIR=/path/to/shared/models
-codekg download-model
+export PYCODEKG_MODEL_DIR=/path/to/shared/models
+pycodekg download-model
 ```
 
 ## Configure Claude Code / Kilo Code (.mcp.json)
@@ -122,12 +119,12 @@ Both Claude Code and Kilo Code read per-repo config from `.mcp.json` in the proj
 ```json
 {
   "mcpServers": {
-    "codekg": {
-      "command": "codekg",
+    "pycodekg": {
+      "command": "pycodekg",
       "args": [
         "mcp",
         "--repo", "/absolute/path/to/repo",
-        "--db",   "/absolute/path/to/repo/.codekg/graph.sqlite"
+        "--db",   "/absolute/path/to/repo/.pycodekg/graph.sqlite"
       ]
     }
   }
@@ -136,7 +133,7 @@ Both Claude Code and Kilo Code read per-repo config from `.mcp.json` in the proj
 
 Always use **absolute paths**. Merge into existing `mcpServers` — don't overwrite other entries.
 
-> ⚠️ Do NOT add `codekg` to any global settings file — use per-repo `.mcp.json` only.
+> ⚠️ Do NOT add `pycodekg` to any global settings file — use per-repo `.mcp.json` only.
 
 ## Configure GitHub Copilot (.vscode/mcp.json)
 
@@ -145,13 +142,13 @@ GitHub Copilot uses a different schema — `"servers"` key and `"type": "stdio"`
 ```json
 {
   "servers": {
-    "codekg": {
+    "pycodekg": {
       "type": "stdio",
-      "command": "codekg",
+      "command": "pycodekg",
       "args": [
         "mcp",
         "--repo", "/absolute/path/to/repo",
-        "--db",   "/absolute/path/to/repo/.codekg/graph.sqlite"
+        "--db",   "/absolute/path/to/repo/.pycodekg/graph.sqlite"
       ]
     }
   }
@@ -167,7 +164,7 @@ Claude Desktop has no Poetry on PATH — use the absolute venv binary:
 ```bash
 poetry env info --path
 # → /path/to/venv
-# binary: /path/to/venv/bin/codekg
+# binary: /path/to/venv/bin/pycodekg
 ```
 
 Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
@@ -175,9 +172,9 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 ```json
 {
   "mcpServers": {
-    "codekg": {
-      "command": "/path/to/venv/bin/codekg",
-      "args": ["mcp", "--repo", "/abs/path", "--db", "/abs/path/.codekg/graph.sqlite"]
+    "pycodekg": {
+      "command": "/path/to/venv/bin/pycodekg",
+      "args": ["mcp", "--repo", "/abs/path", "--db", "/abs/path/.pycodekg/graph.sqlite"]
     }
   }
 }
@@ -187,7 +184,7 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 
 If the project has Claude Copilot installed:
 ```
-/setup-codekg-mcp /path/to/repo
+/setup-pycodekg-mcp /path/to/repo
 ```
 This installs, builds, smoke-tests, and writes both config files automatically.
 
@@ -276,13 +273,13 @@ explain_rank("fn:src/db/store.py:connect")               → why did this rank h
 
 ## .gitignore Setup
 
-The `.codekg/` directory holds the SQLite graph, LanceDB vector index, and snapshots. All are local artifacts — the graph and index are reproducible, snapshots are captured by the post-commit hook.
+The `.pycodekg/` directory holds the SQLite graph, LanceDB vector index, and snapshots. All are local artifacts — the graph and index are reproducible, snapshots are captured by the post-commit hook.
 
 ```gitignore
-.codekg/
+.pycodekg/
 ```
 
-Add this to `.gitignore` when installing CodeKG in a new repo. Commit snapshots manually at milestones if you want git history.
+Add this to `.gitignore` when installing PyCodeKG in a new repo. Commit snapshots manually at milestones if you want git history.
 
 ## Key Defaults
 
@@ -295,11 +292,11 @@ Add this to `.gitignore` when installing CodeKG in a new repo. Commit snapshots 
 
 | Error | Fix |
 |---|---|
-| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `codekg build-lancedb` |
+| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `pycodekg build-lancedb` |
 | `ERROR: 'mcp' package not found` | `poetry add mcp` |
 | `WARNING: SQLite database not found` | Run both build commands first |
 | MCP server not appearing | Use absolute paths; restart Claude Code |
-| Empty query results | Run `codekg build-lancedb --wipe` |
+| Empty query results | Run `pycodekg build-lancedb --wipe` |
 
 ## Full Reference
 

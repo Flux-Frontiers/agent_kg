@@ -42,7 +42,7 @@ from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
 from agent_kg.user_profile import UserProfileStore
 
-# Default storage layout (mirrors .codekg / .dockg convention)
+# Default storage layout (mirrors .pycodekg / .dockg convention)
 _AGENTKG_DIR = ".agentkg"
 _DB_NAME = "graph.sqlite"
 _LANCEDB_DIR = "lancedb"

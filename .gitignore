@@ -214,8 +214,8 @@ cython_debug/
 # AgentKG runtime data — conversation graph is private
 .agentkg/
 
-# CodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
-# MUST include .codekg/snapshots!
+# PyCodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
+# MUST include .pycodekg/snapshots!
 # This is the correct pattern
 .pycodekg/lancedb/
 .pycodekg/lancedb-*
@@ -223,7 +223,7 @@ cython_debug/
 .pycodekg/graph.sqlite*
 .pycodekg/models
 
-# DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
+# DocKG generated artifacts — same pattern as PyCodeKG; snapshots will be tracked once added
 .dockg/lancedb/
 .dockg/lancedb-*
 .dockg/graph.sqlite
