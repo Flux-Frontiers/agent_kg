@@ -9,13 +9,13 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1000]
-        exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.pycodekg/|^\.codekg/|^\.dockg/'
+        exclude: '^(src|docs|assets)/.*\.(png|jpg|jpeg|gif|pdf)$|^\.agentkg/|^\.pycodekg/|^\.dockg/'
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: v0.15.13
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
         exclude: '^\.claude/'
         pass_filenames: false
@@ -29,7 +29,7 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.(agentkg|pycodekg|codekg|dockg)/snapshots/.*']
+        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.(agentkg|pycodekg|dockg)/snapshots/.*']
 
   - repo: local
     hooks:
@@ -39,9 +39,9 @@ repos:
         language: system
         pass_filenames: false
         args: ['--rcfile=pyproject.toml', '--jobs=12']
-      - id: mypy
-        name: mypy
-        entry: poetry run mypy src/
+      - id: ty
+        name: ty
+        entry: poetry run ty check src/
         language: system
         pass_filenames: false
         always_run: true
