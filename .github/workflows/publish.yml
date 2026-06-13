@@ -35,11 +35,6 @@ jobs:
       - name: Build wheel and sdist
         run: poetry build
 
-      - name: Publish to PyPI
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
