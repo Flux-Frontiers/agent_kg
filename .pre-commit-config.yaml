@@ -13,9 +13,9 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: v0.15.13
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
         exclude: '^\.claude/'
         pass_filenames: false
@@ -39,9 +39,9 @@ repos:
         language: system
         pass_filenames: false
         args: ['--rcfile=pyproject.toml', '--jobs=12']
-      - id: mypy
-        name: mypy
-        entry: poetry run mypy src/
+      - id: ty
+        name: ty
+        entry: poetry run ty check src/
         language: system
         pass_filenames: false
         always_run: true

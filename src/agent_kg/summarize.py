@@ -46,7 +46,7 @@ class SummarizerConfig:
     def from_env(cls) -> SummarizerConfig:
         """Load configuration from environment variables."""
         return cls(
-            backend=os.environ.get(  # type: ignore[arg-type]
+            backend=os.environ.get(  # ty: ignore[invalid-argument-type]
                 "AGENTKG_SUMMARIZER_BACKEND", "primary"
             ),
             local_endpoint=os.environ.get(
