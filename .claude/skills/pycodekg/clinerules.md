@@ -1,6 +1,6 @@
-# CodeKG — Cline Rules Template
+# PyCodeKG — Cline Rules Template
 
-Copy this file to `.clinerules` in the root of any repo that has CodeKG configured.
+Copy this file to `.clinerules` in the root of any repo that has PyCodeKG configured.
 It gives Cline automatic context about the available MCP tools and how to use them.
 
 ---
@@ -8,7 +8,7 @@ It gives Cline automatic context about the available MCP tools and how to use th
 ## How to use this file
 
 ```bash
-cp /path/to/code_kg/.claude/skills/codekg/clinerules.md /path/to/myrepo/.clinerules
+cp /path/to/pycode_kg/.claude/skills/pycodekg/clinerules.md /path/to/myrepo/.clinerules
 ```
 
 Or add the content below to an existing `.clinerules` file in your repo.
@@ -18,9 +18,9 @@ Or add the content below to an existing `.clinerules` file in your repo.
 ## Content to put in `.clinerules`
 
 ```
-## CodeKG MCP Tools
+## PyCodeKG MCP Tools
 
-This project has a CodeKG MCP server configured (`codekg`). Use these tools to
+This project has a PyCodeKG MCP server configured (`pycodekg`). Use these tools to
 explore the codebase structure before writing or modifying code.
 
 ### Available tools
@@ -64,7 +64,7 @@ explore the codebase structure before writing or modifying code.
 - **snapshot_diff(key_a, key_b)** — Compare two snapshots side-by-side.
   Returns delta for nodes, edges, docstring coverage, and critical issues.
 
-### When to use CodeKG
+### When to use PyCodeKG
 
 - **Start of session:** Call `graph_stats()` to understand the codebase size.
 - **Before editing:** Call `query_codebase("relevant topic")` to find related code.
@@ -73,17 +73,23 @@ explore the codebase structure before writing or modifying code.
 
 ### Rebuilding the index
 
-If the codebase has changed significantly, rebuild with:
+**Full rebuild** (always wipes — use after renames, deletions, or large refactors):
 
 ```bash
-codekg build-sqlite  --repo . --wipe
-codekg build-lancedb --repo . --wipe
+pycodekg build --repo .
 ```
 
-Or in one step:
+**Incremental upsert** (no wipe — safe for minor edits and new files only):
 
 ```bash
-codekg build --repo . --wipe
+pycodekg update --repo .
+```
+
+Or step by step (with explicit wipe control):
+
+```bash
+pycodekg build-sqlite  --repo . --wipe
+pycodekg build-lancedb --repo . --wipe
 ```
 
 ### Cline MCP config
@@ -95,18 +101,18 @@ Add a named entry for each repo:
 ```json
 {
   "mcpServers": {
-    "codekg-REPONAME": {
-      "command": "/absolute/path/to/venv/bin/codekg",
+    "pycodekg-REPONAME": {
+      "command": "/absolute/path/to/venv/bin/pycodekg",
       "args": [
         "mcp",
         "--repo",    "/absolute/path/to/repo",
-        "--db",      "/absolute/path/to/repo/.codekg/graph.sqlite"
+        "--db",      "/absolute/path/to/repo/.pycodekg/graph.sqlite"
       ]
     }
   }
 }
 ```
 
-Use a unique name per repo (e.g. `codekg-myproject`) to avoid conflicts.
+Use a unique name per repo (e.g. `pycodekg-myproject`) to avoid conflicts.
 Enable/disable servers via the Cline MCP panel as you switch projects.
 ```

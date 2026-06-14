@@ -1,7 +1,7 @@
-# CodeKG Query Cheatsheet
+# PyCodeKG Query Cheatsheet
 
 A practical reference for the seventeen MCP tools, with examples drawn from this codebase.
-All queries below work against the live `code_kg` knowledge graph.
+All queries below work against the live `pycode_kg` knowledge graph.
 
 ---
 
@@ -70,7 +70,7 @@ Returns a ranked set of nodes and the edges between them. Good for mapping unkno
 query_codebase("knowledge graph storage persistence")
 ```
 
-Returns `GraphStore`, `CodeKG`, and the edges connecting them — no need to know filenames.
+Returns `GraphStore`, `PyCodeKG`, and the edges connecting them — no need to know filenames.
 
 ### Trace a call chain
 
@@ -92,7 +92,7 @@ query_codebase("module imports dependencies", rels="IMPORTS")
 query_codebase("NodeVisitor AST visitor base class", rels="INHERITS")
 ```
 
-`CodeKGVisitor` inherits from `ast.NodeVisitor` — this surfaces that relationship.
+`PyCodeKGVisitor` inherits from `ast.NodeVisitor` — this surfaces that relationship.
 
 ### Combine edge types
 
@@ -132,7 +132,7 @@ query_codebase("storage layer", max_per_module=2)
 query_codebase("self.edges attribute access", include_symbols=True)
 ```
 
-With `include_symbols=True` the result includes `symbol` nodes — per-scope variable and attribute references created by `CodeKGVisitor`.
+With `include_symbols=True` the result includes `symbol` nodes — per-scope variable and attribute references created by `PyCodeKGVisitor`.
 
 ---
 
@@ -146,7 +146,7 @@ Returns Markdown with actual source snippets, ranked and deduplicated. Use this 
 pack_snippets("visitor scope tracking variable assignment")
 ```
 
-Returns `CodeKGVisitor`, `visit_FunctionDef`, `visit_Assign` with surrounding source lines.
+Returns `PyCodeKGVisitor`, `visit_FunctionDef`, `visit_Assign` with surrounding source lines.
 
 ### Get context for a specific concept
 
@@ -200,16 +200,16 @@ Pass `include_edges=True` to retrieve outgoing edges and incoming callers in the
 ```
 <kind>:<module_path>:<qualname>
 
-fn:src/code_kg/mcp_server.py:pack_snippets
-m:src/code_kg/visitor.py:CodeKGVisitor.visit_Attribute
-cls:src/code_kg/store.py:GraphStore
-mod:src/code_kg/kg.py
+fn:src/pycode_kg/mcp_server.py:pack_snippets
+m:src/pycode_kg/visitor.py:PyCodeKGVisitor.visit_Attribute
+cls:src/pycode_kg/store.py:GraphStore
+mod:src/pycode_kg/kg.py
 ```
 
 ### Fetch a function
 
 ```python
-get_node("fn:src/code_kg/mcp_server.py:query_codebase")
+get_node("fn:src/pycode_kg/mcp_server.py:query_codebase")
 ```
 
 Returns `lineno`, `end_lineno`, `docstring`, `module_path`, `qualname`.
@@ -217,7 +217,7 @@ Returns `lineno`, `end_lineno`, `docstring`, `module_path`, `qualname`.
 ### Fetch with immediate neighborhood
 
 ```python
-get_node("fn:src/code_kg/mcp_server.py:query_codebase", include_edges=True)
+get_node("fn:src/pycode_kg/mcp_server.py:query_codebase", include_edges=True)
 ```
 
 Also returns `outgoing_edges` (grouped by CALLS, CONTAINS, IMPORTS, INHERITS) and `incoming_calls`
@@ -226,13 +226,13 @@ Also returns `outgoing_edges` (grouped by CALLS, CONTAINS, IMPORTS, INHERITS) an
 ### Fetch a method
 
 ```python
-get_node("m:src/code_kg/visitor.py:CodeKGVisitor.finalize")
+get_node("m:src/pycode_kg/visitor.py:PyCodeKGVisitor.finalize")
 ```
 
 ### Fetch a module
 
 ```python
-get_node("mod:src/code_kg/__init__.py")
+get_node("mod:src/pycode_kg/__init__.py")
 ```
 
 ---
@@ -246,7 +246,7 @@ When same-name definitions exist in multiple modules, caller resolution uses imp
 ### Find direct and indirect callers
 
 ```python
-callers("fn:src/code_kg/store.py:GraphStore.expand")
+callers("fn:src/pycode_kg/store.py:GraphStore.expand")
 ```
 
 Returns all functions that call `expand()`, with full node metadata (location, docstring, etc.).
@@ -254,7 +254,7 @@ Returns all functions that call `expand()`, with full node metadata (location, d
 ### Restrict by relation type
 
 ```python
-callers("fn:src/code_kg/store.py:GraphStore.expand", rel="CALLS")
+callers("fn:src/pycode_kg/store.py:GraphStore.expand", rel="CALLS")
 ```
 
 The `rel` parameter (default `"CALLS"`) lets you find other relation types — e.g., `rel="INHERITS"` to find all subclasses.
@@ -268,7 +268,7 @@ Get a structured understanding of what a code node does, who calls it, and what 
 ### Explain a function
 
 ```python
-explain("fn:src/code_kg/store.py:GraphStore.expand")
+explain("fn:src/pycode_kg/store.py:GraphStore.expand")
 ```
 
 Returns:
@@ -280,13 +280,13 @@ Returns:
 ### Explain a method
 
 ```python
-explain("m:src/code_kg/visitor.py:CodeKGVisitor.visit_FunctionDef")
+explain("m:src/pycode_kg/visitor.py:PyCodeKGVisitor.visit_FunctionDef")
 ```
 
 ### Explain a class
 
 ```python
-explain("cls:src/code_kg/store.py:GraphStore")
+explain("cls:src/pycode_kg/store.py:GraphStore")
 ```
 
 Returns class-level metadata including methods and key callers.
@@ -343,8 +343,8 @@ query_ranked("database connection", mode="hybrid")
 query_ranked("query pipeline", mode="ppr")
 
 # Explain ranking
-explain_rank("fn:src/code_kg/store.py:GraphStore.expand")
-explain_rank("fn:src/code_kg/store.py:GraphStore.expand", q="database connection")
+explain_rank("fn:src/pycode_kg/store.py:GraphStore.expand")
+explain_rank("fn:src/pycode_kg/store.py:GraphStore.expand", q="database connection")
 ```
 
 **Typical structural importance workflow:**
@@ -412,14 +412,14 @@ snapshot_diff("abc1234", "def5678")
 snapshot_show("latest")
 ```
 
-> Snapshots are captured automatically by the pre-commit hook (`codekg install-hooks`).
-> They are stored in `.codekg/snapshots/` and are tracked in git — staged atomically with each commit.
+> Snapshots are captured automatically by the pre-commit hook (`pycodekg install-hooks`).
+> They are stored in `.pycodekg/snapshots/` and are tracked in git — staged atomically with each commit.
 
 ---
 
-## 9. Data-Flow Queries (from `CodeKGVisitor`)
+## 9. Data-Flow Queries (from `PyCodeKGVisitor`)
 
-The `CodeKGVisitor` class enriches the graph with **data-flow** edges.
+The `PyCodeKGVisitor` class enriches the graph with **data-flow** edges.
 These enable a new category of query that structural tools (CALLS, CONTAINS) cannot answer.
 
 ### ATTR_ACCESS — attribute access patterns
@@ -442,7 +442,7 @@ pack_snippets("GraphStore edges within attribute access", include_symbols=True)
 
 ### Scope awareness — what lives in each function
 
-`CodeKGVisitor` tracks `vars_in_scope` per function, seeding all parameter names at function entry. This means semantic queries about parameter patterns are grounded in the correct scope.
+`PyCodeKGVisitor` tracks `vars_in_scope` per function, seeding all parameter names at function entry. This means semantic queries about parameter patterns are grounded in the correct scope.
 
 ```python
 # Find functions with specific parameter shapes
@@ -454,7 +454,7 @@ pack_snippets("async def fetch url timeout parameter scope")
 
 ### Default expression scope (a subtle detail)
 
-Default argument values are evaluated in the *enclosing* scope, not the function scope. `CodeKGVisitor` handles this correctly, so queries about default expressions land on the right scope.
+Default argument values are evaluated in the *enclosing* scope, not the function scope. `PyCodeKGVisitor` handles this correctly, so queries about default expressions land on the right scope.
 
 ```python
 # Find module-level constants used as default values
@@ -471,10 +471,10 @@ pack_snippets("default value parameter enclosing scope constant")
 | `CALLS` | fn/method → fn/method | Direct function call | AST `Call` node |
 | `IMPORTS` | module → module | `import` statement | AST `Import`/`ImportFrom` |
 | `INHERITS` | class → class | `class Foo(Bar)` | AST `ClassDef.bases` |
-| `ATTR_ACCESS` | symbol → symbol | `obj.attr` access | `CodeKGVisitor.visit_Attribute` |
+| `ATTR_ACCESS` | symbol → symbol | `obj.attr` access | `PyCodeKGVisitor.visit_Attribute` |
 | `RESOLVES_TO` | symbol → node | Symbol resolves to definition | `SymbolResolver` name binding |
-| `READS` *(tracked)* | symbol → — | Variable read | `CodeKGVisitor._extract_reads` |
-| `WRITES` *(tracked)* | symbol → — | Variable write | `CodeKGVisitor.visit_Assign` |
+| `READS` *(tracked)* | symbol → — | Variable read | `PyCodeKGVisitor._extract_reads` |
+| `WRITES` *(tracked)* | symbol → — | Variable write | `PyCodeKGVisitor.visit_Assign` |
 
 > **READS / WRITES** are tracked in `vars_in_scope` per scope but are not yet stored as graph edges (no `target` node is wired). They will become queryable once hooked into edge storage.
 
@@ -554,7 +554,7 @@ get_node("fn:src/module/path.py:F")
 
 ## 13. Excluding Directories from Indexing
 
-By default, CodeKG indexes all Python files under the repo root. Excluding directories keeps metrics clean and queries accurate.
+By default, PyCodeKG indexes all Python files under the repo root. Excluding directories keeps metrics clean and queries accurate.
 
 **Why exclude `tests/`?** Test directories pollute architectural analysis in three ways:
 - Pytest entry points have no callers → they show up as **orphaned code**
@@ -564,15 +564,15 @@ By default, CodeKG indexes all Python files under the repo root. Excluding direc
 **Configuration (`pyproject.toml`, persistent — recommended):**
 
 ```toml
-[tool.codekg]
+[tool.pycodekg]
 exclude = ["tests"]          # exclude test suite from all builds and analysis
 ```
 
 **CLI flags (per-command override):**
 
 ```bash
-codekg build  --repo . --exclude-dir tests
-codekg analyze . --exclude-dir tests
+pycodekg build  --repo . --exclude-dir tests
+pycodekg analyze . --exclude-dir tests
 ```
 
 Both options are additive — CLI flags extend `pyproject.toml` excludes.
@@ -584,8 +584,8 @@ Both options are additive — CLI flags extend `pyproject.toml` excludes.
 ```
 Nodes: 6,741   (class: 42 · function: 146 · method: 184 · module: 51 · symbol: 6,318)
 Edges: 6,535   (CALLS: 2,403 · ATTR_ACCESS: 2,179 · RESOLVES_TO: 1,229 · IMPORTS: 344 · CONTAINS: 372 · INHERITS: 8)
-DB:    .codekg/graph.sqlite
+DB:    .pycodekg/graph.sqlite
 Model: all-MiniLM-L6-v2
 ```
 
-*Rebuild after significant code changes: `codekg build --repo . --wipe`*
+*Rebuild after significant code changes: `pycodekg build --repo . --wipe`*

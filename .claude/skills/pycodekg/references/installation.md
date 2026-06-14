@@ -1,4 +1,4 @@
-# CodeKG Installation Reference
+# PyCodeKG Installation Reference
 
 ## Table of Contents
 1. [CLI Flags Reference](#cli-flags-reference)
@@ -13,44 +13,44 @@
 
 ## CLI Flags Reference
 
-### `codekg-build-sqlite`
+### `pycodekg-build-sqlite`
 
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--repo` | | `.` | Repository root path |
-| `--db` | | `.codekg/graph.sqlite` | SQLite output path |
+| `--db` | | `.pycodekg/graph.sqlite` | SQLite output path |
 | `--wipe` | | false | Delete existing graph first |
 
-### `codekg-build-lancedb`
+### `pycodekg-build-lancedb`
 
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--repo` | | `.` | Repository root (anchors default paths) |
-| `--sqlite` | | `<repo>/.codekg/graph.sqlite` | Path to SQLite graph (**not** `--db`) |
-| `--lancedb` | | `<repo>/.codekg/lancedb` | LanceDB output directory |
-| `--table` | | `codekg_nodes` | LanceDB table name |
-| `--model` | | `all-MiniLM-L6-v2` | Sentence-transformer model (override with `CODEKG_MODEL` env var) |
+| `--sqlite` | | `<repo>/.pycodekg/graph.sqlite` | Path to SQLite graph (**not** `--db`) |
+| `--lancedb` | | `<repo>/.pycodekg/lancedb` | LanceDB output directory |
+| `--table` | | `pycodekg_nodes` | LanceDB table name |
+| `--model` | | `all-MiniLM-L6-v2` | Sentence-transformer model (override with `PYCODEKG_MODEL` env var) |
 | `--wipe` | | false | Delete existing vectors first |
 | `--kinds` | | `module,class,function,method` | Node kinds to embed |
 | `--batch` | | `256` | Embedding batch size |
 
-### `codekg-mcp`
+### `pycodekg-mcp`
 
 | Flag | Default | Description |
 |---|---|---|
 | `--repo` | `.` | Repository root |
-| `--db` | `.codekg/graph.sqlite` | SQLite path |
-| `--lancedb` | `.codekg/lancedb` | LanceDB directory |
-| `--model` | `all-MiniLM-L6-v2` | Embedding model (override with `CODEKG_MODEL` env var) |
+| `--db` | `.pycodekg/graph.sqlite` | SQLite path |
+| `--lancedb` | `.pycodekg/lancedb` | LanceDB directory |
+| `--model` | `all-MiniLM-L6-v2` | Embedding model (override with `PYCODEKG_MODEL` env var) |
 | `--transport` | `stdio` | `stdio` or `sse` |
 
-### `codekg-query`
+### `pycodekg-query`
 
 ```bash
-poetry run codekg-query \
-  --sqlite .codekg/graph.sqlite \
-  --lancedb .codekg/lancedb \
-  --q "your query here"
+poetry run pycodekg-query \
+  --sqlite .pycodekg/graph.sqlite \
+  --lancedb .pycodekg/lancedb \
+  "your query here"
 ```
 
 ---
@@ -65,8 +65,8 @@ poetry run codekg-query \
 | **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` | `"mcpServers"` | ❌ Global |
 | **Cline** | `~/...saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | `"mcpServers"` | ❌ Global only |
 
-> ⚠️ **Do NOT add `codekg` to any global settings file** (Claude Code `~/.claude/settings.json`, Kilo Code `mcp_settings.json`, Cline `cline_mcp_settings.json`).
-> Use per-repo config files instead. For Cline, use a uniquely-named entry per repo (e.g. `codekg-myproject`).
+> ⚠️ **Do NOT add `pycodekg` to any global settings file** (Claude Code `~/.claude/settings.json`, Kilo Code `mcp_settings.json`, Cline `cline_mcp_settings.json`).
+> Use per-repo config files instead. For Cline, use a uniquely-named entry per repo (e.g. `pycodekg-myproject`).
 
 ---
 
@@ -77,19 +77,19 @@ poetry run codekg-query \
 ```json
 {
   "mcpServers": {
-    "codekg": {
-      "command": "codekg",
+    "pycodekg": {
+      "command": "pycodekg",
       "args": [
         "mcp",
         "--repo",    "/absolute/path/to/repo",
-        "--db",      "/absolute/path/to/repo/.codekg/graph.sqlite"
+        "--db",      "/absolute/path/to/repo/.pycodekg/graph.sqlite"
       ]
     }
   }
 }
 ```
 
-### Kilo Code `.mcp.json` with Copilot servers (no CodeKG)
+### Kilo Code `.mcp.json` with Copilot servers (no PyCodeKG)
 
 ```json
 {
@@ -151,12 +151,12 @@ If you want Claude Code / Kilo Code to also have access to Copilot servers:
         "WORKSPACE_ID": "your-project"
       }
     },
-    "codekg": {
-      "command": "codekg",
+    "pycodekg": {
+      "command": "pycodekg",
       "args": [
         "mcp",
         "--repo",    ".",
-        "--db",      ".codekg/graph.sqlite"
+        "--db",      ".pycodekg/graph.sqlite"
       ]
     }
   }
@@ -170,13 +170,13 @@ GitHub Copilot uses a different schema — `"servers"` key (not `"mcpServers"`) 
 ```json
 {
   "servers": {
-    "codekg": {
+    "pycodekg": {
       "type": "stdio",
-      "command": "/absolute/path/to/venv/bin/codekg",
+      "command": "/absolute/path/to/venv/bin/pycodekg",
       "args": [
         "mcp",
         "--repo",    ".",
-        "--db",".codekg/graph.sqlite"
+        "--db",".pycodekg/graph.sqlite"
       ]
     }
   }
@@ -192,12 +192,12 @@ VS Code will prompt you to **Trust** the server on first use.
 ```json
 {
   "mcpServers": {
-    "codekg": {
-      "command": "/absolute/path/to/venv/bin/codekg",
+    "pycodekg": {
+      "command": "/absolute/path/to/venv/bin/pycodekg",
       "args": [
         "mcp",
         "--repo",    "/absolute/path/to/repo",
-        "--db",      "/absolute/path/to/repo/.codekg/graph.sqlite"
+        "--db",      "/absolute/path/to/repo/.pycodekg/graph.sqlite"
       ]
     }
   }
@@ -258,7 +258,7 @@ Get venv path: `poetry env info --path`
 ## Gitignore Recommendations
 
 ```gitignore
-.codekg/
+.pycodekg/
 ```
 
 ---
@@ -268,17 +268,17 @@ Get venv path: `poetry env info --path`
 ```bash
 # Graph stats (Python API)
 poetry run python -c "
-from code_kg import CodeKG
+from pycode_kg import PyCodeKG
 import json
-kg = CodeKG(repo_root='.', db_path='.codekg/graph.sqlite', lancedb_dir='.codekg/lancedb')
+kg = PyCodeKG(repo_root='.', db_path='.pycodekg/graph.sqlite', lancedb_dir='.pycodekg/lancedb')
 print(json.dumps(kg.stats(), indent=2))
 "
 
 # Sample query (CLI)
-poetry run codekg-query --sqlite .codekg/graph.sqlite --lancedb .codekg/lancedb --q "module structure"
+poetry run pycodekg-query --sqlite .pycodekg/graph.sqlite --lancedb .pycodekg/lancedb "module structure"
 
 # Verify SQLite row counts
-sqlite3 .codekg/graph.sqlite "SELECT COUNT(*) FROM nodes; SELECT COUNT(*) FROM edges;"
+sqlite3 .pycodekg/graph.sqlite "SELECT COUNT(*) FROM nodes; SELECT COUNT(*) FROM edges;"
 ```
 
 ---
@@ -289,13 +289,13 @@ sqlite3 .codekg/graph.sqlite "SELECT COUNT(*) FROM nodes; SELECT COUNT(*) FROM e
 |---|---|---|
 | `error: the following arguments are required: --sqlite` | Wrong flag for lancedb builder | Use `--sqlite`, not `--db` |
 | `ERROR: 'mcp' package not found` | Optional dep missing | `poetry add mcp` |
-| `WARNING: SQLite database not found` | Graph not built | Run `codekg-build-sqlite` first |
-| Empty results from `query_codebase` | LanceDB stale or missing | `codekg-build-lancedb --wipe` |
-| `RuntimeError: CodeKG not initialised` | Server not started via CLI | Always use `codekg-mcp` CLI |
-| Snippets show wrong line numbers | Source changed since build | `codekg-build-sqlite --wipe` |
+| `WARNING: SQLite database not found` | Graph not built | Run `pycodekg-build-sqlite` first |
+| Empty results from `query_codebase` | LanceDB stale or missing | `pycodekg-build-lancedb --wipe` |
+| `RuntimeError: PyCodeKG not initialised` | Server not started via CLI | Always use `pycodekg-mcp` CLI |
+| Snippets show wrong line numbers | Source changed since build | `pycodekg-build-sqlite --wipe` |
 | MCP server not in Claude Code / Kilo Code | Relative paths or wrong location | Absolute paths in `.mcp.json` (project root); restart |
 | MCP server not in GitHub Copilot | Missing `"type": "stdio"` or wrong key | Use `"servers"` key with `"type": "stdio"` in `.vscode/mcp.json`; click Trust |
 | MCP server not in Claude Desktop | Wrong binary path | `poetry env info --path` for absolute path |
-| Cline shows all repos pointing to same path | Global config used | Use unique entry name per repo (e.g. `codekg-myproject`) |
-| `poetry run which codekg-mcp` empty | `mcp` extra not installed | `poetry add "code-kg[mcp]"` |
-| `Command not found: codekg-mcp` in VS Code MCP log | VS Code extension host doesn't inherit shell PATH; bare `"poetry"` not found | Use absolute path: `"command": "/Users/you/.local/bin/poetry"` (get it with `which poetry`) |
+| Cline shows all repos pointing to same path | Global config used | Use unique entry name per repo (e.g. `pycodekg-myproject`) |
+| `poetry run which pycodekg-mcp` empty | `mcp` extra not installed | `poetry add "pycode-kg[mcp]"` |
+| `Command not found: pycodekg-mcp` in VS Code MCP log | VS Code extension host doesn't inherit shell PATH; bare `"poetry"` not found | Use absolute path: `"command": "/Users/you/.local/bin/poetry"` (get it with `which poetry`) |

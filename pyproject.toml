@@ -190,6 +190,10 @@ unused-ignore-comment = "ignore"
 testpaths  = ["tests"]
 addopts    = "-v --tb=short"
 pythonpath = ["src"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "integration: marks tests that exercise real external dependencies (model, LanceDB)",
+]
 
 [tool.pylint.messages_control]
 disable = ["all"]
