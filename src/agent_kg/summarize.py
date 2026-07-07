@@ -4,19 +4,30 @@
 
 """summarize.py — Configurable LLM summarization backend for KG Context Pruning.
 
-Supports two backends:
-  ``primary``  — Anthropic Claude via the ``anthropic`` SDK (default).
-  ``local``    — Ollama-compatible HTTP endpoint (air-gapped / cost-sensitive).
+Supports four backends:
+  ``primary``  — Anthropic Claude via the ``anthropic`` SDK (default; maximum
+                 coherence with the session model).
+  ``omlx``     — local oMLX / MLX server (OpenAI wire protocol; recommended
+                 local backend, fastest on Apple Silicon).
+  ``ollama``   — local Ollama (OpenAI wire protocol).
+  ``openai``   — OpenAI cloud API.
 
-Configuration via ``agentkg.toml`` or environment variables:
-  AGENTKG_SUMMARIZER_BACKEND   = "primary" | "local"
-  AGENTKG_SUMMARIZER_ENDPOINT  = "http://localhost:11434/api/generate"
-  AGENTKG_SUMMARIZER_MODEL     = "llama3.2"
+The ``omlx`` / ``ollama`` / ``openai`` backends are delegated to the shared
+``kg_utils.synthesis.TextSynthesizer`` (from ``kgmodule-utils[synthesis]``), so
+they share the fleet-wide defaults — including the ``Qwen3-4B-Instruct-2507-MLX-8bit``
+model at ``http://localhost:8080/v1`` for oMLX.
+
+Configuration via ``agentkg.toml`` or environment variables (SYNTH_* convention,
+shared across the KGRAG fleet):
+  SYNTH_BACKEND                = "primary" | "omlx" | "ollama" | "openai"
+  SYNTH_ENDPOINT               = base URL override (empty = backend default)
+  SYNTH_MODEL                  = model-id override (empty = backend default)
+  SYNTH_API_KEY                = bearer token / OpenAI key (openai backend)
+  AGENTKG_SUMMARIZER_PRIMARY_MODEL = Claude model id for the ``primary`` backend
 """
 
 from __future__ import annotations
 
-import json
 import os
 import re
 from dataclasses import dataclass
@@ -27,35 +38,36 @@ from typing import Literal
 class SummarizerConfig:
     """Configuration for the summarization backend.
 
-    :param backend: ``"primary"`` (Anthropic) or ``"local"`` (Ollama).
-    :param local_endpoint: Ollama-compatible API URL.
-    :param local_model: Model name for the local endpoint.
-    :param primary_model: Claude model ID for the primary backend.
+    :param backend: ``"primary"`` (Anthropic), ``"omlx"``, ``"ollama"``, or ``"openai"``.
+    :param primary_model: Claude model ID for the ``primary`` backend.
+    :param synth_endpoint: Base URL override for the synth backends (empty = the
+                           per-backend default resolved by ``kg_utils``).
+    :param synth_model: Model-id override for the synth backends (empty = default).
+    :param synth_api_key: Bearer token / OpenAI key for the ``openai`` backend.
     :param temperature: Sampling temperature (lower = more deterministic).
     :param max_tokens: Maximum tokens in the summary.
     """
 
-    backend: Literal["primary", "local"] = "primary"
-    local_endpoint: str = "http://localhost:11434/api/generate"
-    local_model: str = "llama3.2"
+    backend: Literal["primary", "omlx", "ollama", "openai"] = "primary"
     primary_model: str = "claude-haiku-4-5-20251001"
+    synth_endpoint: str = ""
+    synth_model: str = ""
+    synth_api_key: str = ""
     temperature: float = 0.2
     max_tokens: int = 512
 
     @classmethod
     def from_env(cls) -> SummarizerConfig:
-        """Load configuration from environment variables."""
+        """Load configuration from environment variables (SYNTH_* convention)."""
         return cls(
-            backend=os.environ.get(  # ty: ignore[invalid-argument-type]
-                "AGENTKG_SUMMARIZER_BACKEND", "primary"
-            ),
-            local_endpoint=os.environ.get(
-                "AGENTKG_SUMMARIZER_ENDPOINT", "http://localhost:11434/api/generate"
-            ),
-            local_model=os.environ.get("AGENTKG_SUMMARIZER_MODEL", "llama3.2"),
+            backend=os.environ.get("SYNTH_BACKEND", "primary"),  # ty: ignore[invalid-argument-type]
             primary_model=os.environ.get(
                 "AGENTKG_SUMMARIZER_PRIMARY_MODEL", "claude-haiku-4-5-20251001"
             ),
+            synth_endpoint=os.environ.get("SYNTH_ENDPOINT", ""),
+            synth_model=os.environ.get("SYNTH_MODEL", ""),
+            synth_api_key=os.environ.get("SYNTH_API_KEY", "")
+            or os.environ.get("OPENAI_API_KEY", ""),
         )
 
 
@@ -71,7 +83,7 @@ SUMMARY:"""
 
 
 class Summarizer:
-    """LLM-backed text summarizer with Anthropic + Ollama support.
+    """LLM-backed text summarizer with Anthropic + oMLX/Ollama/OpenAI support.
 
     :param config: Summarization backend configuration.
     """
@@ -82,8 +94,8 @@ class Summarizer:
     def summarize(self, text: str) -> str:
         """Summarize ``text`` using the configured backend.
 
-        Falls back to the local backend if the primary raises, and to a
-        simple extractive fallback if both fail.
+        Falls back to a simple extractive summary if the configured backend
+        fails (missing dependency, unreachable endpoint, or empty output).
 
         :param text: Conversation text to summarize.
         :return: Summary string.
@@ -93,9 +105,8 @@ class Summarizer:
         prompt = _SUMMARY_PROMPT.format(text=text[:4000])
         if self._config.backend == "primary":
             result = self._call_primary(prompt)
-            if result:
-                return result
-        result = self._call_local(prompt)
+        else:
+            result = self._call_synth(prompt)
         if result:
             return result
         # Extractive fallback: first + last sentence(s)
@@ -118,28 +129,33 @@ class Summarizer:
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
-    def _call_local(self, prompt: str) -> str | None:
-        """POST to an Ollama-compatible local endpoint."""
-        try:
-            import urllib.request  # noqa: PLC0415
+    def _call_synth(self, prompt: str) -> str | None:
+        """Summarize via a shared ``kg_utils`` synth backend (omlx/ollama/openai).
 
-            payload = json.dumps(
-                {
-                    "model": self._config.local_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": self._config.temperature},
-                }
-            ).encode()
-            req = urllib.request.Request(
-                self._config.local_endpoint,
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
+        Builds a :class:`~kg_utils.synthesis.TextConfig` directly so empty
+        endpoint/model fields inherit the fleet-wide per-backend defaults
+        (e.g. ``Qwen3-4B-Instruct-2507-MLX-8bit`` at ``:8080/v1`` for oMLX).
+        """
+        try:
+            from kg_utils.synthesis import (  # noqa: PLC0415
+                TextBackend,
+                TextConfig,
+                TextSynthesizer,
             )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
-                return data.get("response", "").strip() or None
+
+            cfg = TextConfig(
+                backend=TextBackend(self._config.backend),
+                endpoint=self._config.synth_endpoint,
+                model=self._config.synth_model,
+                api_key=self._config.synth_api_key,
+                max_tokens=self._config.max_tokens,
+            )
+            result = TextSynthesizer(cfg).complete(
+                [{"role": "user", "content": prompt}],
+                max_tokens=self._config.max_tokens,
+                temperature=self._config.temperature,
+            )
+            return result or None
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
