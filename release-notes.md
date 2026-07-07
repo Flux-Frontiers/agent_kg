@@ -1,49 +1,22 @@
-# Release Notes — v0.4.0
+# Release Notes — v0.7.0
 
-> Released: 2026-04-05
+> Released: 2026-07-07
 
-### Added
+This release gives AgentKG's context-pruning summarizer a real choice of engines. Alongside the default Anthropic backend, it can now drive local MLX (oMLX) and Ollama servers or the OpenAI cloud API through one shared, fleet-wide synthesis layer — so conversation summaries can run fully local and fast on Apple Silicon. It also trims the toolchain down to ruff + ty and cleans up release plumbing.
 
-- **`UserProfileStore.set_identity()` / `get_identity()`** — singleton identity record
-  with structured personal/biographical fields: `name`, `email`, `phone`, `address`,
-  `birth_date`, `gender`, `cognitive_score` (0–100, clamped), `delta_year` (0–150, clamped)
-- **`NodeKind.EDUCATION`** — new graph node kind for education entries
-  (e.g. `"PhD CS, MIT, 1998"`); stored as repeatable nodes, shown in `profile` output
-- **`UserProfileStore.delete()` / `clear_kind()`** — remove a single node by kind+label
-  (case-insensitive) or wipe all nodes of a given kind; return row count
-- **`UserProfileStore.education()`** — convenience accessor for EDUCATION nodes
-- **`agent-kg profile-set`** CLI command — update identity fields and/or add preference,
-  commitment, expertise, interest, style, or education nodes in one call; all node options
-  are repeatable; only supplied options are written
-- **`agent-kg profile-remove`** CLI command — remove specific nodes by label or wipe
-  entire categories with `--clear-<kind>` flags; `--clear-all` wipes every node while
-  preserving the identity record
-- **`install-hooks --claude`** flag — writes Claude Code `UserPromptSubmit` + `Stop`
-  auto-ingest hooks into `.claude/settings.json` of the target repo
-- **`install-hooks --global`** flag — writes the same hooks into `~/.claude/settings.json`
-  so every repo captures turns automatically
-- **`Stop` hook ingests assistant turns** — `last_assistant_message` field captured from
-  the Stop hook payload and ingested as an assistant turn with `--no-embed`
-- **Onboarding Phase 0 (Personal Identity)** — structured identity questions (name, email,
-  phone, address, birth date, gender, cognitive score, delta year) collected before the
-  existing phases and written directly to the identity record
-- **Onboarding Phase 0b (Education)** — free-entry loop stores each line as an EDUCATION node
-- **`render_markdown()` Identity + Education sections** — profile output now opens with
-  structured identity fields and education entries above the graph node sections
-- **`summary()` includes `identity` and `education` keys** for PersonCorpusEntry sync
+## What changed
 
-### Fixed
+**Pluggable summarization backends.** The pruning summarizer now supports four backends — `primary` (Anthropic, the default), `omlx`, `ollama`, and `openai`. The three new ones share the KGRAG fleet's `kg_utils.synthesis` layer over the OpenAI wire protocol, inheriting common defaults (oMLX uses `Qwen3-4B-Instruct-2507-MLX-8bit` at `localhost:8080`, matching GutenbergKG). Configuration moves to the fleet-wide `SYNTH_*` environment convention (`SYNTH_BACKEND` / `SYNTH_ENDPOINT` / `SYNTH_MODEL` / `SYNTH_API_KEY`). If a backend is unavailable, the summarizer degrades gracefully to a deterministic extractive fallback instead of failing.
 
-- **`whenever` NLP commitment pattern** — added `whenever` to `_COMMITMENT_ALWAYS` regex
-  so turns like `"whenever we write new code, write pytest tests"` are auto-extracted
-  as commitments without requiring manual `profile-set`
-- **`profile-set` mypy error** — replaced `**identity_kwargs` unpacking (typed as
-  `dict[str, str | int | None]`) with explicit keyword arguments to satisfy mypy
+**Leaner toolchain.** pylint is gone — ruff (lint + format) and ty (types) now cover everything. The pre-commit `pylint` hook, its extras and config, and every `# pylint: disable=` / dead `# noqa` directive have been removed.
 
-### Changed
+**Release plumbing.** The unused automated PyPI-publish workflow was removed; PyPI releases are cut manually. Tag pushes now trigger only the GitHub Release workflow.
 
-- **`install-hooks` docstring and module header** updated to describe both git pre-commit
-  and Claude Code hook installation paths
+## Upgrading
+
+**Breaking — CLI rename.** The command-line entry points dropped their hyphens: `agent-kg-query` → `agentkg-query`, and so on across the CLI. The PyPI package (`agent-kg`), import name (`agent_kg`), and MCP server id (`agent-kg`) are unchanged. Update any scripts, git hooks, or `.claude/settings.json` permission entries that call the old hyphenated names.
+
+To use a local/cloud summarization backend, install the `local` extra (`pip install -e ".[local]"`, which adds `openai`) and set `SYNTH_BACKEND=omlx` (or `ollama` / `openai`). The default `primary` (Anthropic) backend is unchanged and needs no new setup.
 
 ---
 
