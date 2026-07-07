@@ -401,10 +401,10 @@ def profile_set(
 
     Examples::
 
-        agent-kg profile-set --name "Alice Smith" --email alice@example.com
-        agent-kg profile-set --commitment "always write pytest tests for new code"
-        agent-kg profile-set --preference "concise responses" --style ":param: docstrings"
-        agent-kg profile-set --education "BSc Physics, Oxford, 1990" \\
+        agentkg profile-set --name "Alice Smith" --email alice@example.com
+        agentkg profile-set --commitment "always write pytest tests for new code"
+        agentkg profile-set --preference "concise responses" --style ":param: docstrings"
+        agentkg profile-set --education "BSc Physics, Oxford, 1990" \\
                               --education "PhD CS, MIT, 1995"
     """
     from agent_kg.schema import NodeKind  # noqa: PLC0415
@@ -512,9 +512,9 @@ def profile_remove(
 
     Examples::
 
-        agent-kg profile-remove --commitment "always write pytest tests for new code"
-        agent-kg profile-remove --clear-preferences
-        agent-kg profile-remove --clear-all
+        agentkg profile-remove --commitment "always write pytest tests for new code"
+        agentkg profile-remove --clear-preferences
+        agentkg profile-remove --clear-all
     """
     from agent_kg.schema import NodeKind  # noqa: PLC0415
 
@@ -618,7 +618,7 @@ _PRE_COMMIT_HOOK = """\
 #!/usr/bin/env bash
 # AgentKG pre-commit hook — rebuilds CodeKG + DocKG indices and captures
 # metrics snapshots BEFORE quality checks run.
-# Installed by: agent-kg install-hooks
+# Installed by: agentkg install-hooks
 # Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...
 set -euo pipefail
 
@@ -845,7 +845,7 @@ def init(person: str, model: str) -> None:
 
     _ = st.encode(["warmup"], normalize_embeddings=True)
     click.echo(f"Model ready: {model}")
-    click.echo(f"\nAll set. Run 'agent-kg onboard --person {person}' to build your profile.")
+    click.echo(f"\nAll set. Run 'agentkg onboard --person {person}' to build your profile.")
 
 
 @cli.command()
@@ -872,13 +872,13 @@ def wipe(repo: str, person: str, wipe_local: bool, wipe_global: bool, yes: bool)
     Examples::
 
         # wipe only the local graph for this repo
-        agent-kg wipe --local --person egs
+        agentkg wipe --local --person egs
 
         # wipe the global profile (all repos)
-        agent-kg wipe --global --person egs
+        agentkg wipe --global --person egs
 
         # wipe everything without prompting
-        agent-kg wipe --local --global --person egs --yes
+        agentkg wipe --local --global --person egs --yes
     """
     import shutil  # noqa: PLC0415
 
@@ -945,16 +945,16 @@ def viz(
     Examples::
 
         # Terminal trees (no deps)
-        agent-kg viz --person egs
+        agentkg viz --person egs
 
         # Interactive HTML for the conversation graph
-        agent-kg viz --agent --html --person egs
+        agentkg viz --agent --html --person egs
 
         # Interactive HTML for the profile
-        agent-kg viz --profile --html --person egs --out profile.html
+        agentkg viz --profile --html --person egs --out profile.html
 
         # Full Streamlit explorer
-        agent-kg viz --serve --person egs
+        agentkg viz --serve --person egs
     """
     import importlib.util  # noqa: PLC0415
     import subprocess  # noqa: PLC0415

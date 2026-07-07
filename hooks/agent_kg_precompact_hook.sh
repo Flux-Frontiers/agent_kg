@@ -4,7 +4,7 @@
 # Claude Code "PreCompact" hook. Fires right before the conversation
 # is compressed to free up context window space.
 #
-# Runs `agent-kg prune` SYNCHRONOUSLY so all current turns are compressed
+# Runs `agentkg prune` SYNCHRONOUSLY so all current turns are compressed
 # into summaries (with embeddings) before the context window is wiped.
 # Then snapshots the graph. Both complete before compaction proceeds.
 #
@@ -42,10 +42,10 @@ fi
 echo "[$(date '+%H:%M:%S')] PreCompact triggered for session $SESSION_ID" >> "$STATE_DIR/hook.log"
 
 # Run prune synchronously — summaries + embeddings must land before compaction
-agent-kg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1
+agentkg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1
 
 # Snapshot synchronously so the pre-compaction state is preserved
-agent-kg snapshot --repo "$REPO_ROOT" --label "pre-compact" 2>/dev/null
+agentkg snapshot --repo "$REPO_ROOT" --label "pre-compact" 2>/dev/null
 
 echo "[$(date '+%H:%M:%S')] PreCompact complete for session $SESSION_ID" >> "$STATE_DIR/hook.log"
 

@@ -45,13 +45,13 @@ Embeddings use `all-MiniLM-L6-v2` (384-dim) via `sentence-transformers` + LanceD
 
 ```bash
 # 1. Download the embedding model and create your profile directory
-agent-kg init --person <you>
+agentkg init --person <you>
 
 # 2. Run the onboarding interview
-agent-kg onboard --person <you>
+agentkg onboard --person <you>
 
 # 3. Check your profile
-agent-kg profile --person <you>
+agentkg profile --person <you>
 ```
 
 Embeddings are on by default. `init` pre-warms the model cache so the first `ingest` does not pause to download.
@@ -70,16 +70,16 @@ on a single-user machine — you rarely need to set it explicitly.
 
 ```bash
 # Single-user machine: default is correct, no flag needed
-agent-kg onboard    # writes to ~/.kgrag/profiles/<your-os-username>/
-agent-kg profile    # reads the same path ← correct
+agentkg onboard    # writes to ~/.kgrag/profiles/<your-os-username>/
+agentkg profile    # reads the same path ← correct
 
 # Multi-user or named profiles: be explicit on profile commands only
-agent-kg onboard --person alice
-agent-kg profile --person alice
-agent-kg query "auth strategy"   # no --person needed here
+agentkg onboard --person alice
+agentkg profile --person alice
+agentkg query "auth strategy"   # no --person needed here
 ```
 
-If `agent-kg profile` returns an empty `# UserProfile`, check which `--person` value
+If `agentkg profile` returns an empty `# UserProfile`, check which `--person` value
 was used during `onboard`. The completion message prints the exact path.
 
 ---
@@ -92,31 +92,31 @@ username and is only needed for profile-scoped commands (`init`, `onboard`, `pro
 
 | Command | Description |
 |---|---|
-| `agent-kg init` | Download embedding model and create profile directory (run first) |
-| `agent-kg install-hooks` | Deploy hook scripts and wire Claude Code settings.json |
-| `agent-kg onboard` | Run the structured UserProfile onboarding interview |
-| `agent-kg profile` | Show the UserProfile as Markdown |
-| `agent-kg ingest` | Add a turn to the conversation graph |
-| `agent-kg query` | Semantic search over the graph |
-| `agent-kg assemble` | Assemble a token-budgeted context block |
-| `agent-kg prune` | Compress old turns into Summary nodes |
-| `agent-kg stats` | Show graph node/edge counts |
-| `agent-kg analyze` | Print a full Markdown analysis report |
-| `agent-kg sessions` | List all sessions for this repo |
-| `agent-kg snapshot` | Capture a point-in-time snapshot |
-| `agent-kg mcp` | Start the MCP server (stdio transport) |
+| `agentkg init` | Download embedding model and create profile directory (run first) |
+| `agentkg install-hooks` | Deploy hook scripts and wire Claude Code settings.json |
+| `agentkg onboard` | Run the structured UserProfile onboarding interview |
+| `agentkg profile` | Show the UserProfile as Markdown |
+| `agentkg ingest` | Add a turn to the conversation graph |
+| `agentkg query` | Semantic search over the graph |
+| `agentkg assemble` | Assemble a token-budgeted context block |
+| `agentkg prune` | Compress old turns into Summary nodes |
+| `agentkg stats` | Show graph node/edge counts |
+| `agentkg analyze` | Print a full Markdown analysis report |
+| `agentkg sessions` | List all sessions for this repo |
+| `agentkg snapshot` | Capture a point-in-time snapshot |
+| `agentkg mcp` | Start the MCP server (stdio transport) |
 
-Each command also ships as a dedicated `agent-kg-<name>` script — no `poetry run` needed:
+Each command also ships as a dedicated `agentkg-<name>` script — no `poetry run` needed:
 
 ```bash
-agent-kg-init     --person egs          # profile-scoped
-agent-kg-onboard  --person egs          # profile-scoped
-agent-kg-profile  --person egs          # profile-scoped
-agent-kg-stats    --repo .
-agent-kg-query    "authentication strategy" --k 8 --repo .
-agent-kg-assemble "what did we decide about auth?" --budget 4000 --repo .
-agent-kg-prune    --window 20 --repo .
-agent-kg-mcp
+agentkg-init     --person egs          # profile-scoped
+agentkg-onboard  --person egs          # profile-scoped
+agentkg-profile  --person egs          # profile-scoped
+agentkg-stats    --repo .
+agentkg-query    "authentication strategy" --k 8 --repo .
+agentkg-assemble "what did we decide about auth?" --budget 4000 --repo .
+agentkg-prune    --window 20 --repo .
+agentkg-mcp
 ```
 
 ---
@@ -198,7 +198,7 @@ Without the model, extraction falls back to keyword/regex heuristics automatical
 AgentKG ships a **Model Context Protocol (MCP) server** that exposes the full query pipeline as structured tools for AI agents.
 
 ```bash
-agent-kg-mcp   # stdio transport
+agentkg-mcp   # stdio transport
 ```
 
 Configure in `.mcp.json` (Claude Code / Kilo Code):
@@ -207,7 +207,7 @@ Configure in `.mcp.json` (Claude Code / Kilo Code):
 {
   "mcpServers": {
     "agent-kg": {
-      "command": "agent-kg-mcp"
+      "command": "agentkg-mcp"
     }
   }
 }
@@ -229,13 +229,13 @@ AgentKG ships three Claude Code hook scripts that are deployed by the installer:
 
 ```bash
 # Deploy scripts to ~/.agentkg/hooks/ and wire into ~/.claude/settings.json (all repos)
-agent-kg install-hooks --global
+agentkg install-hooks --global
 
 # Or wire into .claude/settings.json for this repo only
-agent-kg install-hooks --claude
+agentkg install-hooks --claude
 
 # Force-overwrite existing hooks
-agent-kg install-hooks --global --force
+agentkg install-hooks --global --force
 ```
 
 The installer:

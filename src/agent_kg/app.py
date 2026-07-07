@@ -13,7 +13,7 @@ Tabs:
   Stats         — node/edge counts, session list, profile breakdown
 
 Run with:
-    agent-kg viz --serve
+    agentkg viz --serve
     # or directly:
     streamlit run src/agent_kg/app.py -- --repo . --person egs
 """
@@ -405,7 +405,7 @@ tab_agent, tab_profile, tab_query, tab_stats = st.tabs(
 with tab_agent:
     st.subheader(f"Conversation Graph — {repo}")
     if not nodes:
-        st.info(f"No agent graph at `{agent_db}`. Run `agent-kg ingest` to populate it.")
+        st.info(f"No agent graph at `{agent_db}`. Run `agentkg ingest` to populate it.")
     else:
         try:
             html = _agent_html(nodes, edges, physics)
@@ -419,7 +419,7 @@ with tab_profile:
     st.subheader(f"UserProfile — {person}")
     if not profile_rows:
         st.info(
-            f"No profile at `{profile_db}`. Run `agent-kg onboard --person {person}` to build one."
+            f"No profile at `{profile_db}`. Run `agentkg onboard --person {person}` to build one."
         )
     else:
         try:
@@ -434,7 +434,7 @@ with tab_query:
     st.subheader("Hybrid Semantic Query")
 
     if not agent_db.exists():
-        st.warning(f"No agent graph at `{agent_db}`. Run `agent-kg ingest` first.")
+        st.warning(f"No agent graph at `{agent_db}`. Run `agentkg ingest` first.")
     else:
         q_col, btn_col = st.columns([5, 1])
         with q_col:

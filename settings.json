@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
+            "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agentkg-ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --no-embed 2>/dev/null || true",
             "async": true
           }
         ]
@@ -21,7 +21,7 @@
           },
           {
             "type": "command",
-            "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg-snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
+            "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agentkg-snapshot --repo \"$REPO_ROOT\" --label \"session-end\" 2>/dev/null || true",
             "async": true
           }
         ]

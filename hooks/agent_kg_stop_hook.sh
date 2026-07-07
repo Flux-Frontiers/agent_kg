@@ -3,7 +3,7 @@
 #
 # Claude Code "Stop" hook. After every assistant response:
 #   1. Ingests the assistant turn into the graph (--no-embed for speed)
-#   2. Every CONSOLIDATE_INTERVAL human exchanges, runs `agent-kg prune`
+#   2. Every CONSOLIDATE_INTERVAL human exchanges, runs `agentkg prune`
 #      asynchronously to compress old turns into summaries
 #   3. Snapshots the graph asynchronously
 #
@@ -48,7 +48,7 @@ fi
 
 # 1. Ingest assistant turn (--no-embed: consolidation pass handles embeddings)
 if [ -n "$MSG" ]; then
-    agent-kg ingest "$MSG" --role assistant --repo "$REPO_ROOT" --no-embed 2>/dev/null || true
+    agentkg ingest "$MSG" --role assistant --repo "$REPO_ROOT" --no-embed 2>/dev/null || true
 fi
 
 # 2. Count human messages in transcript to decide whether to consolidate
@@ -88,10 +88,10 @@ echo "[$(date '+%H:%M:%S')] Stop session=$SESSION_ID exchanges=$EXCHANGE_COUNT s
 if [ "$SINCE_LAST" -ge "$CONSOLIDATE_INTERVAL" ] && [ "$EXCHANGE_COUNT" -gt 0 ]; then
     echo "$EXCHANGE_COUNT" > "$LAST_CONSOLIDATE_FILE"
     echo "[$(date '+%H:%M:%S')] Triggering consolidation at exchange $EXCHANGE_COUNT" >> "$STATE_DIR/hook.log"
-    agent-kg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
+    agentkg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
 fi
 
 # 4. Async snapshot
-agent-kg snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
+agentkg snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
 
 echo "{}"

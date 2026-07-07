@@ -45,7 +45,7 @@ TOOL INVENTORY (from src/agent_kg/mcp/server.py):
 ### `.claude/skills/agent-kg/SKILL.md`
 
 - **Frontmatter `description:`** — ensure the MCP surface is represented. The
-  `agent-kg-mcp` entry point must be mentioned; if the description enumerates capabilities,
+  `agentkg-mcp` entry point must be mentioned; if the description enumerates capabilities,
   keep it consistent with the tool inventory.
 - **`### MCP server` section** — maintain an **"MCP Tools"** table immediately under it:
 
