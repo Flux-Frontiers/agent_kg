@@ -37,7 +37,6 @@ Configuration via environment:
   AGENTKG_PERSON    — default person ID (default: "default")
   AGENTKG_SESSION   — default session UUID (optional)
 """
-# pylint: disable=import-outside-toplevel
 
 from __future__ import annotations
 
@@ -289,7 +288,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
         elif name == "agent_kg_topics":
             kg = AgentKG(repo_path=repo, person_id=person_id)
-            from agent_kg.schema import NodeKind  # noqa: PLC0415
+            from agent_kg.schema import NodeKind
 
             topics = kg._store.get_nodes_by_kind(NodeKind.TOPIC)
             kg.close()
@@ -313,7 +312,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
                 text = f"Open tasks ({len(tasks)}):\n" + "\n".join(lines)
 
         elif name == "agent_kg_profile":
-            from agent_kg.user_profile import UserProfileStore  # noqa: PLC0415
+            from agent_kg.user_profile import UserProfileStore
 
             profile_dir = Path.home() / ".kgrag" / "profiles" / person_id
             profile = UserProfileStore(profile_dir)
@@ -328,7 +327,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
         else:
             text = f"Unknown tool: {name}"
 
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+    except Exception as exc:
         text = f"Error in {name}: {exc}"
 
     return [types.TextContent(type="text", text=text)]
@@ -341,7 +340,7 @@ async def _run() -> None:
 
 def main() -> None:
     """Start the AgentKG MCP server on stdio."""
-    import asyncio  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+    import asyncio
 
     asyncio.run(_run())
 

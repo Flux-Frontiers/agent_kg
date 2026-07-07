@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """onboard.py — Structured onboarding interview for AgentKG UserProfile.
 
@@ -141,7 +140,7 @@ def run_onboard_interview(
     :param skip_optional: If True, skip the optional Personal phase.
     :return: Dict of ``{phase_name: {question_key: answer}}`` for all answers.
     """
-    from agent_kg.schema import NodeKind  # noqa: PLC0415
+    from agent_kg.schema import NodeKind
 
     _input = input_fn or input
     _print = print_fn or print

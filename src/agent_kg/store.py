@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel  # intentional lazy imports (lancedb, pyarrow, sentence-transformers)
 
 """store.py — SQLite + LanceDB storage for the AgentKG conversation tree."""
 
@@ -34,7 +33,7 @@ def _load_sentence_transformer(model_name: str):
     :param model_name: HuggingFace repo ID or known short alias (e.g. ``"bge-small"``).
     :return: Loaded :class:`~sentence_transformers.SentenceTransformer` instance.
     """
-    from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+    from sentence_transformers import SentenceTransformer
 
     local = resolve_model_path(model_name)
     model_path = str(local) if local.exists() else KNOWN_MODELS.get(model_name, model_name)
@@ -102,7 +101,7 @@ _EMBED_DIM = 384
 
 def _make_node_schema() -> Any:
     """Build the shared PyArrow schema for the LanceDB node vector table."""
-    import pyarrow as pa  # noqa: PLC0415
+    import pyarrow as pa
 
     return pa.schema(
         [
@@ -188,15 +187,15 @@ class AgentKGStore:
         if self._tbl is not None:
             return self._tbl
         try:
-            import lancedb  # noqa: PLC0415
-            import pyarrow  # noqa: PLC0415, F401
+            import lancedb
+            import pyarrow  # noqa: F401
         except ImportError as exc:
             raise ImportError("lancedb and pyarrow are required for AgentKG embeddings") from exc
 
         self._lancedb_dir.mkdir(parents=True, exist_ok=True)
         self._ldb = lancedb.connect(str(self._lancedb_dir))
         schema = _make_node_schema()
-        import warnings  # noqa: PLC0415
+        import warnings
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
@@ -242,12 +241,12 @@ class AgentKGStore:
             return
         try:
             vector = self.embed(text)
-        except (ImportError, Exception):  # pylint: disable=broad-exception-caught
+        except (ImportError, Exception):
             return  # embedding is best-effort; SQLite always written
         tbl = self._get_table()
         try:
             tbl.delete(f"node_id = '{node.id}'")
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
         tbl.add(
             [
@@ -324,7 +323,7 @@ class AgentKGStore:
             tbl = self._get_table()
             for nid in node_ids:
                 tbl.delete(f"node_id = '{nid}'")
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
 
     def find_similar_node(self, text: str, kind: NodeKind, threshold: float = 0.88) -> Node | None:
@@ -363,7 +362,7 @@ class AgentKGStore:
             similarity = 1.0 - distance
             if similarity >= threshold:
                 return self.get_node(results[0]["node_id"])
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
         return None
 
@@ -439,7 +438,7 @@ class AgentKGStore:
                 if len(hits) >= k:
                     break
             return hits
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             return []
 
     # ------------------------------------------------------------------
@@ -551,7 +550,7 @@ class AgentKGStore:
             return 0
         try:
             self._get_table()
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             return 0
         created = 0
         for i, t1 in enumerate(topics):
