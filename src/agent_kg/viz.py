@@ -233,7 +233,7 @@ def render_profile_tree_rich(profile_db_path: Path) -> None:
     root = Tree(f"[bold white]UserProfile[/bold white]  [dim]{profile_db_path}[/dim]")
 
     if not rows:
-        root.add("[dim]Empty — run agent-kg onboard --person <you>[/dim]")
+        root.add("[dim]Empty — run agentkg onboard --person <you>[/dim]")
         console.print(root)
         return
 

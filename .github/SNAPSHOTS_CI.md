@@ -8,14 +8,14 @@ not a GitHub Actions workflow. There are two distinct snapshot streams.
 Hooks are installed with:
 
 ```bash
-agent-kg install-hooks --repo .     # git pre-commit hook (tracked graph snapshots)
-agent-kg install-hooks --claude     # Claude Code hooks for THIS repo (conversation snapshots)
-agent-kg install-hooks --global     # Claude Code hooks for ALL repos
+agentkg install-hooks --repo .     # git pre-commit hook (tracked graph snapshots)
+agentkg install-hooks --claude     # Claude Code hooks for THIS repo (conversation snapshots)
+agentkg install-hooks --global     # Claude Code hooks for ALL repos
 ```
 
 ### 1. Tracked graph snapshots — git pre-commit hook
 
-The pre-commit hook (`.git/hooks/pre-commit`, installed by `agent-kg install-hooks`) runs
+The pre-commit hook (`.git/hooks/pre-commit`, installed by `agentkg install-hooks`) runs
 **before** the quality checks on every commit. It:
 
 1. Captures the staged tree hash (`git write-tree`) and current branch.
@@ -34,12 +34,12 @@ Skip a snapshot on a given commit with:
 AGENTKG_SKIP_SNAPSHOT=1 git commit -m "…"
 ```
 
-### 2. Conversation snapshots — `agent-kg snapshot` / Claude Code hooks
+### 2. Conversation snapshots — `agentkg snapshot` / Claude Code hooks
 
 AgentKG's own conversation-memory snapshots are written to `<repo>/.agentkg/snapshots/<timestamp>.json`.
 This directory is **private and git-ignored** (it holds conversation data). They are produced by:
 
-- The CLI: `agent-kg snapshot --repo . [--label <label>]`
+- The CLI: `agentkg snapshot --repo . [--label <label>]`
 - The Claude Code `Stop` hook — snapshots asynchronously at session end (`--label session-end`).
 - The Claude Code `PreCompact` hook — prunes + snapshots **synchronously** before context
   compaction, so no turns are lost.
@@ -61,7 +61,7 @@ A conversation snapshot (`capture()` in `agent_kg/snapshots.py`) stores:
 
 ```bash
 # Capture one now
-agent-kg snapshot --repo . --label "pre-refactor"
+agentkg snapshot --repo . --label "pre-refactor"
 ```
 
 Example output:
@@ -103,7 +103,7 @@ delta = diff_snapshots(snapshots[1], snapshots[0])
 |---|---|---|
 | `.pycodekg/snapshots/*.json` | ✅ committed | git pre-commit hook (`pycodekg snapshot save`) |
 | `.dockg/snapshots/*.json` | ✅ committed | git pre-commit hook (`dockg snapshot save`) |
-| `.agentkg/snapshots/*.json` | ❌ git-ignored (private) | `agent-kg snapshot` / Claude Code `Stop` + `PreCompact` hooks |
+| `.agentkg/snapshots/*.json` | ❌ git-ignored (private) | `agentkg snapshot` / Claude Code `Stop` + `PreCompact` hooks |
 
 ## Troubleshooting
 
@@ -112,10 +112,10 @@ delta = diff_snapshots(snapshots[1], snapshots[0])
   Install the KG integrations: `pip install -e ".[kgdeps]"`.
 - Run `pycodekg build --repo .` once to initialize the index, then commit again.
 - Confirm the hook is installed: `cat .git/hooks/pre-commit` (re-install with
-  `agent-kg install-hooks --repo . --force`).
+  `agentkg install-hooks --repo . --force`).
 
 ### Conversation snapshot is empty
-- The graph has no turns yet — ingest some first (`agent-kg ingest …`) or let the Claude
+- The graph has no turns yet — ingest some first (`agentkg ingest …`) or let the Claude
   Code hooks run.
 
 ### A commit is taking too long

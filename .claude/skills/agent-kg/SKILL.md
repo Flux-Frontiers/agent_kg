@@ -7,10 +7,10 @@ description: >
   graph. Use this skill when: working in a repo that has AgentKG installed (check for a
   .agentkg/ directory or agent-kg in pyproject.toml), querying past conversation context,
   understanding what a user has told you before, surfacing user preferences or commitments,
-  running or debugging agent-kg CLI commands (agent-kg-ingest, agent-kg-query,
-  agent-kg-assemble, agent-kg-prune, agent-kg-stats, agent-kg-analyze, agent-kg-sessions,
-  agent-kg-snapshot, agent-kg-onboard, agent-kg-profile, agent-kg-viz, agent-kg-wipe,
-  agent-kg-mcp), setting up hooks to auto-ingest conversation turns, managing the
+  running or debugging agent-kg CLI commands (agentkg-ingest, agentkg-query,
+  agentkg-assemble, agentkg-prune, agentkg-stats, agentkg-analyze, agentkg-sessions,
+  agentkg-snapshot, agentkg-onboard, agentkg-profile, agentkg-viz, agentkg-wipe,
+  agentkg-mcp), setting up hooks to auto-ingest conversation turns, managing the
   UserProfile, or troubleshooting why profile or memory data is missing.
 ---
 
@@ -68,48 +68,48 @@ directly access `~/.kgrag/profiles/<person>/`.
 ```bash
 # Ingest a turn (hooks do this automatically — call directly when needed)
 # Slash commands, "Session ended.", and IDE-tag-only turns are silently skipped.
-agent-kg-ingest "text" --role user|assistant --repo .  [--no-embed]
+agentkg-ingest "text" --role user|assistant --repo .  [--no-embed]
 
 # Semantic search over the conversation graph
-agent-kg-query "authentication strategy" --k 10 --repo .
+agentkg-query "authentication strategy" --k 10 --repo .
 
 # Also search profile nodes (preferences, commitments, expertise, style)
-agent-kg-query "docstring style" --k 8 --repo . --include-profile
+agentkg-query "docstring style" --k 8 --repo . --include-profile
 
 # Assemble a token-budgeted context block for a prompt
-agent-kg-assemble "what did we decide about auth?" --budget 4000 --repo .
+agentkg-assemble "what did we decide about auth?" --budget 4000 --repo .
 
 # Show graph statistics
-agent-kg-stats --repo .
+agentkg-stats --repo .
 
 # Full Markdown analysis report
-agent-kg-analyze --repo .
+agentkg-analyze --repo .
 
 # List all sessions
-agent-kg-sessions --repo .
+agentkg-sessions --repo .
 
 # Capture a snapshot
-agent-kg-snapshot --repo . [--label "before refactor"]
+agentkg-snapshot --repo . [--label "before refactor"]
 ```
 
 ### Profile & onboarding
 
 ```bash
 # Run the structured onboarding interview (interactive, populates ~/.kgrag/profiles/)
-agent-kg-onboard --repo . --person egs [--update] [--skip-optional]
+agentkg-onboard --repo . --person egs [--update] [--skip-optional]
 
 # Show the UserProfile as Markdown
-agent-kg-profile --repo . --person egs
+agentkg-profile --repo . --person egs
 ```
 
 ### Pruning (compression)
 
 ```bash
 # Compress old turns into Summary nodes (run when turn count gets large)
-agent-kg-prune --window 20 --repo .
+agentkg-prune --window 20 --repo .
 
 # Force pruning even when all turns are in the current session
-agent-kg-prune --window 20 --repo . --force
+agentkg-prune --window 20 --repo . --force
 ```
 
 `--window N` keeps the N most-recent turns verbatim; older turns are summarised.
@@ -119,35 +119,35 @@ agent-kg-prune --window 20 --repo . --force
 
 ```bash
 # Terminal trees (no extra deps)
-agent-kg-viz --repo .
+agentkg-viz --repo .
 
 # Interactive HTML for the conversation graph
-agent-kg-viz --agent --html --repo .
+agentkg-viz --agent --html --repo .
 
 # Interactive HTML for the profile
-agent-kg-viz --profile --html --repo . --person egs
+agentkg-viz --profile --html --repo . --person egs
 
 # Full Streamlit explorer (requires pip install "agent-kg[viz]")
-agent-kg-viz --serve --repo .
+agentkg-viz --serve --repo .
 ```
 
 ### Wipe
 
 ```bash
 # Erase the local conversation graph only
-agent-kg-wipe --local --repo .
+agentkg-wipe --local --repo .
 
 # Erase the global user profile (all repos)
-agent-kg-wipe --global --person egs
+agentkg-wipe --global --person egs
 
 # Skip confirmation prompt
-agent-kg-wipe --local --global --yes
+agentkg-wipe --local --global --yes
 ```
 
 ### MCP server
 
 ```bash
-agent-kg-mcp   # starts the MCP server (stdio transport)
+agentkg-mcp   # starts the MCP server (stdio transport)
 ```
 
 ## Hooks (Auto-Ingest)
@@ -160,14 +160,14 @@ The `.claude/settings.json` hooks ingest every prompt automatically and snapshot
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --person egs --no-embed 2>/dev/null || true",
+        "command": "PROMPT=$(jq -r '.prompt'); REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agentkg ingest \"$PROMPT\" --role user --repo \"$REPO_ROOT\" --person egs --no-embed 2>/dev/null || true",
         "async": true
       }]
     }],
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agent-kg snapshot --repo \"$REPO_ROOT\" --person egs --label \"session-end\" 2>/dev/null || true",
+        "command": "REPO_ROOT=\"$(git rev-parse --show-toplevel)\"; agentkg snapshot --repo \"$REPO_ROOT\" --person egs --label \"session-end\" 2>/dev/null || true",
         "async": true
       }]
     }]
@@ -187,20 +187,20 @@ Choose the right tool for the query type:
 
 | What you need | Command |
 |---|---|
-| Past architectural decision, prior work | `agent-kg-assemble "topic" --budget 4000` |
-| User preferences, style, commitments | `agent-kg-profile` |
-| Preferences via query interface | `agent-kg-query "style pref" --include-profile` |
-| Raw ranked hits to inspect scores | `agent-kg-query "topic" --k 8` |
+| Past architectural decision, prior work | `agentkg-assemble "topic" --budget 4000` |
+| User preferences, style, commitments | `agentkg-profile` |
+| Preferences via query interface | `agentkg-query "style pref" --include-profile` |
+| Raw ranked hits to inspect scores | `agentkg-query "topic" --k 8` |
 
 ```bash
 # What did we decide about X? (best for architectural/decision recall)
-agent-kg-assemble "X" --budget 4000 --repo .
+agentkg-assemble "X" --budget 4000 --repo .
 
 # What does this user prefer? (direct profile read — always start here)
-agent-kg-profile --repo . --person egs
+agentkg-profile --repo . --person egs
 
 # Find relevant past turns + matching profile nodes in one call
-agent-kg-query "X" --k 8 --repo . --include-profile
+agentkg-query "X" --k 8 --repo . --include-profile
 ```
 
 ## Common Issues
@@ -211,7 +211,7 @@ Pruning normally requires turns from completed (closed) sessions — "cold turns
 If all turns are in the current session, use `--force`:
 
 ```bash
-agent-kg-prune --window 20 --repo . --person egs --force
+agentkg-prune --window 20 --repo . --person egs --force
 ```
 
 ### Profile is empty after onboarding
@@ -221,7 +221,7 @@ If it exists but has 0 rows, the interview likely ran with empty/piped stdin.
 Re-run interactively and verify:
 
 ```bash
-agent-kg-onboard --repo . --person egs
+agentkg-onboard --repo . --person egs
 sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
   "SELECT kind, label FROM profile_nodes;"
 ```
@@ -239,8 +239,8 @@ A broken path silently discards every ingested turn (the `2>/dev/null || true` s
 ## Quick Health Check
 
 ```bash
-agent-kg-stats --repo .                        # node/edge counts by kind
-agent-kg-profile --repo . --person egs        # profile sections populated?
+agentkg-stats --repo .                        # node/edge counts by kind
+agentkg-profile --repo . --person egs        # profile sections populated?
 sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
   "SELECT kind, COUNT(*) FROM profile_nodes GROUP BY kind;"
 ```

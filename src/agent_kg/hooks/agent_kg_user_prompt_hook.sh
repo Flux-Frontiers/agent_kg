@@ -33,7 +33,7 @@ fi
 
 # Ingest user turn — embeddings enabled (fast enough for user turns)
 if [ -n "$PROMPT" ]; then
-    agent-kg ingest "$PROMPT" --role user --repo "$REPO_ROOT" 2>/dev/null || true
+    agentkg ingest "$PROMPT" --role user --repo "$REPO_ROOT" 2>/dev/null || true
 fi
 
 echo "{}"
