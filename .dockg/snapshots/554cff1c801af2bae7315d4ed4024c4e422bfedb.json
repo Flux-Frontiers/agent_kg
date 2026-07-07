@@ -1,7 +1,7 @@
 {
-  "key": "74b6759c12a312cbd8a2b98ff57060abf6a2e985",
+  "key": "554cff1c801af2bae7315d4ed4024c4e422bfedb",
   "branch": "feat/omlx-summarizer",
-  "timestamp": "2026-07-07T18:06:39.982947+00:00",
+  "timestamp": "2026-07-07T18:13:57.090408+00:00",
   "version": "0.12.0",
   "metrics": {
     "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",

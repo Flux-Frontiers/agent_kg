@@ -139,8 +139,10 @@ def test_omlx_default_model_and_endpoint_inherited() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_primary_backend_failure_falls_back_to_extractive() -> None:
-    with patch("anthropic.Anthropic", side_effect=RuntimeError("no api key")):
+def test_primary_backend_none_falls_back_to_extractive() -> None:
+    # Patch the backend call itself so this does not require the optional
+    # ``anthropic`` package to be installed (it is not in the CI test extras).
+    with patch.object(Summarizer, "_call_primary", return_value=None):
         result = Summarizer(SummarizerConfig(backend="primary")).summarize(
             "Decision made. Question raised."
         )
