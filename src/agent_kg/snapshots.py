@@ -91,7 +91,7 @@ def list_snapshots(snapshots_dir: Path) -> list[dict[str, Any]]:
             data = json.loads(f.read_text())
             data["path"] = str(f)
             snaps.append(data)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
     return snaps
 

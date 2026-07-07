@@ -291,7 +291,7 @@ class AgentKG:
 
             return "\n".join(lines)
 
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:
             return f"# AgentKG Analysis\n\nAnalysis failed: {exc}"
 
     # ------------------------------------------------------------------

@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **oMLX / Ollama / OpenAI summarization backends** — the KG-pruning summarizer now
+  supports four backends (`primary` = Anthropic, default; `omlx`; `ollama`; `openai`).
+  The three synth backends delegate to the shared `kg_utils.synthesis.TextSynthesizer`
+  (`kgmodule-utils>=0.4.5`) over the OpenAI wire protocol, inheriting the fleet-wide
+  defaults — including `Qwen3-4B-Instruct-2507-MLX-8bit` at `http://localhost:8080/v1`
+  for oMLX. Install with the `local` extra (adds `openai`).
+
+### Removed
+
+- **pylint** — dropped from the toolchain now that ruff + ty cover linting/formatting/types.
+  Removed the pre-commit `pylint` hook, the `pylint` dev/all extras, the
+  `[tool.pylint.messages_control]` config, and all `# pylint: disable=` comments plus
+  dead `# noqa: PLC0415`/`PLW0603` directives (those rules are not in ruff's active select).
+
 ### Changed
+
+- **Summarizer configuration** now uses the fleet-wide `SYNTH_*` environment convention
+  (`SYNTH_BACKEND`/`SYNTH_ENDPOINT`/`SYNTH_MODEL`/`SYNTH_API_KEY`). The old Ollama-native
+  `/api/generate` path and the `AGENTKG_SUMMARIZER_ENDPOINT`/`_MODEL` variables are removed;
+  `AGENTKG_SUMMARIZER_PRIMARY_MODEL` still selects the Claude model for the `primary` backend.
 
 - **Breaking:** CLI entry points renamed from `agent-kg`/`agent-kg-*` to `agentkg`/`agentkg-*` (e.g. `agent-kg-query` → `agentkg-query`) to match the no-hyphen naming convention used by every sibling KGModule (`pycodekg`, `dockg`, `memorykg`, `ftreekg`, `metabokg`, `diarykg`, `gutenkg`). The PyPI package name (`agent-kg`), Python module (`agent_kg`), and MCP server identifier (`agent-kg`) are unchanged. Update any scripts, hooks, or `.claude/settings.json` permission entries that reference the old hyphenated command names.
 - `.github/workflows/publish.yml`: Added `poetry publish` step (via `PYPI_TOKEN` secret) so tag pushes auto-publish to PyPI; fixed stale release title `CodeKG` → `AgentKG`.

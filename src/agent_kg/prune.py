@@ -112,7 +112,7 @@ def _cluster_turns_by_topic(
 
         return [[turns[i] for i in cluster] for cluster in clusters]
 
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         # Fallback: sequential windows of MIN_CLUSTER_SIZE
         result = []
         for i in range(0, len(turns), _MIN_CLUSTER_SIZE):
@@ -125,7 +125,7 @@ def prune(
     summarizer: Summarizer,
     session: Session | None = None,
     window: int = _DEFAULT_WINDOW,
-    token_budget: int | None = None,  # pylint: disable=unused-argument
+    token_budget: int | None = None,
 ) -> PruneReport:
     """Execute one KG Context Pruning pass.
 
@@ -214,7 +214,7 @@ def prune(
         store.upsert_node(summary_node)
         try:
             store.embed_node(summary_node)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             pass
 
         # COMPRESSED_INTO edges: each pruned turn -> summary

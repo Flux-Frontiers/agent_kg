@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """app.py — AgentKG Streamlit Explorer
 
@@ -205,7 +204,7 @@ def _load_profile(db_path: str):
 
 
 def _agent_html(nodes, edges, physics_on: bool) -> str:
-    from agent_kg.viz import (  # noqa: PLC0415
+    from agent_kg.viz import (
         _KIND_COLOR as VIZ_COLOR,
     )
     from agent_kg.viz import (
@@ -216,9 +215,9 @@ def _agent_html(nodes, edges, physics_on: bool) -> str:
     )
 
     _require_pyvis()
-    import tempfile  # noqa: PLC0415
+    import tempfile
 
-    from pyvis.network import Network  # noqa: PLC0415
+    from pyvis.network import Network
 
     net = Network(height="650px", width="100%", bgcolor="#0d1117", font_color="#e0e0e0")
     net.set_options(
@@ -253,9 +252,9 @@ def _agent_html(nodes, edges, physics_on: bool) -> str:
 
 
 def _profile_html(rows: list[dict]) -> str:
-    from itertools import groupby  # noqa: PLC0415
+    from itertools import groupby
 
-    from agent_kg.viz import (  # noqa: PLC0415
+    from agent_kg.viz import (
         _KIND_COLOR as VIZ_COLOR,
     )
     from agent_kg.viz import (
@@ -265,9 +264,9 @@ def _profile_html(rows: list[dict]) -> str:
     )
 
     _require_pyvis()
-    import tempfile  # noqa: PLC0415
+    import tempfile
 
-    from pyvis.network import Network  # noqa: PLC0415
+    from pyvis.network import Network
 
     net = Network(height="600px", width="100%", bgcolor="#0d1117", font_color="#e0e0e0")
     net.set_options(
@@ -369,16 +368,16 @@ def _run_query(
     kind_filter: str | None,
 ) -> tuple[list[dict], str]:
     """Execute query and context assembly; return (hits, context_md)."""
-    from agent_kg.assemble import assemble_context  # noqa: PLC0415
-    from agent_kg.query import query as kg_query  # noqa: PLC0415
-    from agent_kg.store import AgentKGStore  # noqa: PLC0415
+    from agent_kg.assemble import assemble_context
+    from agent_kg.query import query as kg_query
+    from agent_kg.store import AgentKGStore
 
     agentkg_dir = Path(db_path).parent
     store = AgentKGStore(agentkg_dir / "graph.sqlite", agentkg_dir / "lancedb")
     hits = kg_query(store, q, k=k, kind_filter=kind_filter)
 
     if include_profile:
-        from agent_kg.user_profile import UserProfileStore  # noqa: PLC0415
+        from agent_kg.user_profile import UserProfileStore
 
         profile = UserProfileStore(Path(profile_path).parent)
         profile_hits = profile.search(q, k=k)
@@ -463,7 +462,7 @@ with tab_query:
                     st.session_state.query_results = hits
                     st.session_state.query_context = context_md
                     st.session_state.last_query = query_text.strip()
-                except Exception as exc:  # pylint: disable=broad-exception-caught
+                except Exception as exc:
                     st.error(f"Query failed: {exc}")
 
         results = st.session_state.query_results
@@ -503,7 +502,7 @@ with tab_stats:
     with col1:
         st.subheader("Agent Graph")
         if nodes:
-            from collections import Counter  # noqa: PLC0415
+            from collections import Counter
 
             kind_counts = Counter(n["kind"] for n in nodes)
             st.dataframe(
@@ -532,7 +531,7 @@ with tab_stats:
     with col2:
         st.subheader("UserProfile")
         if profile_rows:
-            from collections import Counter  # noqa: PLC0415
+            from collections import Counter
 
             kind_counts = Counter(r["kind"] for r in profile_rows)
             st.dataframe(

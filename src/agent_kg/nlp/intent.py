@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=line-too-long,import-outside-toplevel
 
 """intent.py — Intent classification for AgentKG Turn nodes.
 
@@ -126,7 +125,7 @@ def _try_spacy(text: str) -> IntentCategory | None:
                 if root.pos_ == "VERB" and root.tag_ == "VB" and not has_nsubj:
                     return IntentCategory.REQUEST
         return None
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
@@ -135,13 +134,13 @@ _SPACY_MODEL: object | None = _SENTINEL
 
 
 def _get_spacy_model():
-    global _SPACY_MODEL  # noqa: PLW0603
+    global _SPACY_MODEL
     if _SPACY_MODEL is _SENTINEL:
         try:
-            import spacy  # noqa: PLC0415
+            import spacy
 
             _SPACY_MODEL = spacy.load("en_core_web_sm")
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             _SPACY_MODEL = None
     return _SPACY_MODEL
 

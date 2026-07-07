@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """profile.py — UserProfile tree: globally persistent personal knowledge.
 
@@ -102,7 +101,7 @@ class UserProfileStore:
         :param category: Optional sub-category.
         :return: The upserted Node.
         """
-        import uuid  # noqa: PLC0415
+        import uuid
 
         db = self._get_db()
         now = datetime.now(UTC).isoformat()
@@ -472,7 +471,7 @@ class UserProfileStore:
         def _dt(s):
             try:
                 return datetime.fromisoformat(s)
-            except Exception:  # pylint: disable=broad-exception-caught
+            except Exception:
                 return datetime.now(UTC)
 
         return Node(

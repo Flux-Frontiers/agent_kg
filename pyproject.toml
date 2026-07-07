@@ -89,7 +89,6 @@ dev = [
     "ty>=0.0.41",
     "pdoc>=14.0.0",
     "pre-commit>=4.5.1",
-    "pylint>=4.0.5",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.4.0",
@@ -120,7 +119,6 @@ all = [
     "ty>=0.0.41",
     "pdoc>=14.0.0",
     "pre-commit>=4.5.1",
-    "pylint>=4.0.5",
     "pycode-kg>=0.19.3",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
@@ -181,16 +179,6 @@ pythonpath = ["src"]
 markers = [
     "slow: marks tests as slow (deselect with '-m not slow')",
     "integration: marks tests that exercise real external dependencies (model, LanceDB)",
-]
-
-[tool.pylint.messages_control]
-disable = ["all"]
-enable = [
-    "broad-exception-caught",   # W0718
-    "cell-var-from-loop",       # W0640
-    "cyclic-import",            # R0401
-    "import-outside-toplevel",  # C0415
-    "undefined-variable",       # E0602
 ]
 
 # ---------------------------------------------------------------------------

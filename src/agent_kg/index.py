@@ -1,5 +1,4 @@
 """index.py — ConversationIndex: LanceDB-backed semantic index for conversation nodes."""
-# pylint: disable=import-outside-toplevel
 
 from __future__ import annotations
 
@@ -34,14 +33,14 @@ class ConversationIndex:
 
     def _get_embedder(self) -> Any:
         if self._embedder is None:
-            from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+            from sentence_transformers import SentenceTransformer
 
             self._embedder = SentenceTransformer(self.model_name)
         return self._embedder
 
     def _get_db(self) -> Any:
         if self._db is None:
-            import lancedb  # noqa: PLC0415
+            import lancedb
 
             self._db = lancedb.connect(str(self.lancedb_dir))
         return self._db
@@ -54,7 +53,7 @@ class ConversationIndex:
         if self.TABLE in names:
             self._table = db.open_table(self.TABLE)
         elif create:
-            import pyarrow as pa  # noqa: PLC0415
+            import pyarrow as pa
 
             schema = pa.schema(
                 [

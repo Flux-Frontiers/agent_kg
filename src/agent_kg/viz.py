@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """viz.py — Terminal and HTML visualizations for AgentKG conversation and profile trees.
 
@@ -237,7 +236,7 @@ def render_profile_tree_rich(profile_db_path: Path) -> None:
         console.print(root)
         return
 
-    from itertools import groupby  # noqa: PLC0415
+    from itertools import groupby
 
     for kind, group in groupby(rows, key=lambda r: r["kind"]):
         color = _KIND_RICH.get(kind, "white")
@@ -256,7 +255,7 @@ def render_profile_tree_rich(profile_db_path: Path) -> None:
 
 
 def _require_pyvis() -> None:
-    import importlib.util  # noqa: PLC0415
+    import importlib.util
 
     if importlib.util.find_spec("pyvis") is None:
         raise ImportError(
@@ -284,7 +283,7 @@ def build_agent_html(db_path: Path, *, height: str = "700px", physics: bool = Tr
     :return: Self-contained HTML string.
     """
     _require_pyvis()
-    from pyvis.network import Network  # noqa: PLC0415
+    from pyvis.network import Network
 
     net = Network(height=height, width="100%", bgcolor="#0d1117", font_color="#e0e0e0")
     net.set_options(
@@ -346,7 +345,7 @@ def build_profile_html(profile_db_path: Path, *, height: str = "600px") -> str:
     :return: Self-contained HTML string.
     """
     _require_pyvis()
-    from pyvis.network import Network  # noqa: PLC0415
+    from pyvis.network import Network
 
     net = Network(height=height, width="100%", bgcolor="#0d1117", font_color="#e0e0e0")
     net.set_options(
@@ -362,7 +361,7 @@ def build_profile_html(profile_db_path: Path, *, height: str = "600px") -> str:
     db.close()
 
     # Group by kind — add a kind hub node, then leaf nodes
-    from itertools import groupby  # noqa: PLC0415
+    from itertools import groupby
 
     net.add_node(
         "__profile__",

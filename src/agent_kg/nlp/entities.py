@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """entities.py — Named entity extraction for AgentKG Turn nodes.
 
@@ -127,7 +126,7 @@ _STOP_WORDS = frozenset(
 def _spacy_entities(text: str) -> list[dict[str, Any]]:
     """Extract named entities using spaCy NER."""
     try:
-        from agent_kg.nlp.intent import _get_spacy_doc  # noqa: PLC0415
+        from agent_kg.nlp.intent import _get_spacy_doc
 
         doc = _get_spacy_doc(text)
         if doc is None:
@@ -140,7 +139,7 @@ def _spacy_entities(text: str) -> list[dict[str, Any]]:
                 continue
             results.append({"label": label, "kind": kind, "source_text": ent.text})
         return results
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return []
 
 

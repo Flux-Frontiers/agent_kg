@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel
 
 """summarize.py — Configurable LLM summarization backend for KG Context Pruning.
 
@@ -115,7 +114,7 @@ class Summarizer:
     def _call_primary(self, prompt: str) -> str | None:
         """Call the Anthropic API via the anthropic SDK."""
         try:
-            import anthropic  # noqa: PLC0415
+            import anthropic
 
             client = anthropic.Anthropic()
             msg = client.messages.create(
@@ -126,7 +125,7 @@ class Summarizer:
             )
             block = msg.content[0] if msg.content else None
             return block.text.strip() if isinstance(block, anthropic.types.TextBlock) else None
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             return None
 
     def _call_synth(self, prompt: str) -> str | None:
@@ -137,7 +136,7 @@ class Summarizer:
         (e.g. ``Qwen3-4B-Instruct-2507-MLX-8bit`` at ``:8080/v1`` for oMLX).
         """
         try:
-            from kg_utils.synthesis import (  # noqa: PLC0415
+            from kg_utils.synthesis import (
                 TextBackend,
                 TextConfig,
                 TextSynthesizer,
@@ -156,7 +155,7 @@ class Summarizer:
                 temperature=self._config.temperature,
             )
             return result or None
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             return None
 
     @staticmethod

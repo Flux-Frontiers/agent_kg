@@ -54,7 +54,7 @@ def consolidate(
                 try:
                     store.embed_node(node)
                     report["nodes_embedded"] += 1
-                except Exception:  # pylint: disable=broad-exception-caught
+                except Exception:
                     pass
 
     # ------------------------------------------------------------------
@@ -63,7 +63,7 @@ def consolidate(
     try:
         new_edges = store.refresh_related_to_edges(threshold=0.75)
         report["edges_created"] += new_edges
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         pass
 
     # ------------------------------------------------------------------

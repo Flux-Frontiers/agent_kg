@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel  # intentional lazy imports throughout Click CLI
 
 """agent_kg CLI — command-line interface for AgentKG.
 
@@ -303,10 +302,10 @@ def snapshot(repo: str, person: str, label: str | None) -> None:
 )
 @click.option("--update", is_flag=True, help="Run in update mode (re-run to refine preferences).")
 @click.option("--skip-optional", is_flag=True, help="Skip the optional Personal phase.")
-def onboard(repo: str, person: str, update: bool, skip_optional: bool) -> None:  # pylint: disable=unused-argument
+def onboard(repo: str, person: str, update: bool, skip_optional: bool) -> None:
     """Run the structured UserProfile onboarding interview."""
     kg = _resolve_kg(repo, person, None)
-    from agent_kg.onboard import run_onboard_interview  # noqa: PLC0415
+    from agent_kg.onboard import run_onboard_interview
 
     run_onboard_interview(
         profile=kg.profile,
@@ -407,7 +406,7 @@ def profile_set(
         agentkg profile-set --education "BSc Physics, Oxford, 1990" \\
                               --education "PhD CS, MIT, 1995"
     """
-    from agent_kg.schema import NodeKind  # noqa: PLC0415
+    from agent_kg.schema import NodeKind
 
     kg = _resolve_kg(repo, person, None)
 
@@ -516,7 +515,7 @@ def profile_remove(
         agentkg profile-remove --clear-preferences
         agentkg profile-remove --clear-all
     """
-    from agent_kg.schema import NodeKind  # noqa: PLC0415
+    from agent_kg.schema import NodeKind
 
     kg = _resolve_kg(repo, person, None)
     did_something = False
@@ -708,9 +707,9 @@ def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool
 
       Use --claude for this repo only, --global for all repos.
     """
-    import importlib.resources  # noqa: PLC0415
-    import json  # noqa: PLC0415
-    import stat  # noqa: PLC0415
+    import importlib.resources
+    import json
+    import stat
 
     repo_root = Path(repo).resolve()
     git_dir = repo_root / ".git"
@@ -821,9 +820,9 @@ def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool
 )
 def init(person: str, model: str) -> None:
     """Initialize AgentKG: download the embedding model and create the profile directory."""
-    from kg_utils.embed import KNOWN_MODELS, resolve_model_path  # noqa: PLC0415
+    from kg_utils.embed import KNOWN_MODELS, resolve_model_path
 
-    from agent_kg.store import _load_sentence_transformer  # noqa: PLC0415
+    from agent_kg.store import _load_sentence_transformer
 
     profile_dir = Path.home() / ".kgrag" / "profiles" / person
     profile_dir.mkdir(parents=True, exist_ok=True)
@@ -880,7 +879,7 @@ def wipe(repo: str, person: str, wipe_local: bool, wipe_global: bool, yes: bool)
         # wipe everything without prompting
         agentkg wipe --local --global --person egs --yes
     """
-    import shutil  # noqa: PLC0415
+    import shutil
 
     if not wipe_local and not wipe_global:
         click.echo("Nothing to wipe. Use --local, --global, or both.", err=True)
@@ -956,11 +955,11 @@ def viz(
         # Full Streamlit explorer
         agentkg viz --serve --person egs
     """
-    import importlib.util  # noqa: PLC0415
-    import subprocess  # noqa: PLC0415
-    import sys  # noqa: PLC0415
+    import importlib.util
+    import subprocess
+    import sys
 
-    from agent_kg.viz import (  # noqa: PLC0415
+    from agent_kg.viz import (
         build_agent_html,
         build_profile_html,
         render_agent_tree_rich,
@@ -1034,7 +1033,7 @@ def viz(
 @cli.command()
 def mcp() -> None:
     """Start the AgentKG MCP server."""
-    from agent_kg.mcp.server import main as mcp_main  # noqa: PLC0415
+    from agent_kg.mcp.server import main as mcp_main
 
     mcp_main()
 

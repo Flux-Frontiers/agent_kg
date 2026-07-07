@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
-# pylint: disable=import-outside-toplevel  # intentional lazy import of spaCy
 
 """topics.py — Topic extraction from Turn text for AgentKG.
 
@@ -79,7 +78,7 @@ _CODE_TOPIC = re.compile(
 def _spacy_topics(text: str) -> list[str]:
     """Extract noun-chunk topics using spaCy."""
     try:
-        from agent_kg.nlp.intent import _get_spacy_doc  # noqa: PLC0415
+        from agent_kg.nlp.intent import _get_spacy_doc
 
         doc = _get_spacy_doc(text)
         if doc is None:
@@ -96,7 +95,7 @@ def _spacy_topics(text: str) -> list[str]:
             else:
                 topics.append(label)
         return list(dict.fromkeys(topics))  # preserve order, deduplicate
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return []
 
 

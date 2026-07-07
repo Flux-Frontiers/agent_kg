@@ -101,19 +101,6 @@ typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 trio = ["trio (>=0.32.0)"]
 
 [[package]]
-name = "astroid"
-version = "4.0.4"
-description = "An abstract syntax tree for Python with inference support."
-optional = true
-python-versions = ">=3.10.0"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "astroid-4.0.4-py3-none-any.whl", hash = "sha256:52f39653876c7dec3e3afd4c2696920e05c83832b9737afc21928f2d2eb7a753"},
-    {file = "astroid-4.0.4.tar.gz", hash = "sha256:986fed8bcf79fb82c78b18a53352a0b287a73817d6dbcfba3162da36667c49a0"},
-]
-
-[[package]]
 name = "asttokens"
 version = "3.0.1"
 description = "Annotate AST trees with source code positions"
@@ -920,23 +907,6 @@ gibberish = ["gibberish-detector"]
 word-list = ["pyahocorasick"]
 
 [[package]]
-name = "dill"
-version = "0.4.1"
-description = "serialize all of Python"
-optional = true
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d"},
-    {file = "dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa"},
-]
-
-[package.extras]
-graph = ["objgraph (>=1.7.2)"]
-profile = ["gprof2dot (>=2022.7.29)"]
-
-[[package]]
 name = "distlib"
 version = "0.4.3"
 description = "Distribution utilities"
@@ -1448,22 +1418,6 @@ files = [
 pygments = "*"
 
 [[package]]
-name = "isort"
-version = "8.0.1"
-description = "A Python utility / library to sort Python imports."
-optional = true
-python-versions = ">=3.10.0"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "isort-8.0.1-py3-none-any.whl", hash = "sha256:28b89bc70f751b559aeca209e6120393d43fbe2490de0559662be7a9787e3d75"},
-    {file = "isort-8.0.1.tar.gz", hash = "sha256:171ac4ff559cdc060bcfff550bc8404a486fee0caab245679c2abe7cb253c78d"},
-]
-
-[package.extras]
-colors = ["colorama"]
-
-[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 description = "Safely pass data to untrusted environments and back."
@@ -1950,19 +1904,6 @@ traitlets = "*"
 
 [package.extras]
 test = ["flake8", "matplotlib", "nbdime", "nbval", "notebook", "pytest"]
-
-[[package]]
-name = "mccabe"
-version = "0.7.0"
-description = "McCabe checker, plugin for flake8"
-optional = true
-python-versions = ">=3.6"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e"},
-    {file = "mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325"},
-]
 
 [[package]]
 name = "mcp"
@@ -3335,32 +3276,6 @@ cryptography = {version = ">=3.4.0", optional = true, markers = "extra == \"cryp
 
 [package.extras]
 crypto = ["cryptography (>=3.4.0)"]
-
-[[package]]
-name = "pylint"
-version = "4.0.6"
-description = "python code static checker"
-optional = true
-python-versions = ">=3.10.0"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "pylint-4.0.6-py3-none-any.whl", hash = "sha256:d11a0e1fdb7b1cd46ec5d6fc78fee8b95f28695b2d6140e5809925f61e32ea54"},
-    {file = "pylint-4.0.6.tar.gz", hash = "sha256:52f19191bee08bf103f9705ad1a0ece4aa5a0a4ef2bdcbd969375a1e6f6579d5"},
-]
-
-[package.dependencies]
-astroid = ">=4.0.2,<=4.1.dev0"
-colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
-dill = {version = ">=0.3.7", markers = "python_version >= \"3.12\""}
-isort = ">=5,<5.13 || >5.13,<9"
-mccabe = ">=0.6,<0.8"
-platformdirs = ">=2.2"
-tomlkit = ">=0.10.1"
-
-[package.extras]
-spelling = ["pyenchant (>=3.2,<4.0)"]
-testutils = ["gitpython (>3)"]
 
 [[package]]
 name = "pymupdf"
@@ -4810,19 +4725,6 @@ files = [
 ]
 
 [[package]]
-name = "tomlkit"
-version = "0.15.0"
-description = "Style preserving TOML library"
-optional = true
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "extra == \"dev\" or extra == \"all\""
-files = [
-    {file = "tomlkit-0.15.0-py3-none-any.whl", hash = "sha256:4dbc8f0fc024412b57ced8757ac7461305126a648ff8c2c807fcb8e133a78738"},
-    {file = "tomlkit-0.15.0.tar.gz", hash = "sha256:7d1a9ecba3086638211b13814ea79c90dd54dd11993564376f3aa92271f5c7a3"},
-]
-
-[[package]]
 name = "torch"
 version = "2.12.1"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
@@ -5433,8 +5335,8 @@ files = [
 dev = ["pytest", "setuptools"]
 
 [extras]
-all = ["anthropic", "detect-secrets", "doc-kg", "openai", "pdoc", "pre-commit", "pycode-kg", "pylint", "pytest", "pytest-cov", "pyvis", "ruff", "streamlit", "ty"]
-dev = ["detect-secrets", "pdoc", "pre-commit", "pylint", "pytest", "pytest-cov", "ruff", "ty"]
+all = ["anthropic", "detect-secrets", "doc-kg", "openai", "pdoc", "pre-commit", "pycode-kg", "pytest", "pytest-cov", "pyvis", "ruff", "streamlit", "ty"]
+dev = ["detect-secrets", "pdoc", "pre-commit", "pytest", "pytest-cov", "ruff", "ty"]
 kgdeps = ["doc-kg", "pycode-kg"]
 llm = ["anthropic"]
 local = ["openai"]
@@ -5443,4 +5345,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "b8c2ab299fc4da7621ce38b139f897c90902f5493fdcea0e2fbbc373a5890dc9"
+content-hash = "61bde43f189e76d22c90e1c564d6ef1bd88a72e2102998875f16434f60c6a8ae"
