@@ -104,6 +104,54 @@ agentkg prune --window 20 --force
 
 ---
 
+## Summarization Backends (Pruning)
+
+`prune` compresses cold turns into `Summary` nodes with an LLM. The backend is chosen
+by the **`SYNTH_BACKEND`** environment variable (default `primary`); connection details
+fall back to the fleet-wide defaults shared with the rest of KGRAG (`kg_utils.synthesis`).
+
+| `SYNTH_BACKEND` | Default endpoint | Default model | Needs |
+|---|---|---|---|
+| `primary` *(default)* | Anthropic API | `claude-haiku-4-5-20251001` | `[llm]` extra + `ANTHROPIC_API_KEY` |
+| `omlx` | `http://localhost:8080/v1` | `Qwen3-4B-Instruct-2507-MLX-8bit` | `[local]` extra |
+| `ollama` | `http://localhost:11434/v1` | `hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q8_0` | `[local]` extra |
+| `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | `[local]` extra + `OPENAI_API_KEY` |
+
+Set the backend (and optional overrides) in the environment before running `prune`:
+
+```bash
+# Default — Anthropic (primary); no extra setup beyond ANTHROPIC_API_KEY
+agentkg prune --window 20
+
+# Local MLX server (fastest on Apple Silicon), fleet-default Qwen model
+SYNTH_BACKEND=omlx agentkg prune --window 20 --force
+
+# Local Ollama
+SYNTH_BACKEND=ollama agentkg prune --window 20 --force
+
+# OpenAI cloud
+SYNTH_BACKEND=openai OPENAI_API_KEY=sk-... agentkg prune --window 20 --force
+
+# Override endpoint / model explicitly (any synth backend)
+SYNTH_BACKEND=omlx SYNTH_ENDPOINT=http://box:8080/v1 SYNTH_MODEL=my-model \
+  agentkg prune --window 20 --force
+```
+
+| Env var | Applies to | Default | Notes |
+|---|---|---|---|
+| `SYNTH_BACKEND` | all | `primary` | `primary` \| `omlx` \| `ollama` \| `openai` |
+| `SYNTH_ENDPOINT` | omlx/ollama/openai | per-backend | Override base URL (must end in `/v1`) |
+| `SYNTH_MODEL` | omlx/ollama/openai | per-backend | Override model id |
+| `SYNTH_API_KEY` | openai | — | Bearer token; falls back to `OPENAI_API_KEY` |
+| `AGENTKG_SUMMARIZER_PRIMARY_MODEL` | primary | `claude-haiku-4-5-20251001` | Claude model for `primary` |
+
+Install the local/cloud backends with the `local` extra (`pip install -e ".[local]"`,
+which adds `openai`). If the chosen backend is unavailable, errors, or returns empty
+output, the summarizer **degrades to a deterministic extractive summary** (first + last
+sentence) rather than failing. Sampling: `temperature=0.2`, `max_tokens=512`.
+
+---
+
 ## Inspection & Diagnostics
 
 ```bash
