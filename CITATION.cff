@@ -14,8 +14,8 @@ authors:
     orcid: "https://orcid.org/0009-0009-0891-1507"
     email: suchanek@flux-frontiers.com
     affiliation: "Flux-Frontiers"
-version: "0.5.1"
-date-released: "2026-04-24"
+version: "0.7.0"
+date-released: "2026-07-07"
 license-url: "https://www.elastic.co/licensing/elastic-license"
 repository-code: "https://github.com/Flux-Frontiers/agent_kg"
 url: "https://github.com/Flux-Frontiers/agent_kg"

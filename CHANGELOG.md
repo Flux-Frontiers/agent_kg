@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Fixed
+
+## [0.7.0] - 2026-07-07
+
+### Added
+
 - **oMLX / Ollama / OpenAI summarization backends** — the KG-pruning summarizer now
   supports four backends (`primary` = Anthropic, default; `omlx`; `ollama`; `openai`).
   The three synth backends delegate to the shared `kg_utils.synthesis.TextSynthesizer`
@@ -22,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Removed the pre-commit `pylint` hook, the `pylint` dev/all extras, the
   `[tool.pylint.messages_control]` config, and all `# pylint: disable=` comments plus
   dead `# noqa: PLC0415`/`PLW0603` directives (those rules are not in ruff's active select).
+- **`.github/workflows/publish.yml`** — removed; PyPI publishing is done manually. Tag pushes
+  now trigger only the GitHub Release workflow (`release.yml`), not an automated PyPI publish.
 
 ### Changed
 
@@ -31,7 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `AGENTKG_SUMMARIZER_PRIMARY_MODEL` still selects the Claude model for the `primary` backend.
 
 - **Breaking:** CLI entry points renamed from `agent-kg`/`agent-kg-*` to `agentkg`/`agentkg-*` (e.g. `agent-kg-query` → `agentkg-query`) to match the no-hyphen naming convention used by every sibling KGModule (`pycodekg`, `dockg`, `memorykg`, `ftreekg`, `metabokg`, `diarykg`, `gutenkg`). The PyPI package name (`agent-kg`), Python module (`agent_kg`), and MCP server identifier (`agent-kg`) are unchanged. Update any scripts, hooks, or `.claude/settings.json` permission entries that reference the old hyphenated command names.
-- `.github/workflows/publish.yml`: Added `poetry publish` step (via `PYPI_TOKEN` secret) so tag pushes auto-publish to PyPI; fixed stale release title `CodeKG` → `AgentKG`.
 - `.claude/commands/release.md`: Replaced stale `codekg-build-sqlite/lancedb --wipe` with `.venv/bin/pycodekg build`; corrected `.codekg/` → `.pycodekg/snapshots/`.
 - `.claude/skills/dockg/SKILL.md`: Corrected build CLI semantics (default = full wipe-and-rebuild; `--update` = incremental); removed non-existent `--wipe` flag; updated embedding model to `BAAI/bge-small-en-v1.5`; added multipass pipeline docs.
 - `README.md`: Version badge corrected from `0.5.1` → `0.6.0`.
