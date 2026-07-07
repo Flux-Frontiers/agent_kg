@@ -1,7 +1,7 @@
 # pyproject.toml — AgentKG package configuration (PEP 621)
 #
 # Author: Eric G. Suchanek, PhD
-# Last Revision: 2026-04-26
+# Last Revision: 2026-07-07 13:56:58
 #
 # Build system : Poetry 2.x with PEP 621 [project] table
 #
@@ -71,7 +71,7 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "kgmodule-utils>=0.4.4",
+    "kgmodule-utils>=0.4.5",
     "lancedb>=0.29.0",
     "mcp>=1.0.0",
     "numpy>=1.24.0",
@@ -97,8 +97,11 @@ dev = [
 llm = [
     "anthropic>=0.25.0",
 ]
+# Local / cloud summarization backends (omlx, ollama, openai) via the shared
+# kg_utils.synthesis TextSynthesizer, which drives all three over the OpenAI
+# wire protocol (the text subset of kgmodule-utils' "synthesis" extra).
 local = [
-    "httpx>=0.27.0",
+    "openai>=1.30.0",
 ]
 viz = [
     "pyvis>=0.3.2",
@@ -113,7 +116,7 @@ all = [
     "anthropic>=0.25.0",
     "detect-secrets>=1.5.0",
     "doc-kg>=0.16.0",
-    "httpx>=0.27.0",
+    "openai>=1.30.0",
     "ty>=0.0.41",
     "pdoc>=14.0.0",
     "pre-commit>=4.5.1",
