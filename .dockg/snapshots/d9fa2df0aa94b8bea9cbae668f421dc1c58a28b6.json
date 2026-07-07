@@ -1,7 +1,7 @@
 {
-  "key": "19bcb8e8f6ead4e8032534e75b6af2b97e57c0b8",
-  "branch": "chore/drop-pylint",
-  "timestamp": "2026-07-07T18:41:18.830057+00:00",
+  "key": "d9fa2df0aa94b8bea9cbae668f421dc1c58a28b6",
+  "branch": "test/synthesis-integration-backends",
+  "timestamp": "2026-07-07T20:28:10.486766+00:00",
   "version": "0.12.0",
   "metrics": {
     "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
