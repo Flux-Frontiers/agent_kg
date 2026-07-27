@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dependency floors lifted to the currently published releases** —
+  `kgmodule-utils>=0.8.0`, `doc-kg>=0.18.1`, `pycode-kg>=0.20.0`; lock
+  regenerated. kgmodule-utils 0.8.0 defaults `vector_backend` to `"auto"`:
+  sqlite-vec for fresh or already-migrated stores, LanceDB only when an
+  un-migrated store already exists on disk, so existing corpora keep working
+  untouched.
+
 ### Removed
 
 ### Fixed
