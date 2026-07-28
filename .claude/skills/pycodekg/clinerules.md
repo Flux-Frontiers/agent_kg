@@ -89,7 +89,7 @@ Or step by step (with explicit wipe control):
 
 ```bash
 pycodekg build-sqlite  --repo . --wipe
-pycodekg build-lancedb --repo . --wipe
+pycodekg build-index --repo . --wipe
 ```
 
 ### Cline MCP config

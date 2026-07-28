@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: vector store migrated from LanceDB to sqlite-vec.** Embeddings now
+  live in a single `.agentkg/vectors.sqlite` file instead of a
+  `.agentkg/lancedb/` directory. **Migration: delete `.agentkg/lancedb/` and
+  re-embed** — see below; nodes are re-embedded from SQLite, which remains the
+  source of truth, so no conversation data is lost.
+  - `AgentKGStore(db_path, vectors_path, embed_model=…)` — the `lancedb_dir`
+    parameter is renamed to `vectors_path` and now names a *file*.
+  - `ConversationIndex(vectors_path, model_name=…)` — likewise.
+  - `ConversationGraph` derives `.agentkg/vectors.sqlite` internally.
+  - `pyarrow` is no longer used (it existed only for the LanceDB table schema);
+    `lancedb` dropped as a direct dependency, and `kgmodule-utils` gains the
+    `[semantic,sqlite-vec]` extras.
+  - **Search results are unchanged.** `AgentKGStore` already queried with an
+    explicit `.metric("cosine")`, and sqlite-vec reports cosine distance, so the
+    `1.0 - distance` similarity conversion carries over untouched. Verified
+    against a complete same-day LanceDB control over all 620 live nodes:
+    identical ranking **and** identical scores across four real queries.
+  - One deliberate semantic change: `ConversationIndex.search()` returns raw
+    `_distance` as `score`, and that number is now cosine rather than L2 — the
+    old LanceDB table was queried without an explicit metric. Documented in the
+    method's docstring.
+
 - **Dependency floors lifted to the currently published releases** —
   `kgmodule-utils>=0.8.0`, `doc-kg>=0.18.1`, `pycode-kg>=0.20.0`; lock
   regenerated. kgmodule-utils 0.8.0 defaults `vector_backend` to `"auto"`:
@@ -20,7 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **`lancedb` and `pyarrow`** — `lancedb` dropped as a direct dependency (it
+  still arrives transitively via `kgmodule-utils[semantic]` until KG_utils
+  splits its extras); `pyarrow` is no longer imported at all, having existed
+  only to declare the LanceDB table schema.
+
 ### Fixed
+
+- **Re-embedding recovers nodes missing from the vector index.** The live
+  `.agentkg` store held 620 nodes in SQLite but only 474 rows in LanceDB — 24%
+  of the graph had drifted out of the index and was unreachable by semantic
+  search. Rebuilding as part of the sqlite-vec migration restores full
+  coverage; the discrepancy was found while validating migration parity.
 
 ## [0.7.0] - 2026-07-07
 

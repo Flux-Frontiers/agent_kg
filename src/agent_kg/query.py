@@ -1,6 +1,6 @@
 """query.py — Semantic query and snippet pack for AgentKG.
 
-Delegates to the LanceDB semantic index in AgentKGStore.
+Delegates to the sqlite-vec semantic index in AgentKGStore.
 """
 
 from __future__ import annotations

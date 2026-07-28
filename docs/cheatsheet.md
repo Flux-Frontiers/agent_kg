@@ -35,7 +35,7 @@ agentkg profile --person alice
 <repo-root>/
   .agentkg/
     graph.sqlite          ← conversation graph (turns, topics, entities, tasks)
-    lancedb/              ← vector embeddings
+    vectors.sqlite        ← vector embeddings
     snapshots/            ← point-in-time JSON snapshots
 
 ~/.kgrag/profiles/<person>/
@@ -343,7 +343,7 @@ agentkg prune --window 20 --force
 Turns were ingested with `--no-embed`. Run without that flag or trigger a consolidate pass:
 
 ```bash
-agentkg ingest "test" --role user   # populates LanceDB
+agentkg ingest "test" --role user   # populates the vector index
 ```
 
 ### Wrong repo path in hooks

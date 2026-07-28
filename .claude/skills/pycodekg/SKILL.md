@@ -1,6 +1,6 @@
 ---
 name: pycodekg
-description: Expert knowledge for installing, configuring, and using the PyCodeKG MCP server — a hybrid semantic + structural knowledge graph for Python codebases. Use this skill when the user asks about: setting up PyCodeKG in a project, adding pycode-kg as a Poetry dependency, building the SQLite or LanceDB knowledge graph, configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, configuring Cline MCP settings, using the pycodekg CLI (pycodekg build, pycodekg build-sqlite, pycodekg build-lancedb, pycodekg mcp, pycodekg query, pycodekg pack, pycodekg analyze, pycodekg centrality, pycodekg viz, pycodekg viz3d, pycodekg viz-timeline, pycodekg explain, pycodekg snapshot, pycodekg architecture, pycodekg download-model, pycodekg install-hooks), using the graph_stats / query_codebase / pack_snippets / get_node / list_nodes / callers / explain / centrality / bridge_centrality / framework_nodes / analyze_repo / rank_nodes / query_ranked / explain_rank / snapshot_list / snapshot_show / snapshot_diff MCP tools, or troubleshooting PyCodeKG errors.
+description: Expert knowledge for installing, configuring, and using the PyCodeKG MCP server — a hybrid semantic + structural knowledge graph for Python codebases. Use this skill when the user asks about: setting up PyCodeKG in a project, adding pycode-kg as a Poetry dependency, building the SQLite or vector knowledge graph, configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, configuring Cline MCP settings, using the pycodekg CLI (pycodekg build, pycodekg build-sqlite, pycodekg build-index, pycodekg mcp, pycodekg query, pycodekg pack, pycodekg analyze, pycodekg centrality, pycodekg viz, pycodekg viz3d, pycodekg viz-timeline, pycodekg explain, pycodekg snapshot, pycodekg architecture, pycodekg download-model, pycodekg install-hooks), using the graph_stats / query_codebase / pack_snippets / get_node / list_nodes / callers / explain / centrality / bridge_centrality / framework_nodes / analyze_repo / rank_nodes / query_ranked / explain_rank / snapshot_list / snapshot_show / snapshot_diff MCP tools, or troubleshooting PyCodeKG errors.
 ---
 
 # PyCodeKG Skill
@@ -9,7 +9,7 @@ description: Expert knowledge for installing, configuring, and using the PyCodeK
 >
 > Grep and file search find text. PyCodeKG understands code. It knows what calls what, what inherits from what, which modules are imported where, and surfaces the most semantically relevant source snippets in a single query. One `pack_snippets` call replaces five rounds of grep-and-read and gives the agent real structural insight into the codebase — not just line matches.
 
-PyCodeKG indexes Python repos into a hybrid knowledge graph (SQLite + LanceDB) and exposes it as MCP tools for AI agents.
+PyCodeKG indexes Python repos into a hybrid knowledge graph (SQLite + sqlite-vec) and exposes it as MCP tools for AI agents.
 
 ## Installation (Poetry)
 
@@ -29,11 +29,11 @@ pycode-kg = { git = "https://github.com/Flux-Frontiers/pycode_kg.git", extras = 
 # Step 1 — SQLite graph
 pycodekg build-sqlite --repo .
 
-# Step 2 — LanceDB vector index
-pycodekg build-lancedb --repo .
+# Step 2 — sqlite-vec vector index
+pycodekg build-index --repo .
 ```
 
-> **Common mistake:** `pycodekg build-lancedb` uses `--sqlite`, not `--db`, when specifying a non-default path.
+> **Common mistake:** `pycodekg build-index` uses `--sqlite`, not `--db`, when specifying a non-default path.
 
 Add `--wipe` to either command to rebuild from scratch.
 
@@ -50,7 +50,7 @@ The knowledge graph is a snapshot of the codebase at build time. It does **not**
 | Minor edits within existing functions | `pycodekg update` (incremental upsert) |
 | New file added to the repo | `pycodekg update` (incremental upsert) |
 
-> **Why `pycodekg build` always wipes:** Deleted or renamed nodes would otherwise remain as phantom entries. LanceDB upserts by node ID, so renamed nodes leave behind orphans. `pycodekg build` clears both stores unconditionally; use `pycodekg update` only when you're sure no nodes were deleted or renamed.
+> **Why `pycodekg build` always wipes:** Deleted or renamed nodes would otherwise remain as phantom entries. The vector store upserts by node ID, so renamed nodes leave behind orphans. `pycodekg build` clears both stores unconditionally; use `pycodekg update` only when you're sure no nodes were deleted or renamed.
 
 ### Full rebuild
 
@@ -83,7 +83,7 @@ Beyond build/query/viz, the full command set:
 
 | Command | Purpose |
 |---|---|
-| `pycodekg build` | Full pipeline: SQLite + LanceDB in one step |
+| `pycodekg build` | Full pipeline: SQLite + vector index in one step |
 | `pycodekg centrality` | Compute Structural Importance Ranking (SIR) over the graph |
 | `pycodekg explain <NODE_ID>` | Natural-language explanation of a code node by ID |
 | `pycodekg snapshot save <version>` | Capture metrics snapshot (commit, branch, version) |
@@ -104,7 +104,7 @@ If you need to use PyCodeKG without network access (e.g., in CI, air-gapped nets
 pycodekg download-model
 ```
 
-This saves the model to `.pycodekg/models/<model-name>/`. Subsequent runs of `build-lancedb` and `pycodekg query` will use the cached local copy without any network access.
+This saves the model to `.pycodekg/models/<model-name>/`. Subsequent runs of `build-index` and `pycodekg query` will use the cached local copy without any network access.
 
 Alternatively, set `PYCODEKG_MODEL_DIR` to cache elsewhere:
 ```bash
@@ -273,7 +273,7 @@ explain_rank("fn:src/db/store.py:connect")               → why did this rank h
 
 ## .gitignore Setup
 
-The `.pycodekg/` directory holds the SQLite graph, LanceDB vector index, and snapshots. All are local artifacts — the graph and index are reproducible, snapshots are captured by the post-commit hook.
+The `.pycodekg/` directory holds the SQLite graph, sqlite-vec vector index, and snapshots. All are local artifacts — the graph and index are reproducible, snapshots are captured by the post-commit hook.
 
 ```gitignore
 .pycodekg/
@@ -292,11 +292,11 @@ Add this to `.gitignore` when installing PyCodeKG in a new repo. Commit snapshot
 
 | Error | Fix |
 |---|---|
-| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `pycodekg build-lancedb` |
+| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `pycodekg build-index` |
 | `ERROR: 'mcp' package not found` | `poetry add mcp` |
 | `WARNING: SQLite database not found` | Run both build commands first |
 | MCP server not appearing | Use absolute paths; restart Claude Code |
-| Empty query results | Run `pycodekg build-lancedb --wipe` |
+| Empty query results | Run `pycodekg build-index --wipe` |
 
 ## Full Reference
 

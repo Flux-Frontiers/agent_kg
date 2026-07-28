@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-07-27T01:27:05.735300+00:00",
+  "last_update": "2026-07-28T22:41:56.475760+00:00",
   "snapshots": [
     {
       "key": "1771ace598ab20ea913d094f2438d6be59d0298a",
@@ -422,6 +422,49 @@
           "nodes": 1166,
           "edges": 9757,
           "coverage_delta": 0.03813124839784665,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "29b9442ea4cb9f5b3cd3d375d15103ea7d104302",
+      "branch": "feat/sqlite-vec-migration",
+      "timestamp": "2026-07-28T22:41:56.474786+00:00",
+      "version": "0.18.1",
+      "file": "29b9442ea4cb9f5b3cd3d375d15103ea7d104302.json",
+      "metrics": {
+        "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
+        "total_nodes": 1853,
+        "total_edges": 13112,
+        "node_counts": {
+          "chunk": 336,
+          "document": 12,
+          "entity": 577,
+          "keyword": 488,
+          "section": 207,
+          "topic": 233
+        },
+        "edge_counts": {
+          "CONTAINS": 543,
+          "CO_OCCURS_WITH": 8642,
+          "HAS_KEYWORD": 1341,
+          "HAS_TOPIC": 350,
+          "MENTIONS_ENTITY": 1608,
+          "NEXT": 101,
+          "REFERENCES": 1,
+          "SIMILAR_TO": 526
+        },
+        "meaningful_nodes": 1841,
+        "coverage_score": 0.9851190476190476,
+        "issues_count": 0,
+        "complexity_median": 22.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 1179,
+          "edges": 9887,
+          "coverage_delta": 0.03831053698074971,
           "issues_delta": 0
         }
       }

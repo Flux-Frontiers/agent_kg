@@ -343,7 +343,7 @@ class AgentKGAdapter(KGAdapter):
 
 New KGModule package scaffolded via `/new-kg-module agent_kg`. See **Revised Package Layout** in the Resolved Design Decisions section for the full directory tree.
 
-Storage: SQLite for graph topology (nodes, edges, properties) + LanceDB for embeddings — identical to the two-layer architecture used by CodeKG and DocKG. Session index in `sessions.jsonl`. Snapshot format mirrors `code_kg.snapshots` / `doc_kg.snapshots`.
+Storage: SQLite for graph topology (nodes, edges, properties) + sqlite-vec for embeddings — identical to the two-layer architecture used by PyCodeKG. (DocKG still uses LanceDB pending its own migration.) Session index in `sessions.jsonl`. Snapshot format mirrors `code_kg.snapshots` / `doc_kg.snapshots`.
 
 ---
 
@@ -366,7 +366,7 @@ The result is a model that carries its own **semantically coherent, token-effici
 | Phase | Scope | Deliverable |
 |-------|-------|-------------|
 | 0 | Scaffold | `agent_kg` package via `/new-kg-module`; `AgentKGAdapter` stub in kgrag |
-| 1 | Ingest | Phase 1 incremental parser; `Turn`, `Topic`, `Entity` nodes; SQLite + LanceDB |
+| 1 | Ingest | Phase 1 incremental parser; `Turn`, `Topic`, `Entity` nodes; SQLite + sqlite-vec |
 | 2 | Query | `query()` / `pack()` / `assemble_context()` |
 | 3 | Pruning | KG Context Pruning algorithm; `Summary` nodes; `prune()` |
 | 4 | MCP | Full MCP tool surface; integration with KGRAG corpus |
@@ -439,11 +439,11 @@ AgentKG uses **two storage locations** reflecting the two different scopes of wh
   profiles/
     <person_id>/
       userprofile.sqlite       # UserProfile graph (Preference, Expertise, Interest, Commitment)
-      userprofile.lancedb/     # embeddings for profile nodes
+      userprofile-vectors.sqlite  # embeddings for profile nodes
 
 <repo>/.agentkg/
   graph.sqlite                 # conversation tree only (Turn, Topic, Task, Summary)
-  lancedb/                     # conversation embeddings
+  vectors.sqlite               # conversation embeddings
   snapshots/                   # temporal snapshots (same format as CodeKG/DocKG)
   sessions.jsonl               # session index: id, start_time, end_time, turn_count
 ```
@@ -497,8 +497,8 @@ The registry entry for an `agent` KG carries `metadata: {"private": true}` by de
 agent_kg/
   src/agent_kg/
     __init__.py
-    graph.py              # ConversationGraph: repo-scoped SQLite + LanceDB (.agentkg/)
-    profile.py            # UserProfileGraph: user-scoped SQLite + LanceDB (~/.kgrag/profiles/)
+    graph.py              # ConversationGraph: repo-scoped SQLite + sqlite-vec (.agentkg/)
+    profile.py            # UserProfileGraph: user-scoped SQLite + sqlite-vec (~/.kgrag/profiles/)
     ingest.py             # Phase 1: sentence parse → NLP → conversation tree update
     nlp/
       intent.py           # Intent classification pipeline (spaCy + embeddings)
@@ -582,7 +582,7 @@ This means `kgrag person info "Eric"` shows a live summary of the user's prefere
 | Phase | Scope | Deliverable |
 |-------|-------|-------------|
 | 0 | Scaffold | `agent_kg` package via `/new-kg-module`; `AgentKGAdapter` stub in kgrag |
-| 1 | Conversation tree | Phase 1 incremental parser; `Turn`, `Topic`, `Entity` nodes; SQLite + LanceDB |
+| 1 | Conversation tree | Phase 1 incremental parser; `Turn`, `Topic`, `Entity` nodes; SQLite + sqlite-vec |
 | 2 | Query + assembly | `query()` / `pack()` / `assemble_context()` |
 | 3 | Pruning | KG Context Pruning; `Summary` nodes; `prune()` |
 | 4 | UserProfile tree | `Preference`, `Style`, `Interest`, `Expertise`, `Commitment` nodes; implicit learning |

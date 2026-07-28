@@ -22,7 +22,7 @@ Quick start::
 Architecture:
   - Conversation tree: Turn, Topic, Intent, Entity, Task, Summary nodes
   - UserProfile tree: Preference, Style, Interest, Expertise, Commitment nodes
-  - Storage: SQLite (topology) + LanceDB (embeddings)
+  - Storage: SQLite (topology) + sqlite-vec (embeddings)
   - KG Context Pruning: LLM-compresses old turns into Summary nodes
   - MCP server: Exposes all tools to Claude Code and other MCP clients
 """

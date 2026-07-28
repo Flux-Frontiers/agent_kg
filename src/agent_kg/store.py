@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
 
-"""store.py — SQLite + LanceDB storage for the AgentKG conversation tree."""
+"""store.py — SQLite + sqlite-vec storage for the AgentKG conversation tree."""
 
 from __future__ import annotations
 
@@ -98,42 +98,31 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 _EMBED_DIM = 384
 
-
-def _make_node_schema() -> Any:
-    """Build the shared PyArrow schema for the LanceDB node vector table."""
-    import pyarrow as pa
-
-    return pa.schema(
-        [
-            pa.field("node_id", pa.utf8()),
-            pa.field("kind", pa.utf8()),
-            pa.field("text", pa.utf8()),
-            pa.field("session_id", pa.utf8()),
-            pa.field("vector", pa.list_(pa.float32(), _EMBED_DIM)),
-        ]
-    )
+# Metadata persisted alongside each vector in the sqlite-vec store.  ``search()``
+# returns these columns verbatim, so anything a caller reads out of a hit must
+# appear here — ``text`` in particular is surfaced directly to consumers.
+_META_COLUMNS = ("kind", "text", "session_id")
 
 
 class AgentKGStore:
-    """Two-layer storage: SQLite for graph topology + LanceDB for embeddings.
+    """Two-layer storage: SQLite for graph topology + sqlite-vec for embeddings.
 
     :param db_path: Path to the SQLite ``.db`` file.
-    :param lancedb_dir: Directory for the LanceDB vector store.
+    :param vectors_path: Path to the sqlite-vec vector store file.
     :param embed_model: sentence-transformers model name for embeddings.
     """
 
     def __init__(
         self,
         db_path: Path,
-        lancedb_dir: Path,
+        vectors_path: Path,
         embed_model: str = _EMBED_MODEL,
     ) -> None:
         self._db_path = Path(db_path)
-        self._lancedb_dir = Path(lancedb_dir)
+        self._vectors_path = Path(vectors_path)
         self._embed_model_name = embed_model
         self._db: sqlite3.Connection | None = None
-        self._ldb = None
-        self._tbl = None
+        self._backend = None
         self._embedder = None
 
     # ------------------------------------------------------------------
@@ -183,28 +172,22 @@ class AgentKGStore:
             )
         db.commit()
 
-    def _get_table(self):
-        if self._tbl is not None:
-            return self._tbl
+    def _get_backend(self):
+        """Open (creating if needed) the sqlite-vec vector store."""
+        if self._backend is not None:
+            return self._backend
         try:
-            import lancedb
-            import pyarrow  # noqa: F401
+            from kg_utils.vector_backend import SqliteVecBackend
         except ImportError as exc:
-            raise ImportError("lancedb and pyarrow are required for AgentKG embeddings") from exc
+            raise ImportError(
+                "kgmodule-utils[sqlite-vec] is required for AgentKG embeddings"
+            ) from exc
 
-        self._lancedb_dir.mkdir(parents=True, exist_ok=True)
-        self._ldb = lancedb.connect(str(self._lancedb_dir))
-        schema = _make_node_schema()
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            existing = self._ldb.table_names()
-        if "nodes" in existing:
-            self._tbl = self._ldb.open_table("nodes")
-        else:
-            self._tbl = self._ldb.create_table("nodes", schema=schema)
-        return self._tbl
+        self._vectors_path.parent.mkdir(parents=True, exist_ok=True)
+        backend = SqliteVecBackend(self._vectors_path, dim=_EMBED_DIM, meta_columns=_META_COLUMNS)
+        backend.open()
+        self._backend = backend
+        return self._backend
 
     def _get_embedder(self):
         if self._embedder is None:
@@ -232,9 +215,9 @@ class AgentKGStore:
         db.commit()
 
     def embed_node(self, node: Node) -> None:
-        """Compute and upsert the embedding for ``node`` into LanceDB.
+        """Compute and upsert the embedding for ``node`` into the vector store.
 
-        Silently skips if the embedding model or LanceDB is unavailable.
+        Silently skips if the embedding model or vector backend is unavailable.
         """
         text = (node.text or node.label).strip()
         if not text:
@@ -243,15 +226,13 @@ class AgentKGStore:
             vector = self.embed(text)
         except (ImportError, Exception):
             return  # embedding is best-effort; SQLite always written
-        tbl = self._get_table()
-        try:
-            tbl.delete(f"node_id = '{node.id}'")
-        except Exception:
-            pass
-        tbl.add(
+        backend = self._get_backend()
+        # SqliteVecBackend.upsert() deletes any prior row for the id first, so
+        # no separate delete is needed here.
+        backend.upsert(
             [
                 {
-                    "node_id": node.id,
+                    "id": node.id,
                     "kind": str(node.kind),
                     "text": text[:500],
                     "session_id": node.session_id,
@@ -261,7 +242,7 @@ class AgentKGStore:
         )
 
     def upsert_node_with_embedding(self, node: Node) -> None:
-        """Write to SQLite and LanceDB in one call."""
+        """Write to SQLite and the vector store in one call."""
         self.upsert_node(node)
         self.embed_node(node)
 
@@ -312,7 +293,7 @@ class AgentKGStore:
         db.commit()
 
     def delete_nodes(self, node_ids: list[str]) -> None:
-        """Delete nodes (CASCADE removes their edges) from SQLite + LanceDB."""
+        """Delete nodes (CASCADE removes their edges) from SQLite + vector store."""
         if not node_ids:
             return
         db = self._get_db()
@@ -320,9 +301,7 @@ class AgentKGStore:
         db.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", node_ids)
         db.commit()
         try:
-            tbl = self._get_table()
-            for nid in node_ids:
-                tbl.delete(f"node_id = '{nid}'")
+            self._get_backend().delete_ids(node_ids)
         except Exception:
             pass
 
@@ -330,13 +309,13 @@ class AgentKGStore:
         """Return an existing node of ``kind`` whose embedding is within
         ``threshold`` cosine similarity of ``text``, or None.
 
-        Falls back to exact-label SQLite match when the LanceDB index is
+        Falls back to exact-label SQLite match when the vector index is
         empty (e.g. after ``--no-embed`` ingestion), ensuring deduplication
         works even before the first consolidation pass.
 
         Used for entity/topic deduplication during ingest.
         """
-        # Fast path: exact label match in SQLite (works even with empty LanceDB)
+        # Fast path: exact label match in SQLite (works even with an empty index)
         row = (
             self._get_db()
             .execute(
@@ -349,19 +328,19 @@ class AgentKGStore:
         if row:
             return Node.from_dict(dict(row))
 
-        # Semantic path: vector similarity via LanceDB
+        # Semantic path: cosine similarity via the sqlite-vec store.  Both
+        # backends report cosine ``_distance``, so the similarity conversion
+        # below is unchanged from the LanceDB implementation.
         try:
-            tbl = self._get_table()
+            backend = self._get_backend()
             vector = self.embed(text)
-            results = (
-                tbl.search(vector).metric("cosine").where(f"kind = '{kind}'").limit(1).to_list()
-            )
+            results = backend.search(vector, 1, where=f"kind = '{kind}'")
             if not results:
                 return None
             distance = results[0].get("_distance", 1.0)
             similarity = 1.0 - distance
             if similarity >= threshold:
-                return self.get_node(results[0]["node_id"])
+                return self.get_node(results[0]["id"])
         except Exception:
             pass
         return None
@@ -418,20 +397,18 @@ class AgentKGStore:
         :return: List of ``{node_id, kind, text, session_id, score}`` dicts.
         """
         try:
-            tbl = self._get_table()
+            backend = self._get_backend()
             vector = self.embed(query)
-            searcher = tbl.search(vector).metric("cosine").limit(k * 3)
-            if kind_filter:
-                searcher = searcher.where(f"kind = '{kind_filter}'")
-            results = searcher.to_list()
+            where = f"kind = '{kind_filter}'" if kind_filter else None
+            results = backend.search(vector, k * 3, where=where)
             hits = []
             for r in results:
                 hits.append(
                     {
-                        "node_id": r["node_id"],
+                        "node_id": r["id"],
                         "kind": r["kind"],
                         "text": r["text"],
-                        "session_id": r.get("session_id", ""),
+                        "session_id": r.get("session_id") or "",
                         "score": float(max(0.0, 1.0 - r.get("_distance", 1.0))),
                     }
                 )
@@ -549,7 +526,7 @@ class AgentKGStore:
         if len(topics) < 2:
             return 0
         try:
-            self._get_table()
+            self._get_backend()
         except Exception:
             return 0
         created = 0
@@ -574,6 +551,12 @@ class AgentKGStore:
         if self._db:
             self._db.close()
             self._db = None
+        if self._backend is not None:
+            try:
+                self._backend.close()
+            except Exception:
+                pass
+            self._backend = None
 
 
 # ------------------------------------------------------------------

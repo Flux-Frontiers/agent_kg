@@ -4,7 +4,7 @@
 """Unit tests for agent_kg.store.AgentKGStore — SQLite-only operations.
 
 Tests only exercise operations that go through SQLite, avoiding the
-LanceDB / sentence-transformers embedding path.
+sqlite-vec / sentence-transformers embedding path.
 """
 
 import pytest
@@ -18,7 +18,7 @@ def store(tmp_path):
     """Fresh in-temp-dir AgentKGStore for each test."""
     s = AgentKGStore(
         db_path=tmp_path / "test.db",
-        lancedb_dir=tmp_path / "lance",
+        vectors_path=tmp_path / "vectors.sqlite",
     )
     yield s
     s.close()

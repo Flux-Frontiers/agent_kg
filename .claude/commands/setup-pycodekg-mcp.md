@@ -25,9 +25,9 @@ This command accepts an optional repository path argument:
 
 All artifact paths default relative to `REPO_ROOT`:
 - `DB_PATH` → `$REPO_ROOT/.pycodekg/graph.sqlite`
-- `LANCEDB_DIR` → `$REPO_ROOT/.pycodekg/lancedb`
+- `VECTORS_PATH` → `$REPO_ROOT/.pycodekg/vectors.sqlite`
 
-Do not pass `--db` or `--lancedb` flags — the commands default to `.pycodekg/` automatically.
+Do not pass `--db` or `--vectors` flags — the commands default to `.pycodekg/` automatically.
 
 ---
 
@@ -105,26 +105,26 @@ the final report.
 
 ---
 
-## Step 3: Build the Semantic Index (LanceDB)
+## Step 3: Build the Semantic Index (sqlite-vec)
 
-1. Check whether `LANCEDB_DIR` already exists and is non-empty:
+1. Check whether `VECTORS_PATH` already exists and is non-empty:
    ```bash
-   ls "$REPO_ROOT/.pycodekg/lancedb" 2>/dev/null
+   ls "$REPO_ROOT/.pycodekg/vectors.sqlite" 2>/dev/null
    ```
 2. If it exists and the user chose to keep the SQLite graph (Step 2), ask:
-   > "A vector index already exists at `$REPO_ROOT/.pycodekg/lancedb`. Rebuild it?"
+   > "A vector index already exists at `$REPO_ROOT/.pycodekg/vectors.sqlite`. Rebuild it?"
    - **Yes**: proceed with `--wipe`
    - **No**: skip to Step 4
 
 3. Run the embedding build:
    ```bash
-   $RUNNER pycodekg build-lancedb --repo "$REPO_ROOT" --wipe
+   $RUNNER pycodekg build-index --repo "$REPO_ROOT" --wipe
    ```
    Note: use `--sqlite` (not `--db`) if specifying a non-default SQLite path.
 
-4. Confirm the LanceDB directory was populated:
+4. Confirm the vector store was populated:
    ```bash
-   ls -lh "$REPO_ROOT/.pycodekg/lancedb"
+   ls -lh "$REPO_ROOT/.pycodekg/vectors.sqlite"
    ```
 5. Report the number of indexed vectors (shown in the command output).
 
@@ -290,7 +290,7 @@ Present a summary of everything that was done:
 ✓ Runner used:          poetry run  OR  .venv/bin/pycodekg (fallback)
 ✓ Repository indexed:   <REPO_ROOT>
 ✓ SQLite graph:         <REPO_ROOT>/.pycodekg/graph.sqlite  (<N> nodes, <M> edges)
-✓ LanceDB index:        <REPO_ROOT>/.pycodekg/lancedb  (<V> vectors)
+✓ Vector index:         <REPO_ROOT>/.pycodekg/vectors.sqlite  (<V> vectors)
 ✓ Smoke test:           passed
 ✓ Claude Code config:   <REPO_ROOT>/.mcp.json  (pycodekg entry)
 ✓ Claude Desktop config: <CONFIG_PATH>  (pycodekg entry)
@@ -329,10 +329,10 @@ Suggested first query after restart:
 |-------|-----|
 | `Current Python version is not allowed by the project` | Use `.venv/bin/pycodekg` directly instead of `poetry run pycodekg` |
 | `pycodekg: command not found` | Run `poetry install`; if venv exists use `.venv/bin/pycodekg` |
-| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `pycodekg build-lancedb` |
+| `error: the following arguments are required: --sqlite` | Use `--sqlite`, not `--db`, for `pycodekg build-index` |
 | `ModuleNotFoundError: No module named 'mcp'` | Run `poetry install` — `mcp` is a required dep, not an extra |
 | `WARNING: SQLite database not found` | Run both build commands first |
-| Empty query results | Run `pycodekg build-lancedb --repo "$REPO_ROOT" --wipe` |
+| Empty query results | Run `pycodekg build-index --repo "$REPO_ROOT" --wipe` |
 | `pycodekg mcp` not appearing in Claude Code | Use absolute venv path in `.mcp.json`; restart Claude Code |
 
 ---
@@ -344,7 +344,7 @@ When the target codebase changes, the graph must be rebuilt:
 ```bash
 # Rebuild both artifacts (idempotent — safe to re-run)
 $RUNNER pycodekg build-sqlite  --repo "$REPO_ROOT" --wipe
-$RUNNER pycodekg build-lancedb --repo "$REPO_ROOT" --wipe
+$RUNNER pycodekg build-index --repo "$REPO_ROOT" --wipe
 ```
 
 The MCP client configs do not need to change — they point to the same file paths.
