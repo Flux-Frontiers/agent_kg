@@ -9,7 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`agentkg reindex`** — backfills embeddings for nodes present in SQLite but
+  missing from the vector index, with `--check` to report drift and exit
+  non-zero without writing. Idempotent and cheap when already in sync.
+  Backed by `AgentKGStore.missing_embedding_ids()` and `.reindex()`.
+
 ### Changed
+
+- **BREAKING: vector store migrated from LanceDB to sqlite-vec.** Embeddings now
+  live in a single `.agentkg/vectors.sqlite` file instead of a
+  `.agentkg/lancedb/` directory. **Migration: delete `.agentkg/lancedb/` and
+  re-embed** — see below; nodes are re-embedded from SQLite, which remains the
+  source of truth, so no conversation data is lost.
+  - `AgentKGStore(db_path, vectors_path, embed_model=…)` — the `lancedb_dir`
+    parameter is renamed to `vectors_path` and now names a *file*.
+  - `ConversationIndex(vectors_path, model_name=…)` — likewise.
+  - `ConversationGraph` derives `.agentkg/vectors.sqlite` internally.
+  - `pyarrow` is no longer used (it existed only for the LanceDB table schema);
+    `lancedb` dropped as a direct dependency, and `kgmodule-utils` gains the
+    `[semantic,sqlite-vec]` extras.
+  - **Search results are unchanged.** `AgentKGStore` already queried with an
+    explicit `.metric("cosine")`, and sqlite-vec reports cosine distance, so the
+    `1.0 - distance` similarity conversion carries over untouched. Verified
+    against a complete same-day LanceDB control over all 620 live nodes:
+    identical ranking **and** identical scores across four real queries.
+  - One deliberate semantic change: `ConversationIndex.search()` returns raw
+    `_distance` as `score`, and that number is now cosine rather than L2 — the
+    old LanceDB table was queried without an explicit metric. Documented in the
+    method's docstring.
 
 - **Dependency floors lifted to the currently published releases** —
   `kgmodule-utils>=0.8.0`, `doc-kg>=0.18.1`, `pycode-kg>=0.20.0`; lock
@@ -20,7 +47,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **`lancedb` and `pyarrow`** — `lancedb` dropped as a direct dependency (it
+  still arrives transitively via `kgmodule-utils[semantic]` until KG_utils
+  splits its extras); `pyarrow` is no longer imported at all, having existed
+  only to declare the LanceDB table schema.
+
 ### Fixed
+
+- **Intent nodes were never embedded.** `ingest.py` wrote them to SQLite with
+  no `embed_node()` call at all — unlike turn/topic/entity/task nodes, which
+  embed under `if embed:`. Intents could therefore never be found by semantic
+  search. Now embedded on the same conditional as every other kind.
+
+- **The Stop hook no longer defers embedding.** It passed `--no-embed` for
+  speed and relied on the consolidation pass to catch up. That pass was the
+  design flaw: it covered only four node kinds (`TURN`, `TOPIC`, `ENTITY`,
+  `SUMMARY` — not `INTENT` or `TASK`), was scoped to the *current session*, and
+  re-embedded every node on every run rather than only the missing ones. So any
+  node from an earlier session, or of an uncovered kind, stayed unembedded
+  permanently. Assistant turns are now embedded inline: ~3s measured against a
+  30s hook timeout, and the UserPromptSubmit hook already paid the same cost.
+
+- **Consolidation now reconciles instead of re-embedding blindly.** Its
+  re-embed step delegates to `store.reindex()`, which is global rather than
+  session-scoped, covers every node kind, and embeds only what the index is
+  missing — removing the redundant full re-embed on each pass.
+
+  Measured across the fleet before these changes: **every** `.agentkg` index
+  had drifted from its SQLite source, from 15% to 100% of nodes missing
+  (`kgrag`: 4018 nodes, none indexed). Re-embedding during the sqlite-vec
+  migration restored full coverage in all 12 stores.
+
+  `--no-embed` remains available for bulk import, with its help text corrected
+  to say the node stays unsearchable until a reindex.
+
+- **Embedding failures are no longer silent.** `embed_node()` caught
+  `(ImportError, Exception)` and returned, so a broken embedder produced no
+  signal at all. Failures now increment `AgentKGStore.embed_failures` and warn
+  once per store instance, pointing at `agentkg reindex`. (This was not the
+  cause of the drift above, but it is why the drift was invisible.)
 
 ## [0.7.0] - 2026-07-07
 

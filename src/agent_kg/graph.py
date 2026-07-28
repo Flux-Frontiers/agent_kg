@@ -5,7 +5,7 @@
 
 ``AgentKG`` is the high-level façade that wires together all AgentKG components:
 
-  - :class:`~agent_kg.store.AgentKGStore` — SQLite + LanceDB storage
+  - :class:`~agent_kg.store.AgentKGStore` — SQLite + sqlite-vec storage
   - :class:`~agent_kg.user_profile.UserProfileStore` — global UserProfile tree
   - :class:`~agent_kg.session.Session` — session lifecycle
   - :func:`~agent_kg.ingest.ingest_turn` — Phase 1 incremental ingest
@@ -45,7 +45,7 @@ from agent_kg.user_profile import UserProfileStore
 # Default storage layout (mirrors .pycodekg / .dockg convention)
 _AGENTKG_DIR = ".agentkg"
 _DB_NAME = "graph.sqlite"
-_LANCEDB_DIR = "lancedb"
+_VECTORS_FILE = "vectors.sqlite"
 _SNAPSHOTS_DIR = "snapshots"
 
 # Global UserProfile path
@@ -63,7 +63,7 @@ class AgentKG:
 
         <repo>/.agentkg/
             graph.sqlite     # conversation tree
-            lancedb/         # semantic embeddings
+            vectors.sqlite   # semantic embeddings
             snapshots/       # temporal snapshots
 
         ~/.kgrag/profiles/<person_id>/
@@ -92,14 +92,14 @@ class AgentKG:
         agentkg_dir.mkdir(parents=True, exist_ok=True)
 
         self._db_path = agentkg_dir / _DB_NAME
-        self._lancedb_dir = agentkg_dir / _LANCEDB_DIR
+        self._vectors_path = agentkg_dir / _VECTORS_FILE
         self._snapshots_dir = agentkg_dir / _SNAPSHOTS_DIR
         self._profile_dir = _PROFILE_BASE / person_id
 
         # Components (lazy where possible)
         self._store = AgentKGStore(
             db_path=self._db_path,
-            lancedb_dir=self._lancedb_dir,
+            vectors_path=self._vectors_path,
             embed_model=embed_model or DEFAULT_MODEL,
         )
         self._profile = UserProfileStore(self._profile_dir)

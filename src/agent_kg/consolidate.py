@@ -45,17 +45,18 @@ def consolidate(
         return report
 
     # ------------------------------------------------------------------
-    # 1. Re-embed nodes that may lack embeddings (best-effort)
+    # 1. Backfill embeddings for nodes the vector index is missing
     # ------------------------------------------------------------------
-    for kind in (NodeKind.TURN, NodeKind.TOPIC, NodeKind.ENTITY, NodeKind.SUMMARY):
-        nodes = store.get_nodes_by_kind(kind, session_id=session_id)
-        for node in nodes:
-            if node.text or node.label:
-                try:
-                    store.embed_node(node)
-                    report["nodes_embedded"] += 1
-                except Exception:
-                    pass
+    # Delegates to store.reindex(), which reconciles SQLite (the source of
+    # truth) against the vector index globally.  This deliberately ignores
+    # ``session_id``: nodes are ingested with ``--no-embed`` by the stop hook,
+    # so anything that missed its own consolidation pass — an earlier session,
+    # or a kind this pass did not previously cover — would otherwise stay
+    # unembedded permanently.  reindex() also embeds only what is *missing*,
+    # where this pass previously re-embedded every node on every run.
+    result = store.reindex()
+    report["nodes_embedded"] += result["embedded"]
+    report["embed_failures"] = result["failed"]
 
     # ------------------------------------------------------------------
     # 2. Recompute RELATED_TO edges between Topic nodes

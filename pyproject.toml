@@ -58,7 +58,7 @@ license = "Elastic-2.0"
 authors = [
     { name = "Eric G. Suchanek, PhD", email = "suchanek@flux-frontiers.com" }
 ]
-keywords = ["knowledge-graph", "conversation-memory", "lancedb", "mcp", "semantic-search", "claude"]
+keywords = ["knowledge-graph", "conversation-memory", "sqlite-vec", "mcp", "semantic-search", "claude"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -71,8 +71,7 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "kgmodule-utils>=0.8.0",
-    "lancedb>=0.29.0",
+    "kgmodule-utils[semantic,sqlite-vec]>=0.8.0",
     "mcp>=1.0.0",
     "numpy>=1.24.0",
     "rich>=14.0.0",
@@ -178,7 +177,7 @@ addopts    = "-v --tb=short"
 pythonpath = ["src"]
 markers = [
     "slow: marks tests as slow (deselect with '-m not slow')",
-    "integration: marks tests that exercise real external dependencies (model, LanceDB)",
+    "integration: marks tests that exercise real external dependencies (model, sqlite-vec)",
 ]
 
 # ---------------------------------------------------------------------------

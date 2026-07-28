@@ -219,6 +219,7 @@ cython_debug/
 # This is the correct pattern
 .pycodekg/lancedb/
 .pycodekg/lancedb-*
+.pycodekg/vectors.sqlite
 .pycodekg/graph.sqlite
 .pycodekg/graph.sqlite*
 .pycodekg/models
@@ -226,6 +227,7 @@ cython_debug/
 # DocKG generated artifacts — same pattern as PyCodeKG; snapshots will be tracked once added
 .dockg/lancedb/
 .dockg/lancedb-*
+.dockg/vectors.sqlite
 .dockg/graph.sqlite
 .dockg/graph.sqlite*
 .dockg/models

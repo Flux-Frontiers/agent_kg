@@ -16,7 +16,7 @@ description: >
 
 # AgentKG Skill
 
-AgentKG stores conversational memory in a knowledge graph (SQLite + LanceDB) that persists
+AgentKG stores conversational memory in a knowledge graph (SQLite + sqlite-vec) that persists
 across sessions. Every user turn, assistant turn, topic, entity, intent, task, and user
 preference is a node. Edges encode relationships. The result is a queryable, prunable,
 semantically searchable memory that survives context resets.
@@ -26,7 +26,7 @@ semantically searchable memory that survives context resets.
 ```
 <repo-root>/.agentkg/          ← per-repo conversation graph
   graph.sqlite                 ← nodes + edges (SQLite)
-  lancedb/                     ← vector embeddings
+  vectors.sqlite               ← vector embeddings
   snapshots/                   ← point-in-time JSON snapshots
 
 ~/.kgrag/profiles/<person_id>/ ← GLOBAL user profile (never pruned)
@@ -228,7 +228,7 @@ sqlite3 ~/.kgrag/profiles/egs/userprofile.sqlite \
 
 ### Semantic search returns score=0.000
 
-Turns were ingested with `--no-embed`. The LanceDB index is empty.
+Turns were ingested with `--no-embed`. The vector index is empty.
 Run a consolidate pass or ingest a few turns without `--no-embed` to populate embeddings.
 
 ### Wrong repo path in hooks

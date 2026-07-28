@@ -21,15 +21,14 @@
 | `--db` | | `.pycodekg/graph.sqlite` | SQLite output path |
 | `--wipe` | | false | Delete existing graph first |
 
-### `pycodekg-build-lancedb`
+### `pycodekg-build-index`
 
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--repo` | | `.` | Repository root (anchors default paths) |
 | `--sqlite` | | `<repo>/.pycodekg/graph.sqlite` | Path to SQLite graph (**not** `--db`) |
-| `--lancedb` | | `<repo>/.pycodekg/lancedb` | LanceDB output directory |
-| `--table` | | `pycodekg_nodes` | LanceDB table name |
-| `--model` | | `all-MiniLM-L6-v2` | Sentence-transformer model (override with `PYCODEKG_MODEL` env var) |
+| `--vectors` | | `<repo>/.pycodekg/vectors.sqlite` | sqlite-vec vector store path |
+| `--model` | | `BAAI/bge-small-en-v1.5` | Sentence-transformer model (override with `PYCODEKG_MODEL` env var) |
 | `--wipe` | | false | Delete existing vectors first |
 | `--kinds` | | `module,class,function,method` | Node kinds to embed |
 | `--batch` | | `256` | Embedding batch size |
@@ -40,8 +39,8 @@
 |---|---|---|
 | `--repo` | `.` | Repository root |
 | `--db` | `.pycodekg/graph.sqlite` | SQLite path |
-| `--lancedb` | `.pycodekg/lancedb` | LanceDB directory |
-| `--model` | `all-MiniLM-L6-v2` | Embedding model (override with `PYCODEKG_MODEL` env var) |
+| `--vectors` | `.pycodekg/vectors.sqlite` | sqlite-vec vector store path |
+| `--model` | `BAAI/bge-small-en-v1.5` | Embedding model (override with `PYCODEKG_MODEL` env var) |
 | `--transport` | `stdio` | `stdio` or `sse` |
 
 ### `pycodekg-query`
@@ -49,7 +48,7 @@
 ```bash
 poetry run pycodekg-query \
   --sqlite .pycodekg/graph.sqlite \
-  --lancedb .pycodekg/lancedb \
+  --vectors .pycodekg/vectors.sqlite \
   "your query here"
 ```
 
@@ -270,12 +269,12 @@ Get venv path: `poetry env info --path`
 poetry run python -c "
 from pycode_kg import PyCodeKG
 import json
-kg = PyCodeKG(repo_root='.', db_path='.pycodekg/graph.sqlite', lancedb_dir='.pycodekg/lancedb')
+kg = PyCodeKG(repo_root='.', db_path='.pycodekg/graph.sqlite', vectors_path='.pycodekg/vectors.sqlite')
 print(json.dumps(kg.stats(), indent=2))
 "
 
 # Sample query (CLI)
-poetry run pycodekg-query --sqlite .pycodekg/graph.sqlite --lancedb .pycodekg/lancedb "module structure"
+poetry run pycodekg-query --sqlite .pycodekg/graph.sqlite --vectors .pycodekg/vectors.sqlite "module structure"
 
 # Verify SQLite row counts
 sqlite3 .pycodekg/graph.sqlite "SELECT COUNT(*) FROM nodes; SELECT COUNT(*) FROM edges;"
@@ -287,10 +286,10 @@ sqlite3 .pycodekg/graph.sqlite "SELECT COUNT(*) FROM nodes; SELECT COUNT(*) FROM
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `error: the following arguments are required: --sqlite` | Wrong flag for lancedb builder | Use `--sqlite`, not `--db` |
+| `error: the following arguments are required: --sqlite` | Wrong flag for index builder | Use `--sqlite`, not `--db` |
 | `ERROR: 'mcp' package not found` | Optional dep missing | `poetry add mcp` |
 | `WARNING: SQLite database not found` | Graph not built | Run `pycodekg-build-sqlite` first |
-| Empty results from `query_codebase` | LanceDB stale or missing | `pycodekg-build-lancedb --wipe` |
+| Empty results from `query_codebase` | Vector index stale or missing | `pycodekg-build-index --wipe` |
 | `RuntimeError: PyCodeKG not initialised` | Server not started via CLI | Always use `pycodekg-mcp` CLI |
 | Snippets show wrong line numbers | Source changed since build | `pycodekg-build-sqlite --wipe` |
 | MCP server not in Claude Code / Kilo Code | Relative paths or wrong location | Absolute paths in `.mcp.json` (project root); restart |

@@ -373,7 +373,7 @@ def _run_query(
     from agent_kg.store import AgentKGStore
 
     agentkg_dir = Path(db_path).parent
-    store = AgentKGStore(agentkg_dir / "graph.sqlite", agentkg_dir / "lancedb")
+    store = AgentKGStore(agentkg_dir / "graph.sqlite", agentkg_dir / "vectors.sqlite")
     hits = kg_query(store, q, k=k, kind_filter=kind_filter)
 
     if include_profile:

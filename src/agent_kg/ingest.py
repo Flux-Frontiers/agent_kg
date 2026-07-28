@@ -9,7 +9,7 @@ On every conversation turn:
   3. Deduplicate entities + topics against existing nodes
   4. Create/update linked nodes (Intent, Entity, Topic, Task)
   5. Add structural edges (FOLLOWS, ADDRESSES, EXPRESSES, MENTIONS, CREATES)
-  6. Embed all new nodes into LanceDB (async-friendly: called by caller)
+  6. Embed all new nodes into the vector store (async-friendly: called by caller)
 
 Also handles implicit UserProfile updates (preferences, commitments, expertise)
 by delegating to the profile module.
@@ -160,7 +160,7 @@ def ingest_turn(
 ) -> IngestResult:
     """Ingest a single conversation turn into the AgentKG.
 
-    Phase 1 — runs synchronously. Embedding (LanceDB writes) is included
+    Phase 1 — runs synchronously. Embedding (vector-store writes) is included
     when ``embed=True`` (default). Set ``embed=False`` for deferred batch
     embedding via :func:`~agent_kg.consolidate.consolidate`.
 
@@ -234,6 +234,8 @@ def ingest_turn(
         last_seen=now,
     )
     store.upsert_node(intent_node)
+    if embed:
+        store.embed_node(intent_node)
     store.add_edge(
         Edge(source_id=turn_node.id, target_id=intent_node.id, relation=EdgeRelation.EXPRESSES)
     )

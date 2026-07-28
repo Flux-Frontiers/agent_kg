@@ -14,7 +14,7 @@ def store(tmp_path):
     """Fresh in-temp-dir AgentKGStore for each test."""
     s = AgentKGStore(
         db_path=tmp_path / "test.db",
-        lancedb_dir=tmp_path / "lance",
+        vectors_path=tmp_path / "vectors.sqlite",
     )
     yield s
     s.close()

@@ -4,7 +4,7 @@
 """Unit tests for agent_kg.store.AgentKGStore — SQLite-only operations.
 
 Tests only exercise operations that go through SQLite, avoiding the
-LanceDB / sentence-transformers embedding path.
+sqlite-vec / sentence-transformers embedding path.
 """
 
 import pytest
@@ -18,7 +18,7 @@ def store(tmp_path):
     """Fresh in-temp-dir AgentKGStore for each test."""
     s = AgentKGStore(
         db_path=tmp_path / "test.db",
-        lancedb_dir=tmp_path / "lance",
+        vectors_path=tmp_path / "vectors.sqlite",
     )
     yield s
     s.close()
@@ -240,3 +240,74 @@ class TestStats:
         s = store.stats()
         assert s["kind_counts"].get("turn", 0) == 2
         assert s["kind_counts"].get("topic", 0) == 1
+
+
+# ---------------------------------------------------------------------------
+# Vector-index reconciliation (drift detection + reindex)
+# ---------------------------------------------------------------------------
+
+
+class TestMissingEmbeddingIds:
+    """SQLite is the source of truth; the vector index is derived and drifts."""
+
+    def test_all_missing_when_nothing_embedded(self, store):
+        """Nodes written without embedding are reported as missing."""
+        store.upsert_node(Node(kind=NodeKind.TOPIC, label="api"))
+        store.upsert_node(Node(kind=NodeKind.TOPIC, label="docker"))
+        assert len(store.missing_embedding_ids()) == 2
+
+    def test_empty_when_no_nodes(self, store):
+        """An empty graph has no drift."""
+        assert store.missing_embedding_ids() == []
+
+    def test_textless_nodes_are_not_reported(self, store):
+        """Nodes with no embeddable text can never be indexed.
+
+        Counting them would report drift that no amount of reindexing could
+        ever clear.
+        """
+        store.upsert_node(Node(kind=NodeKind.TOPIC, label="", text=""))
+        assert store.missing_embedding_ids() == []
+
+
+class TestReindex:
+    """reindex() backfills only what is missing and converges."""
+
+    @pytest.mark.integration
+    def test_reindex_backfills_and_converges(self, store):
+        """After reindex the vector store matches SQLite, and re-running is a no-op."""
+        pytest.importorskip("sentence_transformers")
+        for label in ("alpha", "beta", "gamma"):
+            store.upsert_node(Node(kind=NodeKind.TOPIC, label=label))
+        assert len(store.missing_embedding_ids()) == 3
+
+        result = store.reindex()
+        assert result["scanned"] == 3
+        assert result["embedded"] == 3
+        assert result["failed"] == 0
+        assert store.missing_embedding_ids() == []
+
+        # Idempotent: a second pass finds nothing to do.
+        assert store.reindex() == {"scanned": 0, "embedded": 0, "failed": 0}
+
+    def test_reindex_on_empty_graph_is_noop(self, store):
+        """reindex() on an empty graph does nothing and does not raise."""
+        assert store.reindex() == {"scanned": 0, "embedded": 0, "failed": 0}
+
+
+class TestEmbedFailureVisibility:
+    """Embedding failures must be counted, not silently swallowed."""
+
+    def test_failure_is_counted_and_warned_once(self, store, monkeypatch, capsys):
+        """A broken embedder increments the counter and warns exactly once."""
+
+        def _boom(_text):
+            raise RuntimeError("model unavailable")
+
+        monkeypatch.setattr(store, "embed", _boom)
+        for label in ("one", "two", "three"):
+            store.embed_node(Node(kind=NodeKind.TOPIC, label=label))
+
+        assert store.embed_failures == 3
+        # Warned once, not once per node.
+        assert capsys.readouterr().err.count("embedding unavailable") == 1

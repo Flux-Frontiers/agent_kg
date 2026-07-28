@@ -175,7 +175,7 @@ pack_snippets("to_markdown render output", max_lines=40)
 ### Increase semantic seeds
 
 ```python
-pack_snippets("embedding model LanceDB index build", k=12)
+pack_snippets("embedding model vector index build", k=12)
 ```
 
 `k=` is the number of semantic seed nodes before graph expansion. Raise it when the first results feel off-target.
