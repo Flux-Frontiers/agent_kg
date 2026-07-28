@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`agentkg reindex`** — backfills embeddings for nodes present in SQLite but
+  missing from the vector index, with `--check` to report drift and exit
+  non-zero without writing. Idempotent and cheap when already in sync.
+  Backed by `AgentKGStore.missing_embedding_ids()` and `.reindex()`.
+
 ### Changed
 
 - **BREAKING: vector store migrated from LanceDB to sqlite-vec.** Embeddings now
@@ -49,11 +54,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Re-embedding recovers nodes missing from the vector index.** The live
-  `.agentkg` store held 620 nodes in SQLite but only 474 rows in LanceDB — 24%
-  of the graph had drifted out of the index and was unreachable by semantic
-  search. Rebuilding as part of the sqlite-vec migration restores full
-  coverage; the discrepancy was found while validating migration parity.
+- **Intent nodes were never embedded.** `ingest.py` wrote them to SQLite with
+  no `embed_node()` call at all — unlike turn/topic/entity/task nodes, which
+  embed under `if embed:`. Intents could therefore never be found by semantic
+  search. Now embedded on the same conditional as every other kind.
+
+- **The Stop hook no longer defers embedding.** It passed `--no-embed` for
+  speed and relied on the consolidation pass to catch up. That pass was the
+  design flaw: it covered only four node kinds (`TURN`, `TOPIC`, `ENTITY`,
+  `SUMMARY` — not `INTENT` or `TASK`), was scoped to the *current session*, and
+  re-embedded every node on every run rather than only the missing ones. So any
+  node from an earlier session, or of an uncovered kind, stayed unembedded
+  permanently. Assistant turns are now embedded inline: ~3s measured against a
+  30s hook timeout, and the UserPromptSubmit hook already paid the same cost.
+
+- **Consolidation now reconciles instead of re-embedding blindly.** Its
+  re-embed step delegates to `store.reindex()`, which is global rather than
+  session-scoped, covers every node kind, and embeds only what the index is
+  missing — removing the redundant full re-embed on each pass.
+
+  Measured across the fleet before these changes: **every** `.agentkg` index
+  had drifted from its SQLite source, from 15% to 100% of nodes missing
+  (`kgrag`: 4018 nodes, none indexed). Re-embedding during the sqlite-vec
+  migration restored full coverage in all 12 stores.
+
+  `--no-embed` remains available for bulk import, with its help text corrected
+  to say the node stays unsearchable until a reindex.
+
+- **Embedding failures are no longer silent.** `embed_node()` caught
+  `(ImportError, Exception)` and returned, so a broken embedder produced no
+  signal at all. Failures now increment `AgentKGStore.embed_failures` and warn
+  once per store instance, pointing at `agentkg reindex`. (This was not the
+  cause of the drift above, but it is why the drift was invisible.)
 
 ## [0.7.0] - 2026-07-07
 

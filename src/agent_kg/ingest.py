@@ -234,6 +234,8 @@ def ingest_turn(
         last_seen=now,
     )
     store.upsert_node(intent_node)
+    if embed:
+        store.embed_node(intent_node)
     store.add_edge(
         Edge(source_id=turn_node.id, target_id=intent_node.id, relation=EdgeRelation.EXPRESSES)
     )

@@ -2,7 +2,7 @@
 # AGENT-KG STOP HOOK
 #
 # Claude Code "Stop" hook. After every assistant response:
-#   1. Ingests the assistant turn into the graph (--no-embed for speed)
+#   1. Ingests the assistant turn into the graph, embedding it inline
 #   2. Every CONSOLIDATE_INTERVAL human exchanges, runs `agentkg prune`
 #      asynchronously to compress old turns into summaries
 #   3. Snapshots the graph asynchronously
@@ -46,9 +46,14 @@ if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     exit 0
 fi
 
-# 1. Ingest assistant turn (--no-embed: consolidation pass handles embeddings)
+# 1. Ingest assistant turn, embedding inline.
+#    This previously passed --no-embed and deferred to the consolidation pass,
+#    which left nodes unsearchable until (and unless) that pass reached them —
+#    it was session-scoped and skipped some node kinds, so turns routinely
+#    stayed unembedded forever. Embedding here costs ~3s against a 30s hook
+#    timeout, and the UserPromptSubmit hook already pays the same cost.
 if [ -n "$MSG" ]; then
-    agentkg ingest "$MSG" --role assistant --repo "$REPO_ROOT" --no-embed 2>/dev/null || true
+    agentkg ingest "$MSG" --role assistant --repo "$REPO_ROOT" 2>/dev/null || true
 fi
 
 # 2. Count human messages in transcript to decide whether to consolidate

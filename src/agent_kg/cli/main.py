@@ -70,7 +70,15 @@ def cli() -> None:
     help=_PERSON_HELP,
 )
 @click.option("--session", default=None, help="Session UUID to resume.")
-@click.option("--no-embed", is_flag=True, help="Defer embedding to consolidate pass.")
+@click.option(
+    "--no-embed",
+    is_flag=True,
+    help=(
+        "Skip embedding for this turn — the node is stored but not semantically "
+        "searchable until `agentkg reindex` (or a consolidation pass) backfills it. "
+        "Intended for bulk import; not used by the hooks."
+    ),
+)
 def ingest(
     text: str, role: str, repo: str, person: str, session: str | None, no_embed: bool
 ) -> None:
@@ -205,6 +213,57 @@ def prune_cmd(window: int, repo: str, person: str, session: str | None, force: b
 
 # Register prune under the name 'prune'
 cli.add_command(prune_cmd, name="prune")
+
+
+@cli.command()
+@click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
+@click.option(
+    "--person",
+    default=_DEFAULT_PERSON,
+    show_default=True,
+    help=_PERSON_HELP,
+)
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Report drift and exit non-zero if any node is missing; write nothing.",
+)
+def reindex(repo: str, person: str, check: bool) -> None:
+    """Backfill embeddings for nodes missing from the vector index.
+
+    SQLite is the source of truth; the vector index is derived. They drift
+    apart whenever nodes are ingested with ``--no-embed`` or while the
+    embedding model is unavailable, because nothing backfills afterwards.
+    This reconciles the two. It is idempotent and cheap when already in sync.
+    """
+    kg = _resolve_kg(repo, person, None)
+    store = kg.index
+    missing = store.missing_embedding_ids()
+    total = store.stats().get("node_count", 0)
+
+    if check:
+        if missing:
+            pct = len(missing) / total * 100 if total else 0
+            click.echo(f"{len(missing)} of {total} nodes missing embeddings ({pct:.0f}%)")
+            kg.close()
+            raise SystemExit(1)
+        click.echo(f"In sync — all {total} nodes embedded.")
+        kg.close()
+        return
+
+    if not missing:
+        click.echo(f"In sync — all {total} nodes embedded. Nothing to do.")
+        kg.close()
+        return
+
+    click.echo(f"Reindexing {len(missing)} of {total} nodes …")
+    result = store.reindex(progress=True)
+    click.echo(f"  embedded: {result['embedded']}")
+    if result["failed"]:
+        click.echo(f"  failed:   {result['failed']}")
+    kg.close()
+    if result["failed"]:
+        raise SystemExit(1)
 
 
 @cli.command()

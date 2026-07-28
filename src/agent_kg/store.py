@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import sys
 from datetime import UTC, datetime, timedelta
 
 os.environ.setdefault("TQDM_DISABLE", "1")
@@ -124,6 +125,9 @@ class AgentKGStore:
         self._db: sqlite3.Connection | None = None
         self._backend = None
         self._embedder = None
+        #: Number of nodes whose embedding failed during this store's lifetime.
+        self.embed_failures = 0
+        self._embed_warned = False
 
     # ------------------------------------------------------------------
     # Lazy init
@@ -217,15 +221,28 @@ class AgentKGStore:
     def embed_node(self, node: Node) -> None:
         """Compute and upsert the embedding for ``node`` into the vector store.
 
-        Silently skips if the embedding model or vector backend is unavailable.
+        Embedding is best-effort: SQLite is always written, and a failure here
+        leaves the node searchable structurally but not semantically.  Failures
+        are counted in :attr:`embed_failures` and warned about *once* per store
+        instance, so a systematically broken embedder is visible rather than
+        silent — run ``agentkg reindex`` to backfill afterwards.
         """
         text = (node.text or node.label).strip()
         if not text:
             return
         try:
             vector = self.embed(text)
-        except (ImportError, Exception):
-            return  # embedding is best-effort; SQLite always written
+        except Exception as exc:  # noqa: BLE001 — embedding must never break ingest
+            self.embed_failures += 1
+            if not self._embed_warned:
+                self._embed_warned = True
+                print(
+                    f"[AgentKG] embedding unavailable ({type(exc).__name__}: {exc}); "
+                    "nodes are being stored without vectors. "
+                    "Run `agentkg reindex` once resolved.",
+                    file=sys.stderr,
+                )
+            return
         backend = self._get_backend()
         # SqliteVecBackend.upsert() deletes any prior row for the id first, so
         # no separate delete is needed here.
@@ -240,6 +257,52 @@ class AgentKGStore:
                 }
             ]
         )
+
+    def missing_embedding_ids(self) -> list[str]:
+        """Return ids of nodes present in SQLite but absent from the vector store.
+
+        SQLite is the source of truth; the vector store is derived.  The two
+        drift apart whenever a node is written while embedding is disabled
+        (``--no-embed``) or unavailable, because nothing backfills afterwards.
+
+        Nodes with no embeddable text are excluded — they can never be indexed,
+        so counting them would report permanent phantom drift.
+
+        :return: Node ids needing an embedding, in insertion order.
+        """
+        rows = (
+            self._get_db()
+            .execute("SELECT id FROM nodes WHERE TRIM(COALESCE(NULLIF(text, ''), label)) != ''")
+            .fetchall()
+        )
+        try:
+            indexed = self._get_backend().existing_ids()
+        except Exception:  # noqa: BLE001 — no store yet means everything is missing
+            indexed = set()
+        return [r["id"] for r in rows if r["id"] not in indexed]
+
+    def reindex(self, *, progress: bool = False) -> dict[str, int]:
+        """Embed every node that is missing from the vector store.
+
+        Idempotent: nodes already indexed are skipped, so this is safe to run
+        repeatedly and cheap when the store is already in sync.
+
+        :param progress: Print a progress line to stderr every 100 nodes.
+        :return: ``{"scanned", "embedded", "failed"}`` counts.
+        """
+        missing = self.missing_embedding_ids()
+        before = self.embed_failures
+        embedded = 0
+        for i, node_id in enumerate(missing, start=1):
+            node = self.get_node(node_id)
+            if node is None:
+                continue
+            self.embed_node(node)
+            embedded += 1
+            if progress and i % 100 == 0:
+                print(f"[AgentKG] reindexed {i}/{len(missing)}", file=sys.stderr)
+        failed = self.embed_failures - before
+        return {"scanned": len(missing), "embedded": embedded - failed, "failed": failed}
 
     def upsert_node_with_embedding(self, node: Node) -> None:
         """Write to SQLite and the vector store in one call."""
