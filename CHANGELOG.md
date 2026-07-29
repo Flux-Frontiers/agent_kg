@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`kgmodule-utils[semantic,sqlite-vec]` floor lifted to `>=0.9.0`**; lock
+  regenerated. The floor had drifted a release behind the published version.
+  This was the only change still outstanding from the closed
+  `chore/transformers-cve-unpin` PR — both the transformers CVE fix and the
+  `kgdeps` extra removal it carried had already reached `main` by another
+  route, with the lock resolving transformers to 5.14.1.
+
 ### Removed
 
 ### Fixed

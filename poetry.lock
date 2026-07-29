@@ -5106,4 +5106,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "4f840761d5ba1ae99495de595e36b6e3cf2fc67700829dce0c3175c8d3225781"
+content-hash = "9df432a9fdc6197ce3f6ec56c69d55a4f0291cd8ba9f893ea7b43517b98608cb"
