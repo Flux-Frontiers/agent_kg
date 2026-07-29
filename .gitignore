@@ -211,32 +211,6 @@ cython_debug/
 *.fdb_latexmk
 *.synctex.gz
 
-# AgentKG runtime data — conversation graph is private
-.agentkg/
-
-# PyCodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
-# MUST include .pycodekg/snapshots!
-# This is the correct pattern
-.pycodekg/lancedb/
-.pycodekg/lancedb-*
-.pycodekg/vectors.sqlite
-.pycodekg/graph.sqlite
-.pycodekg/graph.sqlite*
-.pycodekg/models
-
-# DocKG generated artifacts — same pattern as PyCodeKG; snapshots will be tracked once added
-.dockg/lancedb/
-.dockg/lancedb-*
-.dockg/vectors.sqlite
-.dockg/graph.sqlite
-.dockg/graph.sqlite*
-.dockg/models
-
-.agentkg/
-
-# Local MCP configuration (contains absolute paths)
-.mcp.json
-
 # MacOS
 .DS_Store
 commit.txt
@@ -248,3 +222,37 @@ assets/code_kg_arch_*.png
 commit.txt
 
 bundles/
+
+# === KG generated artifacts (normalized across the fleet) ===
+# Databases, vector indexes and model caches are transient and
+# reproducible. snapshots/ is TRACKED and must never be ignored --
+# never use a bare `**/.<ns>/` pattern here, it swallows snapshots too.
+
+**/.pycodekg/lancedb/
+**/.pycodekg/lancedb-*
+**/.pycodekg/*.sqlite
+**/.pycodekg/*.sqlite-shm
+**/.pycodekg/*.sqlite-wal
+**/.pycodekg/*.db
+**/.pycodekg/models
+
+**/.dockg/lancedb/
+**/.dockg/lancedb-*
+**/.dockg/*.sqlite
+**/.dockg/*.sqlite-shm
+**/.dockg/*.sqlite-wal
+**/.dockg/*.db
+**/.dockg/models
+**/.dockg/embeddings.json
+
+# AgentKG local store -- nothing under it is ever tracked
+**/.agentkg/
+
+# Agent scratch dirs (Claude Code / Codex)
+.agents/
+.codex/
+
+# MCP server config -- machine-specific, contains absolute paths
+.mcp.json
+.mcp.json.sav
+# === end KG generated artifacts ===
