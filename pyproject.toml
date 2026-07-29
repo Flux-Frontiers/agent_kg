@@ -1,7 +1,7 @@
 # pyproject.toml — AgentKG package configuration (PEP 621)
 #
 # Author: Eric G. Suchanek, PhD
-# Last Revision: 2026-07-29 11:28:54
+# Last Revision: 2026-07-29 00:00:00
 #
 # Build system : Poetry 2.x with PEP 621 [project] table
 #
@@ -49,7 +49,7 @@ packages = [{ include = "agent_kg", from = "src" }]
 # ---------------------------------------------------------------------------
 [project]
 name = "agent-kg"
-version = "0.8.1"
+version = "0.8.2"
 description = "Conversational memory as a knowledge graph"
 readme = "README.md"
 license = "Elastic-2.0"

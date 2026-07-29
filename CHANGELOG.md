@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Removed
+
+### Fixed
+
+## [0.8.2] - 2026-07-29
+
+### Added
+
+### Changed
+
 - **`kgmodule-utils[semantic,sqlite-vec]` floor lifted to `>=0.9.0`**; lock
   regenerated. The floor had drifted a release behind the published version.
   This was the only change still outstanding from the closed
