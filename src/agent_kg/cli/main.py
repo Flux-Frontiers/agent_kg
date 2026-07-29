@@ -674,10 +674,21 @@ def _claude_hooks(deploy_dir: Path) -> dict:
 
 _PRE_COMMIT_HOOK = """\
 #!/usr/bin/env bash
-# AgentKG pre-commit hook — rebuilds CodeKG + DocKG indices and captures
-# metrics snapshots BEFORE quality checks run.
+# AgentKG pre-commit hook — runs quality checks first, then rebuilds the
+# CodeKG + DocKG indices and captures metrics snapshots.
 # Installed by: agentkg install-hooks
 # Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...
+#
+# Order matters, and it is deliberately checks-then-index:
+#
+#   * `pre-commit run` stashes unstaged changes and restores them afterwards.
+#     Rebuilding the indices before that ran meant a build's freshly-rewritten
+#     snapshots/manifest.json landed inside the stash window, where the restore
+#     could fail with "patch does not apply" and abort the commit outright — or,
+#     worse, let a staged deletion of a tracked snapshot slip into the commit.
+#     Building afterwards keeps KG artifacts entirely outside that window.
+#   * This hook rebuilds two indices. There is no reason to pay for either on a
+#     commit that ruff/ty/pytest is about to reject.
 set -euo pipefail
 
 [ "${AGENTKG_SKIP_SNAPSHOT:-0}" = "1" ] && exit 0
@@ -686,7 +697,20 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 cd "$REPO_ROOT"
 
-# Capture tree hash of staged index NOW — before any tool modifies files.
+# Quality checks first (ruff, ty, pytest, detect-secrets, ...). Delegates to
+# .pre-commit-config.yaml so quality checks stay in one place. A hook that
+# rewrites files also exits non-zero here, so we never index a tree that is
+# about to be reformatted.
+PRECOMMIT="$REPO_ROOT/.venv/bin/pre-commit"
+if [ -x "$PRECOMMIT" ]; then
+    "$PRECOMMIT" run || exit 1
+elif command -v pre-commit &>/dev/null; then
+    pre-commit run || exit 1
+fi
+
+# Capture the tree hash now that the checks have passed and nothing further
+# will modify the working tree — this keys both snapshots to the content that
+# is actually about to be committed.
 TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -717,14 +741,9 @@ if [ -d "$REPO_ROOT/docs" ] && { command -v dockg &>/dev/null || [ -x "$REPO_ROO
     fi
 fi
 
-# Run pre-commit framework checks (ruff, mypy, detect-secrets, etc.) AFTER
-# snapshots are captured and staged.
-PRECOMMIT="$REPO_ROOT/.venv/bin/pre-commit"
-if [ -x "$PRECOMMIT" ]; then
-    "$PRECOMMIT" run || exit 1
-elif command -v pre-commit &>/dev/null; then
-    pre-commit run || exit 1
-fi
+# Snapshots are staged after `pre-commit run`, so they are not scanned by it —
+# detect-secrets already excludes snapshots/ by config, which is why that is
+# safe.
 
 exit 0
 """
