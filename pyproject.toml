@@ -69,7 +69,7 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "kgmodule-utils[semantic,sqlite-vec]>=0.8.0",
+    "kgmodule-utils[semantic,sqlite-vec]>=0.9.0",
     # Capped at <2: mcp 2.0 removed the low-level Server decorator API
     # (@app.list_tools / @app.call_tool) that agent_kg.mcp.server registers on.
     "mcp>=1.0.0,<2",
