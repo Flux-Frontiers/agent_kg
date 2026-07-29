@@ -15,6 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.8.1] - 2026-07-29
+
+### Fixed
+
+- **`agentkg-mcp` crashed on import for anyone installing from PyPI.** The `mcp`
+  dependency was declared as `>=1.0.0` with no upper bound, so a fresh install
+  resolved mcp 2.0.0, which removed the low-level `Server` decorator API that
+  `agent_kg.mcp.server` registers on — `@app.list_tools()` raised
+  `AttributeError` at module import, taking down the console script and any
+  `.mcp.json` integration. Pinned to `mcp>=1.0.0,<2`, matching the 1.28.1 that
+  the lock file and test suite have been exercising all along. Porting to the
+  mcp 2.x API is deferred; it is a rewrite, not a rename.
+
+  The lock file masked this locally: it constrains only this repo's own
+  installs, never what a PyPI consumer resolves. 0.8.0 was built but never
+  published to PyPI, so 0.8.1 is the first release of this line to ship there.
+
+### Added
+
+- **`tests/test_mcp_server.py`** — import-level regression tests for the MCP
+  server. Nothing in the suite imported `agent_kg.mcp.server`, so a module that
+  fails at import registered as green in CI. Verified to fail against mcp 2.0
+  and pass against 1.28.1.
+
 ## [0.8.0] - 2026-07-29
 
 ### Added
