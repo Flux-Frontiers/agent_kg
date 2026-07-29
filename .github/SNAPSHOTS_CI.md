@@ -109,7 +109,8 @@ delta = diff_snapshots(snapshots[1], snapshots[0])
 
 ### No graph snapshot was committed
 - `pycodekg`/`dockg` may not be installed in the environment — the hook skips them silently.
-  Install the KG integrations: `pip install -e ".[kgdeps]"`.
+  Install the KG integrations by hand: `pip install doc-kg pycode-kg` (they are
+  deliberately not declared as extras — see the note in `pyproject.toml`).
 - Run `pycodekg build --repo .` once to initialize the index, then commit again.
 - Confirm the hook is installed: `cat .git/hooks/pre-commit` (re-install with
   `agentkg install-hooks --repo . --force`).

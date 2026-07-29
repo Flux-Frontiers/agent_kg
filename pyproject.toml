@@ -10,7 +10,6 @@
 #   pip install -e ".[dev]"             core + dev tools (pytest, ruff, ty, etc.)
 #   pip install -e ".[llm]"             core + Anthropic LLM summarizer
 #   pip install -e ".[viz]"             core + Streamlit/PyVis visualizer
-#   pip install -e ".[kgdeps]"          core + KG integrations (pycode-kg, doc-kg)
 #   pip install -e ".[all]"             everything above
 #   pip install -e "."                  core runtime only
 #
@@ -20,7 +19,6 @@
 #   poetry install --extras "dev"       core + dev tools only
 #   poetry install --extras "llm"       core + Anthropic LLM summarizer only
 #   poetry install --extras "viz"       core + Streamlit/PyVis visualizer only
-#   poetry install --extras "kgdeps"    core + KG integrations only
 #   poetry install                      core runtime only
 #
 # First-time setup
@@ -105,20 +103,21 @@ viz = [
     "pyvis>=0.3.2",
     "streamlit>=1.35.0",
 ]
-# pycode-kg and doc-kg are on PyPI; install kgdeps for local KG integration
-kgdeps = [
-    "doc-kg>=0.18.1",
-    "pycode-kg>=0.20.0",
-]
+# Cross-KG sibling packages (doc-kg, pycode-kg, agent-kg, kg-rag) are NOT
+# declared here. They are never imported by this package, and listing them
+# forces poetry's universal resolution to reconcile the transformers pin of
+# every *published* sibling against this project's own -- a deadlock, since
+# doc-kg and pycode-kg each depend on the other. Install them by hand:
+#   pip install doc-kg pycode-kg          # both on PyPI
+#   pip install 'kg-rag @ git+https://github.com/Flux-Frontiers/KGRAG.git'
+#   pip install 'agent-kg @ git+https://github.com/Flux-Frontiers/agent_kg.git'
 all = [
     "anthropic>=0.25.0",
     "detect-secrets>=1.5.0",
-    "doc-kg>=0.18.1",
     "openai>=1.30.0",
     "ty>=0.0.41",
     "pdoc>=14.0.0",
     "pre-commit>=4.5.1",
-    "pycode-kg>=0.20.0",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "pyvis>=0.3.2",
