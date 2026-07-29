@@ -1,22 +1,22 @@
-# Release Notes — v0.7.0
+# Release Notes — v0.8.0
 
-> Released: 2026-07-07
+> Released: 2026-07-29
 
-This release gives AgentKG's context-pruning summarizer a real choice of engines. Alongside the default Anthropic backend, it can now drive local MLX (oMLX) and Ollama servers or the OpenAI cloud API through one shared, fleet-wide synthesis layer — so conversation summaries can run fully local and fast on Apple Silicon. It also trims the toolchain down to ruff + ty and cleans up release plumbing.
+AgentKG's vector store moves off LanceDB and onto sqlite-vec. Embeddings now live in a single `.agentkg/vectors.sqlite` file rather than a `.agentkg/lancedb/` directory, which makes a conversation graph two files instead of a file plus a directory tree — easier to back up, copy between machines, and reason about. This is a breaking change and existing installs need one migration step, described under Upgrading.
 
 ## What changed
 
-**Pluggable summarization backends.** The pruning summarizer now supports four backends — `primary` (Anthropic, the default), `omlx`, `ollama`, and `openai`. The three new ones share the KGRAG fleet's `kg_utils.synthesis` layer over the OpenAI wire protocol, inheriting common defaults (oMLX uses `Qwen3-4B-Instruct-2507-MLX-8bit` at `localhost:8080`, matching GutenbergKG). Configuration moves to the fleet-wide `SYNTH_*` environment convention (`SYNTH_BACKEND` / `SYNTH_ENDPOINT` / `SYNTH_MODEL` / `SYNTH_API_KEY`). If a backend is unavailable, the summarizer degrades gracefully to a deterministic extractive fallback instead of failing.
+**A single-file vector store.** The `AgentKGStore` and `ConversationIndex` constructors now take a `vectors_path` naming a file, replacing the `lancedb_dir` directory parameter, and `ConversationGraph` derives the path internally. Search results are unaffected: the old store already queried with an explicit cosine metric and sqlite-vec reports cosine distance, so the similarity conversion carries over untouched — verified against a same-day LanceDB control across all 620 live nodes, with identical ranking *and* identical scores on four real queries. The one deliberate difference is that `ConversationIndex.search()` returns a raw distance that is now cosine rather than L2, since that path previously ran without an explicit metric.
 
-**Leaner toolchain.** pylint is gone — ruff (lint + format) and ty (types) now cover everything. The pre-commit `pylint` hook, its extras and config, and every `# pylint: disable=` / dead `# noqa` directive have been removed.
+**Embedding is no longer deferred.** Two bugs meant parts of the graph were silently unsearchable. Intent nodes were written to SQLite with no embedding call at all, so semantic search could never surface them. Separately, the `Stop` hook skipped embedding for speed and leaned on a consolidation pass to catch up — but that pass covered only four node kinds, was scoped to the current session, and re-embedded everything each run instead of just what was missing, so any node from an earlier session or of an uncovered kind stayed unembedded forever. Measured across the fleet before the fix, every `.agentkg` index had drifted from its SQLite source — between 15% and 100% of nodes missing. Ingestion now embeds inline, and the new `agentkg reindex` command backfills anything that drifts, with a `--check` mode that reports drift and exits non-zero without writing.
 
-**Release plumbing.** The unused automated PyPI-publish workflow was removed; PyPI releases are cut manually. Tag pushes now trigger only the GitHub Release workflow.
+**Leaner dependency resolution.** The `kgdeps` extra is gone and `doc-kg` / `pycode-kg` are no longer declared as dependencies. AgentKG never imported either package, so the extra bought nothing at runtime — but declaring them forced Poetry to reconcile the `transformers` pin of every published sibling against this project's own, a deadlock given that doc-kg and pycode-kg depend on each other. Removing them drops 259 lines from the lock file and lets the `transformers` constraint sit where `kgmodule-utils` actually wants it. This mirrors a change already made in doc_kg and pycode_kg.
 
 ## Upgrading
 
-**Breaking — CLI rename.** The command-line entry points dropped their hyphens: `agent-kg-query` → `agentkg-query`, and so on across the CLI. The PyPI package (`agent-kg`), import name (`agent_kg`), and MCP server id (`agent-kg`) are unchanged. Update any scripts, git hooks, or `.claude/settings.json` permission entries that call the old hyphenated names.
+Delete the old `.agentkg/lancedb/` directory and re-embed. SQLite remains the source of truth for conversation data, so nodes are rebuilt from it and nothing is lost — run `agentkg reindex` to repopulate the vector index, or `agentkg reindex --check` first if you want to see the drift before writing. Because earlier versions could leave intents and older-session nodes unembedded, a reindex on an existing corpus will likely find more missing entries than the migration alone accounts for; that is expected, and is the bug being fixed.
 
-To use a local/cloud summarization backend, install the `local` extra (`pip install -e ".[local]"`, which adds `openai`) and set `SYNTH_BACKEND=omlx` (or `ollama` / `openai`). The default `primary` (Anthropic) backend is unchanged and needs no new setup.
+If you use the cross-KG integrations, install them directly — `pip install doc-kg pycode-kg` — as `pip install "agent-kg[kgdeps]"` no longer exists. Note that `lancedb` may still arrive transitively through `kgmodule-utils[semantic]` until that package splits its extras; AgentKG itself no longer uses it.
 
 ---
 

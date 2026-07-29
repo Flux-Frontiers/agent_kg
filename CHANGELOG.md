@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Fixed
+
+## [0.8.0] - 2026-07-29
+
+### Added
+
 - **`agentkg reindex`** — backfills embeddings for nodes present in SQLite but
   missing from the vector index, with `--check` to report drift and exit
   non-zero without writing. Idempotent and cheap when already in sync.
@@ -38,14 +48,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     old LanceDB table was queried without an explicit metric. Documented in the
     method's docstring.
 
-- **Dependency floors lifted to the currently published releases** —
-  `kgmodule-utils>=0.8.0`, `doc-kg>=0.18.1`, `pycode-kg>=0.20.0`; lock
-  regenerated. kgmodule-utils 0.8.0 defaults `vector_backend` to `"auto"`:
-  sqlite-vec for fresh or already-migrated stores, LanceDB only when an
-  un-migrated store already exists on disk, so existing corpora keep working
-  untouched.
+- **`kgmodule-utils` floor lifted to `>=0.8.0`**; lock regenerated. 0.8.0
+  defaults `vector_backend` to `"auto"`: sqlite-vec for fresh or
+  already-migrated stores, LanceDB only when an un-migrated store already exists
+  on disk, so existing corpora keep working untouched.
+
+- **`transformers` pin realigned to `>=5.5.0,<6`**, matching what
+  `kgmodule-utils[semantic]` itself declares. The previous `<4.57` ceiling
+  existed only to reconcile the sibling KG packages during resolution.
 
 ### Removed
+
+- **BREAKING (packaging): the `kgdeps` extra is gone, and `doc-kg` /
+  `pycode-kg` are no longer declared anywhere.** Neither package is imported by
+  `agent_kg`, so the extra bought no runtime capability — but listing them
+  forced poetry's universal resolution to reconcile the `transformers` pin of
+  every published sibling against this project's own, a deadlock since doc-kg
+  and pycode-kg depend on each other. Install them by hand when you want the
+  cross-KG integrations: `pip install doc-kg pycode-kg` (both on PyPI). Drops
+  259 lines from the lock file. Mirrors the same change already made in doc_kg
+  and pycode_kg.
 
 - **`lancedb` and `pyarrow`** — `lancedb` dropped as a direct dependency (it
   still arrives transitively via `kgmodule-utils[semantic]` until KG_utils
