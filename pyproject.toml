@@ -105,12 +105,10 @@ viz = [
     "pyvis>=0.3.2",
     "streamlit>=1.35.0",
 ]
-# Cross-KG sibling packages (doc-kg, pycode-kg, kg-rag) are NOT declared here.
-# They are never imported by this package, and listing them forces poetry's
-# universal resolution to reconcile the transformers pin of every *published*
-# sibling against this project's own -- a deadlock, since doc-kg and pycode-kg
-# each depend on the other. Install them by hand:
-#   pip install doc-kg pycode-kg          # both on PyPI
+# Cross-KG siblings are never imported by this package, so none are extras --
+# listing them would put sibling packages into the published dependency graph.
+# The two whose CLIs this repo actually runs (doc-kg, pycode-kg) live in
+# [tool.poetry.group.kg] below. kg-rag is neither imported nor run here.
 all = [
     "anthropic>=0.25.0",
     "detect-secrets>=1.5.0",
@@ -124,6 +122,32 @@ all = [
     "ruff>=0.4.0",
     "streamlit>=1.35.0",
 ]
+
+# ---------------------------------------------------------------------------
+# Maintainer tooling (Poetry group, not a PEP 621 extra)
+# ---------------------------------------------------------------------------
+# doc-kg and pycode-kg are tools this repo *runs*, not libraries it imports.
+# Nothing under src/ imports either one. They are here because:
+#   - the local .git/hooks/pre-commit rebuilds both indices before committing
+#     (it probes .venv/bin/pycodekg and .venv/bin/dockg first, so an installed
+#     group is exactly what it wants to find),
+#   - .claude/commands/release.md runs `pycodekg build` as a release step,
+#   - .mcp.json serves a `dockg` MCP server.
+# Undeclared, all three silently degrade on a fresh clone.
+#
+# A Poetry group rather than [project.optional-dependencies] on purpose. Groups
+# are maintainer-facing: locked and installable, but NOT written into the
+# wheel's metadata -- so no published extra acquires a sibling package, and the
+# KG fleet's dependency resolution stays decoupled.
+#
+#   poetry install --with kg      # get the dockg / pycodekg CLIs into .venv/bin
+#   poetry install                # default: group is optional, skipped
+[tool.poetry.group.kg]
+optional = true
+
+[tool.poetry.group.kg.dependencies]
+doc-kg = ">=0.21.1"
+pycode-kg = ">=0.21.4"
 
 [project.urls]
 Homepage   = "https://github.com/Flux-Frontiers/agent_kg"
