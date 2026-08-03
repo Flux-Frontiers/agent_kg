@@ -27,6 +27,10 @@ from pathlib import Path
 
 import streamlit as st
 
+# `st.components.v1` is a submodule: `import streamlit` does not guarantee it is
+# bound, so reference it only after importing it explicitly.
+import streamlit.components.v1  # noqa: F401
+
 # ---------------------------------------------------------------------------
 # Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
