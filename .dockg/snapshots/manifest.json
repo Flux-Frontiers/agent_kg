@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-07-29T18:39:11.614041+00:00",
+  "last_update": "2026-08-03T18:57:03.053722+00:00",
   "snapshots": [
     {
       "key": "1771ace598ab20ea913d094f2438d6be59d0298a",
@@ -599,11 +599,11 @@
       }
     },
     {
-      "key": "7938706475adc96671537dc2a0bb0e545251d6d3",
-      "branch": "main",
-      "timestamp": "2026-07-29T18:39:11.613444+00:00",
+      "key": "aa4f07a3de6f37cf7195c23d3d3bca2a91340d75",
+      "branch": "fix/ty-streamlit-submodule",
+      "timestamp": "2026-08-03T18:57:03.053090+00:00",
       "version": "0.18.1",
-      "file": "7938706475adc96671537dc2a0bb0e545251d6d3.json",
+      "file": "aa4f07a3de6f37cf7195c23d3d3bca2a91340d75.json",
       "metrics": {
         "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
         "total_nodes": 1917,
