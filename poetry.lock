@@ -1618,18 +1618,18 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "kgmodule-utils"
-version = "0.10.0"
+version = "0.12.0"
 description = "Shared types, graph store, semantic index, and pipeline base for the KGModule SDK"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main", "kg"]
 files = [
-    {file = "kgmodule_utils-0.10.0-py3-none-any.whl", hash = "sha256:765279f44cf754cf9256ddeab0eee4bb462f1028af3417eb321f7ef3ad1aa8a0"},
-    {file = "kgmodule_utils-0.10.0.tar.gz", hash = "sha256:b06a36c4674d2c308a776c6246f0519d99804fbd32e1901cd02fa240449baf24"},
+    {file = "kgmodule_utils-0.12.0-py3-none-any.whl", hash = "sha256:87cc05115de8b41469c0c05b09f2a07667f10cb332e6f35548c15076d1cd771d"},
+    {file = "kgmodule_utils-0.12.0.tar.gz", hash = "sha256:c366e725f4c49f5640433379f1f314a9c093c59a02e2a8e105cd1c640347556f"},
 ]
 
 [package.dependencies]
-numpy = {version = ">=1.24.0", optional = true, markers = "extra == \"semantic\""}
+numpy = {version = ">=1.24.0", optional = true, markers = "extra == \"semantic\" or extra == \"viz3d\""}
 rich = {version = ">=13.0.0,<15.0.0", optional = true, markers = "extra == \"semantic\""}
 sentence-transformers = {version = ">=5.4.1", optional = true, markers = "extra == \"semantic\""}
 sqlite-vec = {version = "0.1.9", optional = true, markers = "extra == \"semantic\" or extra == \"sqlite-vec\""}
@@ -1643,6 +1643,7 @@ sqlite-vec = ["sqlite-vec (==0.1.9)"]
 synthesis = ["httpx (>=0.27.0)", "openai (>=1.30.0)", "pillow (>=10.0.0)"]
 synthesis-mflux = ["httpx (>=0.27.0)", "mflux (>=0.9.0)", "openai (>=1.30.0)", "pillow (>=10.0.0)"]
 viz = ["pyvis (>=0.3.2)"]
+viz3d = ["numpy (>=1.24.0)"]
 
 [[package]]
 name = "markdown-it-py"
@@ -2901,19 +2902,19 @@ files = [
 
 [[package]]
 name = "pycode-kg"
-version = "0.21.4"
+version = "0.22.0"
 description = "A tool to build a searchable knowledge graph from Python repositories"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["kg"]
 files = [
-    {file = "pycode_kg-0.21.4-py3-none-any.whl", hash = "sha256:bcca9ed8e4c276d513af8da7b0726e8ba2cd36e8f18632a4f1940ad710a9e0f0"},
-    {file = "pycode_kg-0.21.4.tar.gz", hash = "sha256:2a94e9dd62d1c745f27ea371c03a8e69275992ebf7e6dcd1faf29cd042f73150"},
+    {file = "pycode_kg-0.22.0-py3-none-any.whl", hash = "sha256:c164193b20116ab845fb9467e65e32b92fcc77922cab037b3afae2f2c5efbe0e"},
+    {file = "pycode_kg-0.22.0.tar.gz", hash = "sha256:631ad04fc9b5a750f09b7a2189b0be2855d1fcdcb8b4ab6c665e3d64f64af96f"},
 ]
 
 [package.dependencies]
 click = ">=8.1.0,<9"
-kgmodule-utils = {version = ">=0.10.0", extras = ["semantic"]}
+kgmodule-utils = {version = ">=0.11.0", extras = ["semantic", "viz3d"]}
 mcp = ">=1.0.0,<2"
 networkx = ">=3.0"
 numpy = ">=1.24.0"
@@ -5215,4 +5216,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "855081929b298080cb46c011b5287534bd7f7f7c190e13265aa13186b1eb19a8"
+content-hash = "77d25bbcdc07e848550f5b162d0d674e528fe75d32f492d726b0e32f0656baf4"
