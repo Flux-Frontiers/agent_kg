@@ -731,7 +731,12 @@ fi
 if [ -d "$REPO_ROOT/docs" ] && { command -v dockg &>/dev/null || [ -x "$REPO_ROOT/.venv/bin/dockg" ]; }; then
     DOCKG="${REPO_ROOT}/.venv/bin/dockg"
     [ -x "$DOCKG" ] || DOCKG="dockg"
-    "$DOCKG" build --repo "$REPO_ROOT" --wipe || true
+    # No --wipe: doc-kg dropped that flag, and a full rebuild is the default
+    # now (`--update` is the opt-in incremental path). The flag lingering here
+    # made `dockg build` exit non-zero on every commit, and `|| true` swallowed
+    # it — so `snapshot save` below kept capturing a graph that was never
+    # rebuilt.
+    "$DOCKG" build --repo "$REPO_ROOT" || true
     if [ -d "$REPO_ROOT/.dockg" ]; then
         "$DOCKG" snapshot save \\
             --repo "$REPO_ROOT" \\
