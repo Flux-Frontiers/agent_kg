@@ -1,0 +1,123 @@
+{
+  "key": "5f16a8c460d27d97035d9ba90c532e48aaa0b006",
+  "branch": "chore/fleet-currency",
+  "timestamp": "2026-08-15T16:47:02.164234+00:00",
+  "version": "0.21.2",
+  "metrics": {
+    "db_path": ".dockg/graph.sqlite",
+    "total_nodes": 1909,
+    "total_edges": 13408,
+    "node_counts": {
+      "chunk": 347,
+      "document": 12,
+      "entity": 596,
+      "keyword": 504,
+      "section": 207,
+      "topic": 243
+    },
+    "edge_counts": {
+      "CONTAINS": 554,
+      "CO_OCCURS_WITH": 8840,
+      "HAS_KEYWORD": 1385,
+      "HAS_TOPIC": 361,
+      "MENTIONS_ENTITY": 1644,
+      "NEXT": 109,
+      "REFERENCES": 1,
+      "SIMILAR_TO": 514
+    },
+    "meaningful_nodes": 1897,
+    "coverage_score": 0.9855907780979827,
+    "issues_count": 0,
+    "complexity_median": 22.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:CHANGELOG.md:0046",
+      "file_path": "CHANGELOG.md",
+      "label": "Added",
+      "references": 0,
+      "semantic_links": 23,
+      "total_links": 24
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0031",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Query Search Retrieval Semantic",
+      "references": 0,
+      "semantic_links": 23,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0005",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Fan-In Ranking",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0032",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Graph Traversal Node Edge",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0030",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Data Persistence Storage Database",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:docs/AGENT_KG_DESIGN.md:0007",
+      "file_path": "docs/AGENT_KG_DESIGN.md",
+      "label": "Node Types",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0014",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Docstring Coverage",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0012",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 21
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0003",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Edge Distribution",
+      "references": 0,
+      "semantic_links": 20,
+      "total_links": 20
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0027",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "CodeRank -- Global Structural Importance",
+      "references": 0,
+      "semantic_links": 20,
+      "total_links": 20
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 1235,
+    "edges": 10183,
+    "coverage_delta": 0.03878226745968483,
+    "issues_delta": 0
+  }
+}
