@@ -4,7 +4,7 @@
   "timestamp": "2026-07-07T20:42:23.310579+00:00",
   "version": "0.12.0",
   "metrics": {
-    "db_path": "/Users/egs/repos/agent_kg/.dockg/graph.sqlite",
+    "db_path": ".dockg/graph.sqlite",
     "total_nodes": 1927,
     "total_edges": 13698,
     "node_counts": {
