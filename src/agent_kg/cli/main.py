@@ -689,9 +689,23 @@ _PRE_COMMIT_HOOK = """\
 #     Building afterwards keeps KG artifacts entirely outside that window.
 #   * This hook rebuilds two indices. There is no reason to pay for either on a
 #     commit that ruff/ty/pytest is about to reject.
+#
+# Snapshots are opt-in and OFF by default (2026-08-18):
+#
+#   AGENTKG_SNAPSHOT=1 git commit ...        opt in to a per-commit snapshot
+#   AGENTKG_SKIP_SNAPSHOT=1 git commit ...   force snapshots off (wins)
+#
+# AGENTKG_SKIP_SNAPSHOT no longer skips the quality checks. It used to
+# short-circuit the whole hook, so a variable named "skip snapshot" also
+# silently skipped ruff, ty and pytest. It now gates only what it names.
+#
+# A per-commit snapshot records `git write-tree` and is then staged into that
+# same commit, so the recorded hash can never equal the tree it names — an
+# audit of 605 fleet snapshots found only 63 (10.4%) keyed to a real commit
+# tree. The fix is to snapshot at release, keyed on the tag; until that lands
+# this hook runs quality checks only.
+# See kgrag_priv/docs/SNAPSHOT_STRATEGY.md.
 set -euo pipefail
-
-[ "${AGENTKG_SKIP_SNAPSHOT:-0}" = "1" ] && exit 0
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
@@ -708,9 +722,17 @@ elif command -v pre-commit &>/dev/null; then
     pre-commit run || exit 1
 fi
 
-# Capture the tree hash now that the checks have passed and nothing further
-# will modify the working tree — this keys both snapshots to the content that
-# is actually about to be committed.
+# ---------------------------------------------------------------------------
+# Opt-in index rebuild + snapshots. Everything below is skipped unless
+# AGENTKG_SNAPSHOT=1 is set, and is skipped regardless if
+# AGENTKG_SKIP_SNAPSHOT=1.
+# ---------------------------------------------------------------------------
+[ "${AGENTKG_SNAPSHOT:-0}" = "1" ] || exit 0
+[ "${AGENTKG_SKIP_SNAPSHOT:-0}" = "1" ] && exit 0
+
+# Captured after the checks so nothing further modifies the working tree. Note
+# the caveat above: this still cannot match the committed tree, because the
+# `git add` calls below change the index after this point.
 TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -885,7 +907,10 @@ def install_hooks(repo: str, force: bool, claude_hooks: bool, global_hooks: bool
     mode = hook_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     hook_path.chmod(mode)
     click.echo(f"OK Installed git pre-commit hook: {hook_path}")
-    click.echo("  Skip with: AGENTKG_SKIP_SNAPSHOT=1 git commit ...")
+    click.echo("  Quality checks run on every commit.")
+    click.echo("  Snapshots are OFF by default - see kgrag_priv/docs/SNAPSHOT_STRATEGY.md.")
+    click.echo("  Opt in with:  AGENTKG_SNAPSHOT=1 git commit ...")
+    click.echo("  Force off:    AGENTKG_SKIP_SNAPSHOT=1 git commit ...")
 
 
 @cli.command()
