@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+from kg_utils.temporal import temporal_metadata
+
 
 class NodeKind(StrEnum):
     """Node types in the AgentKG conversation and UserProfile trees."""
@@ -137,6 +139,28 @@ class Node:
     created_at: datetime = field(default_factory=_now)
     updated_at: datetime = field(default_factory=_now)
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    def temporal(self) -> dict[str, str]:
+        """Derive the shared :mod:`kg_utils.temporal` contract from this node.
+
+        A conversational node is one of the few things in the fleet with a
+        genuine *interval*: a topic first mentioned on Monday and last mentioned
+        on Friday occurred across that span, not at a point. So all three keys
+        are meaningful here — ``first_seen`` is when it began, ``last_seen``
+        when it was last observed, and ``created_at`` when the row was written.
+
+        This is a derived view, computed from the node's own authored
+        timestamps. Nothing writes the contract keys independently, so the two
+        representations cannot disagree; ``metadata`` stays free for whatever
+        the caller wants to put there.
+
+        :return: The contract keys for this node.
+        """
+        return temporal_metadata(
+            occurred_start=self.first_seen,
+            occurred_end=self.last_seen,
+            recorded_at=self.created_at,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a flat dict suitable for SQLite insertion."""
