@@ -152,7 +152,7 @@ ruff = ">=0.4.0,<0.16"
 optional = true
 
 [tool.poetry.group.kg.dependencies]
-doc-kg = ">=0.21.2"
+doc-kg = ">=0.22.0"
 pycode-kg = ">=0.23.1"
 
 [project.urls]
