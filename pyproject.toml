@@ -70,6 +70,10 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
+    # 0.18.0: Node.temporal() derives the shared kg_utils.temporal contract
+    # from first_seen/last_seen/created_at, so a federated query can scope this
+    # KG by time. AgentKG is the fleet's clearest interval case — a topic
+    # spans from first mention to last.
     "kgmodule-utils[semantic,sqlite-vec]>=0.18.0",
     # Capped at <2: mcp 2.0 removed the low-level Server decorator API
     # (@app.list_tools / @app.call_tool) that agent_kg.mcp.server registers on.

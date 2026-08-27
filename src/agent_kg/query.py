@@ -45,6 +45,7 @@ def query(
                     "score": h["score"],
                     "status": node.status,
                     "created_at": node.created_at.isoformat(),
+                    "metadata": node.temporal(),
                 }
             )
         else:
@@ -89,6 +90,7 @@ def pack(
                     "kind": h["kind"],
                     "content": content,
                     "score": h["score"],
+                    "metadata": node.temporal() if node else {},
                 }
             )
 

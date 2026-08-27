@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Node.temporal()` — AgentKG speaks the shared `kg_utils.temporal` contract,
+  and it is the fleet's clearest interval case.** A diary entry happens on a
+  day. A conversational topic is first mentioned on Monday and last mentioned
+  on Friday, and *occurred across that span* — so unlike every other module
+  adopting the contract so far, all three keys carry real information here:
+  `first_seen` → `occurred_start`, `last_seen` → `occurred_end`,
+  `created_at` → `recorded_at`.
+
+  That makes a federated `QueryScope(time_range=...)` behave the way anyone
+  would expect of conversation memory: a window landing anywhere inside a
+  topic's lifespan matches it, rather than only a window containing the moment
+  it was first seen.
+
+  The contract is a **derived view** of the node's own authored timestamps,
+  computed on demand and never stored beside them, so the two representations
+  cannot disagree. The `metadata` field stays free for whatever a caller wants
+  to put there — a test pins that `temporal()` does not touch it.
+
+  `query()` results now carry `metadata`, which is where kg-rag's agent adapter
+  reads it.
+
+  Requires `kgmodule-utils>=0.18.0`; the floor moves with it.
+
+### Added
+
 ### Changed
 
 ### Removed
