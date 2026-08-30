@@ -131,8 +131,20 @@ class TestNodeCRUD:
 class TestEdgeCRUD:
     """add_edge, get_edges."""
 
+    @staticmethod
+    def _nodes(store, *ids):
+        """Create the nodes an edge references.
+
+        Foreign keys are enforced, so an edge to a node that does not exist is
+        rejected -- which is the point. These tests exercise edge CRUD, not the
+        constraint, so they need real endpoints.
+        """
+        for node_id in ids:
+            store.upsert_node(Node(id=node_id, kind=NodeKind.TURN, text=node_id))
+
     def test_add_and_get_by_source(self, store):
         """An edge can be added and retrieved by source_id."""
+        self._nodes(store, "s1", "t1")
         edge = Edge(source_id="s1", target_id="t1", relation=EdgeRelation.FOLLOWS)
         store.add_edge(edge)
         edges = store.get_edges(source_id="s1")
@@ -143,6 +155,7 @@ class TestEdgeCRUD:
 
     def test_add_and_get_by_target(self, store):
         """get_edges by target_id works."""
+        self._nodes(store, "s1", "t1")
         edge = Edge(source_id="s1", target_id="t1", relation=EdgeRelation.MENTIONS)
         store.add_edge(edge)
         edges = store.get_edges(target_id="t1")
@@ -150,6 +163,7 @@ class TestEdgeCRUD:
 
     def test_get_edges_by_relation(self, store):
         """get_edges with relation filter returns only matching edges."""
+        self._nodes(store, "a", "b", "c")
         store.add_edge(Edge(source_id="a", target_id="b", relation=EdgeRelation.FOLLOWS))
         store.add_edge(Edge(source_id="a", target_id="c", relation=EdgeRelation.MENTIONS))
         follows = store.get_edges(source_id="a", relation=str(EdgeRelation.FOLLOWS))
@@ -225,9 +239,11 @@ class TestStats:
 
     def test_counts_after_inserts(self, store):
         """node_count and edge_count reflect inserted data."""
-        store.upsert_node(Node(kind=NodeKind.TURN, label="t1"))
-        store.upsert_node(Node(kind=NodeKind.TOPIC, label="api"))
-        store.add_edge(Edge(source_id="a", target_id="b", relation=EdgeRelation.FOLLOWS))
+        turn = Node(kind=NodeKind.TURN, label="t1")
+        topic = Node(kind=NodeKind.TOPIC, label="api")
+        store.upsert_node(turn)
+        store.upsert_node(topic)
+        store.add_edge(Edge(source_id=turn.id, target_id=topic.id, relation=EdgeRelation.FOLLOWS))
         s = store.stats()
         assert s["node_count"] == 2
         assert s["edge_count"] == 1
@@ -311,3 +327,84 @@ class TestEmbedFailureVisibility:
         assert store.embed_failures == 3
         # Warned once, not once per node.
         assert capsys.readouterr().err.count("embedding unavailable") == 1
+
+
+# ---------------------------------------------------------------------------
+# Referential integrity
+#
+# The schema always declared ON DELETE CASCADE, but SQLite ignores foreign keys
+# unless the pragma is set per connection and it never was. Every node deletion
+# since the first release left its edges behind; fleet graphs accumulated
+# thousands each.
+# ---------------------------------------------------------------------------
+
+
+class TestReferentialIntegrity:
+    """Foreign key enforcement, cascade, and the upsert hazard it creates."""
+
+    @staticmethod
+    def _pair(store):
+        """Create two connected nodes and return them."""
+        a = Node(kind=NodeKind.TURN, label="a", text="a")
+        b = Node(kind=NodeKind.TOPIC, label="b", text="b")
+        store.upsert_node(a)
+        store.upsert_node(b)
+        store.add_edge(Edge(source_id=a.id, target_id=b.id, relation=EdgeRelation.MENTIONS))
+        return a, b
+
+    def test_deleting_a_node_removes_its_edges(self, store):
+        """The declared cascade actually fires."""
+        a, _ = self._pair(store)
+        assert store.stats()["edge_count"] == 1
+
+        store.delete_nodes([a.id])
+
+        assert store.stats()["edge_count"] == 0
+
+    def test_reupserting_a_node_preserves_its_edges(self, store):
+        """Updating a node must not take its edges with it.
+
+        INSERT OR REPLACE deletes the row before reinserting, which fires the
+        cascade. Ingest re-upserts topic and entity nodes on almost every turn,
+        so using it here would erase the graph's structure continuously.
+        """
+        a, b = self._pair(store)
+
+        a.text = "updated text"
+        store.upsert_node(a)
+
+        assert store.stats()["edge_count"] == 1
+        assert store.get_node(a.id).text == "updated text"
+
+    def test_edge_to_a_missing_node_is_rejected(self, store):
+        """An edge cannot reference a node that does not exist."""
+        import sqlite3
+
+        import pytest
+
+        a = Node(kind=NodeKind.TURN, label="a", text="a")
+        store.upsert_node(a)
+
+        with pytest.raises(sqlite3.IntegrityError):
+            store.add_edge(Edge(source_id=a.id, target_id="ghost", relation=EdgeRelation.MENTIONS))
+
+    def test_existing_dangling_edges_are_purged_on_open(self, tmp_path):
+        """Historical damage is cleaned up when the store is next opened."""
+        db_path = tmp_path / "legacy.db"
+
+        # Build a graph the old way: foreign keys off, so the delete orphans
+        # the edge exactly as every prior release did.
+        legacy = AgentKGStore(db_path=db_path, vectors_path=tmp_path / "v.sqlite")
+        a, b = self._pair(legacy)
+        raw = legacy._get_db()
+        raw.execute("PRAGMA foreign_keys = OFF")
+        raw.execute("DELETE FROM nodes WHERE id = ?", (a.id,))
+        raw.commit()
+        assert legacy.stats()["edge_count"] == 1, "setup should leave one orphan"
+        legacy.close()
+
+        reopened = AgentKGStore(db_path=db_path, vectors_path=tmp_path / "v.sqlite")
+        try:
+            assert reopened.stats()["edge_count"] == 0
+        finally:
+            reopened.close()

@@ -105,6 +105,22 @@ _EMBED_DIM = 384
 _META_COLUMNS = ("kind", "text", "session_id")
 
 
+def _purge_redundant_edges(db: sqlite3.Connection) -> None:
+    """Collapse self-loops and duplicates created by repointing edges.
+
+    :param db: Open connection.
+    """
+    db.execute("DELETE FROM edges WHERE source_id = target_id")
+    db.execute(
+        """
+        DELETE FROM edges
+        WHERE rowid NOT IN (
+            SELECT MIN(rowid) FROM edges GROUP BY source_id, target_id, relation
+        )
+        """
+    )
+
+
 class AgentKGStore:
     """Two-layer storage: SQLite for graph topology + sqlite-vec for embeddings.
 
@@ -138,10 +154,15 @@ class AgentKGStore:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
             self._db = sqlite3.connect(str(self._db_path), check_same_thread=False)
             self._db.row_factory = sqlite3.Row
+            # SQLite ignores foreign keys unless asked, per connection. Without
+            # this the edges table's ON DELETE CASCADE never fires and deleted
+            # nodes leave their edges dangling.
+            self._db.execute("PRAGMA foreign_keys = ON")
             # Deduplicate before creating the unique index so that the index
             # creation in _SCHEMA_SQL does not fail on existing duplicate rows.
             self._migrate_dedup_before_schema()
             self._db.executescript(_SCHEMA_SQL)
+            self._migrate_purge_dangling_edges()
             self._db.commit()
         return self._db
 
@@ -160,7 +181,35 @@ class AgentKGStore:
         ).fetchone()
         if not exists:
             return
+        has_edges = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='edges'"
+        ).fetchone()
+
         for kind in ("topic", "entity"):
+            # Move the losers' edges onto the surviving node first. Foreign keys
+            # are enabled by the time this runs, so deleting a duplicate would
+            # otherwise cascade its edges away and drop the turn-to-topic links
+            # the survivor should inherit.
+            if has_edges:
+                for column in ("source_id", "target_id"):
+                    db.execute(
+                        f"""
+                        UPDATE OR IGNORE edges
+                        SET {column} = (
+                            SELECT MIN(k.id) FROM nodes k
+                            WHERE k.kind = loser.kind
+                              AND LOWER(TRIM(k.label)) = LOWER(TRIM(loser.label))
+                        )
+                        FROM nodes AS loser
+                        WHERE edges.{column} = loser.id
+                          AND loser.kind = ?
+                          AND loser.id NOT IN (
+                              SELECT MIN(id) FROM nodes WHERE kind = ?
+                              GROUP BY LOWER(TRIM(label))
+                          )
+                        """,
+                        (kind, kind),
+                    )
             db.execute(
                 """
                 DELETE FROM nodes
@@ -174,7 +223,29 @@ class AgentKGStore:
                 """,
                 (kind, kind),
             )
+
+        if has_edges:
+            _purge_redundant_edges(db)
         db.commit()
+
+    def _migrate_purge_dangling_edges(self) -> None:
+        """Delete edges whose endpoints no longer exist.
+
+        Historical damage only. The schema has always declared ON DELETE
+        CASCADE, but SQLite ignores foreign keys unless the pragma is set per
+        connection, and it never was -- so every node deletion since the first
+        release left its edges behind. Fleet graphs carry thousands each.
+        Cheap and idempotent: a no-op once the graph is clean.
+        """
+        db = self._db
+        assert db is not None
+        db.execute(
+            """
+            DELETE FROM edges
+            WHERE source_id NOT IN (SELECT id FROM nodes)
+               OR target_id NOT IN (SELECT id FROM nodes)
+            """
+        )
 
     def _get_backend(self):
         """Open (creating if needed) the sqlite-vec vector store."""
@@ -208,13 +279,24 @@ class AgentKGStore:
     # ------------------------------------------------------------------
 
     def upsert_node(self, node: Node) -> None:
-        """Insert or replace a node (SQLite only — call embed_node separately)."""
+        """Insert or update a node (SQLite only — call embed_node separately).
+
+        Deliberately not ``INSERT OR REPLACE``: that deletes the existing row
+        before inserting the new one, which fires ``ON DELETE CASCADE`` on the
+        edges table and silently destroys every edge touching the node. Ingest
+        re-upserts topic and entity nodes on almost every turn, so the damage
+        would be continuous. ``ON CONFLICT DO UPDATE`` mutates the row in place
+        and leaves edges intact.
+        """
         db = self._get_db()
         d = node.to_dict()
         cols = ", ".join(d.keys())
         placeholders = ", ".join(["?"] * len(d))
+        assignments = ", ".join(f"{c} = excluded.{c}" for c in d if c != "id")
         db.execute(
-            f"INSERT OR REPLACE INTO nodes ({cols}) VALUES ({placeholders})", list(d.values())
+            f"INSERT INTO nodes ({cols}) VALUES ({placeholders}) "
+            f"ON CONFLICT(id) DO UPDATE SET {assignments}",
+            list(d.values()),
         )
         db.commit()
 
