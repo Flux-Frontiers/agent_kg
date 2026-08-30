@@ -32,8 +32,16 @@ mkdir -p "$STATE_DIR"
 
 INPUT=$(cat)
 SESSION_ID=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_id','unknown'))" 2>/dev/null)
+TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
+TRANSCRIPT_PATH="${TRANSCRIPT_PATH/#\~/$HOME}"
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+# Resolve the repo this session belongs to. Never derive it from the process
+# working directory alone: a hook inherits whatever directory the agent's shell
+# last moved to, so a session that inspects a sibling repo would ingest into --
+# and prune -- that repo instead of its own.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT=$(python3 "$HOOK_DIR/resolve_repo_root.py" "$TRANSCRIPT_PATH" 2>/dev/null)
+[ -n "$REPO_ROOT" ] || REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     echo "{}"
     exit 0

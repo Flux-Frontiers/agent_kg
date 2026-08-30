@@ -38,9 +38,17 @@ MIN_CHARS=25
 INPUT=$(cat)
 
 PROMPT=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('prompt',''))" 2>/dev/null)
+SESSION_ID=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_id',''))" 2>/dev/null)
+TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
+TRANSCRIPT_PATH="${TRANSCRIPT_PATH/#\~/$HOME}"
 
-# Resolve repo root; skip if not in a git repo with an .agentkg dir
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+# Resolve the repo this session belongs to. Never derive it from the process
+# working directory alone: a hook inherits whatever directory the agent's shell
+# last moved to, so a session that inspects a sibling repo would ingest into --
+# and prune -- that repo instead of its own.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT=$(python3 "$HOOK_DIR/resolve_repo_root.py" "$TRANSCRIPT_PATH" 2>/dev/null)
+[ -n "$REPO_ROOT" ] || REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     echo "{}"
     exit 0
@@ -60,7 +68,8 @@ fi
 
 # --- write side: ingest the user turn (embeddings on; fast enough here) ---
 if [ -n "$PROMPT" ]; then
-    "$AGENTKG" ingest "$PROMPT" --role user --repo "$REPO_ROOT" >/dev/null 2>&1 || true
+    "$AGENTKG" ingest "$PROMPT" --role user --repo "$REPO_ROOT" \
+        ${SESSION_ID:+--session "$SESSION_ID"} >/dev/null 2>&1 || true
 fi
 
 # --- read side: assemble recalled context for this prompt ---
@@ -69,7 +78,8 @@ if [ "${#PROMPT}" -lt "$MIN_CHARS" ]; then
     exit 0
 fi
 
-CONTEXT=$("$AGENTKG" assemble "$PROMPT" --repo "$REPO_ROOT" --budget "$BUDGET" 2>/dev/null)
+CONTEXT=$("$AGENTKG" assemble "$PROMPT" --repo "$REPO_ROOT" --budget "$BUDGET" \
+    ${SESSION_ID:+--session "$SESSION_ID"} 2>/dev/null)
 if [ -z "$CONTEXT" ]; then
     echo "{}"
     exit 0

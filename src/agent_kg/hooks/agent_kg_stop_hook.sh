@@ -39,8 +39,13 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(s
 # Expand ~ in transcript path
 TRANSCRIPT_PATH="${TRANSCRIPT_PATH/#\~/$HOME}"
 
-# Resolve repo root; skip if no .agentkg
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+# Resolve the repo this session belongs to. Never derive it from the process
+# working directory alone: a hook inherits whatever directory the agent's shell
+# last moved to, so a session that inspects a sibling repo would ingest into --
+# and prune -- that repo instead of its own.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT=$(python3 "$HOOK_DIR/resolve_repo_root.py" "$TRANSCRIPT_PATH" 2>/dev/null)
+[ -n "$REPO_ROOT" ] || REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     echo "{}"
     exit 0
@@ -65,7 +70,8 @@ fi
 #    stayed unembedded forever. Embedding here costs ~3s against a 30s hook
 #    timeout, and the UserPromptSubmit hook already pays the same cost.
 if [ -n "$MSG" ]; then
-    "$AGENTKG" ingest "$MSG" --role assistant --repo "$REPO_ROOT" 2>/dev/null || true
+    "$AGENTKG" ingest "$MSG" --role assistant --repo "$REPO_ROOT" \
+        ${SESSION_ID:+--session "$SESSION_ID"} >/dev/null 2>&1 || true
 fi
 
 # 2. Count human messages in transcript to decide whether to consolidate

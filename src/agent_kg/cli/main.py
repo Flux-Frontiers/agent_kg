@@ -624,11 +624,14 @@ def profile_remove(
 # Directory where hook scripts are deployed on the user's machine.
 _HOOKS_DEPLOY_DIR = Path.home() / ".agentkg" / "hooks"
 
-# Scripts bundled inside the package (src/agent_kg/hooks/).
+# Scripts bundled inside the package (src/agent_kg/hooks/). The resolver is a
+# helper the three hooks invoke, not a hook itself, but it deploys alongside
+# them because they locate it relative to their own directory.
 _HOOK_SCRIPTS = [
     "agent_kg_user_prompt_hook.sh",
     "agent_kg_stop_hook.sh",
     "agent_kg_precompact_hook.sh",
+    "resolve_repo_root.py",
 ]
 
 
