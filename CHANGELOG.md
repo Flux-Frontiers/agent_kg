@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-30
+
 ### Added
 
 - **`Node.temporal()` — AgentKG speaks the shared `kg_utils.temporal` contract,
@@ -32,13 +34,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Requires `kgmodule-utils>=0.18.0`; the floor moves with it.
 
-### Added
+- **`UserPromptSubmit` now returns recalled context instead of an empty ack.**
+  All three Claude Code hooks previously only ingested into the graph and
+  returned `{}`, so nothing recalled ever reached the model. The hook now
+  assembles a token-budgeted context block for the incoming prompt and returns
+  it as `additionalContext`; prompts under 25 characters skip assembly, where
+  recall rarely pays for its own cost, and the hook carries an explicit 30s
+  timeout. Also fixes two bugs found while wiring this up: the hooks called a
+  bare `agentkg`, which does not reliably resolve on a hook's inherited PATH,
+  and `|| true` swallowed the failure so the hook exited 0 having done
+  nothing — all three now fall back to `~/.local/bin/agentkg` and log when
+  neither resolves. And `ingest`'s stdout summary, which `UserPromptSubmit`
+  treats as context, was leaking write-side chatter into every prompt — the
+  write side is now redirected to `/dev/null`.
 
 ### Changed
 
-### Removed
+- **Dependency floors brought current across the fleet dependency sweep.**
+  `kgmodule-utils` moved `>=0.12.1` → `>=0.13.2` → `>=0.18.0`, and
+  `doc-kg`/`pycode-kg` floors were likewise raised to their currently-published
+  releases, with the lock regenerated at each step. Dev tooling (pytest, ruff,
+  ty, pre-commit, pdoc) also moved from a `dev` extra to an optional Poetry
+  group alongside the existing `kg` group, so it can no longer be
+  pip-installed and no longer ships in the wheel; the `all` aggregate extra —
+  which had been re-listing dev tools as installable regardless of where they
+  actually lived — is gone with it. `dockg` and `pycodekg`, which this repo's
+  pre-commit hook and release tooling already assumed were on `PATH`, are now
+  declared explicitly as a `[tool.poetry.group.kg]` dependency group.
+
+- **Historical snapshot `db_path` values relativized.** Snapshots are
+  committed to git; entries written before `kgmodule-utils` 0.13.2 started
+  relativizing on write recorded an absolute path, publishing each
+  developer's home directory and username into the repo. Only `db_path`
+  changes — timestamps, metrics, hotspots and deltas are untouched, so
+  snapshot history, timeline and diff all keep their full record.
 
 ### Fixed
+
+- **Foreign keys were never enforced, so the edges table's
+  `ON DELETE CASCADE` was decorative.** SQLite ignores foreign keys unless
+  `PRAGMA foreign_keys` is set per connection, and it never was — every node
+  deletion since the first release left its edges behind. Across sampled
+  fleet graphs, 13724 of kgrag's 19935 edges and 5508 of pycode_kg's 7749
+  pointed at nodes that no longer existed. Enabling the pragma outright would
+  have been destructive on its own: `upsert_node` used `INSERT OR REPLACE`,
+  which deletes then reinserts, and with cascades live that would erase every
+  edge on a node re-upserted almost every turn — it now uses
+  `ON CONFLICT DO UPDATE` instead. The topic/entity dedup migration needed the
+  equivalent fix from the other direction, repointing edges onto the
+  surviving node before deleting its duplicate rather than after. A one-time
+  migration purges the historical damage on next open (idempotent, a no-op
+  once a graph is clean), and `TestReferentialIntegrity` guards against
+  regressions.
+
+- **Duplicate turns were being stored and replayed back into context.** A
+  caller invoking `ingest` twice for the same turn went uncaught, so roughly
+  half the turns in production graphs were the same text stored twice (52% in
+  pycode_kg, 50% in doc_kg). `ingest` now rejects a turn whose normalized text
+  matches one already stored in the same session within the last five
+  seconds — narrow enough that a genuinely repeated "ok" minutes later still
+  records. `assemble`'s "Relevant Past Turns" exclusion set was separately
+  built from only the current session while the verbatim section printed
+  across all sessions, so the set was always empty and nothing was ever
+  excluded; both sections now derive from one deduplicated list. The CLI's
+  skip reporting also always blamed "slash command, empty, or system-only
+  content" regardless of the real cause — `IngestResult` now carries an
+  accurate `skip_reason`.
+
+- **`prune()` compressed every session's turns, not just the one being
+  pruned.** It read `get_all_turns()` with no session filter, so a
+  consolidation or pre-compaction in one session could compress a concurrent
+  conversation's turns into its own summary clusters. `prune()` now takes
+  `session_id` and scopes selection to it; omitting it keeps the prior
+  repo-wide behavior for a manual `agentkg prune`. The `PreCompact` hook also
+  defaulted a missing session id to the literal string `"unknown"`, which
+  would have been forwarded as if real — it now defaults to empty and omits
+  the flag entirely.
+
+- **Hooks inferred the wrong repository and session, and could cross-
+  contaminate both.** `REPO_ROOT` came from `git rev-parse --show-toplevel`
+  against the hook's inherited working directory, so a session that merely
+  `cd`'d into a sibling repo to inspect it would ingest into that repo
+  instead — observed live: a session working in quiltwright pruned 32 turns
+  of memory_kg's history into 7 summaries. Resolution now prefers
+  `CLAUDE_PROJECT_DIR`, then the first `cwd` recorded in the session
+  transcript (written before any tool runs), falling back to the old
+  behavior only when neither is available. Separately, neither hook passed
+  `--session`, so every call took `Session.open`'s `None` path, which resumes
+  any session started within the last four hours — merging genuinely
+  concurrent conversations. Both hooks now pass the session id through.
+
+- **Pre-commit hooks called `poetry run`, which resolves against whatever
+  environment the calling shell happens to advertise** — an inherited
+  `VIRTUAL_ENV` from a different repo silently redirected these checks,
+  surfacing as unrelated-looking failures like "Command not found: ty". Hook
+  entries now call `.venv/bin/<tool>` directly (`ty` additionally needs
+  `--python .venv`, since it resolves site-packages from `VIRTUAL_ENV`
+  regardless of which binary started it).
+
+- **The generated pre-commit hook could skip quality checks by accident, and
+  its per-commit snapshot recorded a tree hash that could never be
+  correct.** `AGENTKG_SKIP_SNAPSHOT` sat above `pre-commit run`, so setting it
+  also silently skipped ruff, ty and pytest; it now gates only the snapshot
+  block. The snapshot itself is now opt-in via `AGENTKG_SNAPSHOT=1` (default
+  off) — staging the snapshot into the same commit it describes changes the
+  index after the hash is recorded, so the two could never match (an audit
+  found 10.4% of fleet snapshots keyed this way). The KG index rebuild step
+  was also moved to run after `pre-commit run` rather than before:
+  `pre-commit run` stashes and restores unstaged changes around itself, and
+  building first put freshly-rewritten snapshot files inside that stash
+  window, which already caused one commit here to silently drop a staged
+  snapshot deletion.
+
+- **`app.py` imported `streamlit.components.v1` implicitly.** It called
+  `st.components.v1.html()` after only `import streamlit as st`, working only
+  because something else in the import graph happened to pull the submodule
+  in first. Now imported explicitly. Also adds the fleet-standard "Installed
+  CLI" CI job, which builds the wheel and loads every console-script entry
+  point into a clean venv.
+
+- **Security: pytest floor raised to `>=9.0.3`** (GHSA-6w46-j5rx-g56g —
+  predictable temp-directory paths on UNIX). The lockfile already resolved
+  9.x, so this changes the declaration, not what installs.
+
+- **Security: `cryptography`, `gitpython`, `setuptools`, and `torch` bumped**
+  to `50.0.0`, `3.1.58`, `83.0.0`, and `2.13.0` respectively, resolving
+  versions an OSV.dev scan flagged as vulnerable in `poetry.lock`.
 
 ## [0.8.2] - 2026-07-29
 

@@ -50,7 +50,7 @@ packages = [{ include = "agent_kg", from = "src" }]
 # ---------------------------------------------------------------------------
 [project]
 name = "agent-kg"
-version = "0.8.2"
+version = "0.9.0"
 description = "Conversational memory as a knowledge graph"
 readme = "README.md"
 license = "Elastic-2.0"

@@ -44,7 +44,7 @@ from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
 from agent_kg.user_profile import UserProfileStore
 
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 __author__ = "Eric G. Suchanek, PhD"
 
 __all__ = [
