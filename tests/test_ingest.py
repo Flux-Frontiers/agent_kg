@@ -253,3 +253,77 @@ class TestEntityDeduplication:
         entities = store.get_nodes_by_kind(NodeKind.ENTITY)
         req_entities = [e for e in entities if e.label == "requests"]
         assert len(req_entities) == 1
+
+
+# ---------------------------------------------------------------------------
+# Duplicate suppression
+#
+# Regression coverage: roughly half the turns in production graphs were the
+# same text stored twice, written milliseconds apart by a caller invoking
+# ingest twice for one turn. Nothing rejected the second copy.
+# ---------------------------------------------------------------------------
+
+
+def test_immediate_repeat_is_skipped(session, store):
+    """The same text ingested twice in quick succession stores one Turn."""
+    first = ingest("we need to trigger ci again", "user", session, store)
+    second = ingest("we need to trigger ci again", "user", session, store)
+
+    assert first.skipped is False
+    assert second.skipped is True
+    assert len(store.get_all_turns(session_id=session.id)) == 1
+
+
+def test_repeat_differing_in_whitespace_and_case_is_skipped(session, store):
+    """Duplicate detection normalizes before comparing."""
+    ingest("Deploy the release now", "user", session, store)
+    second = ingest("deploy   THE  release now", "user", session, store)
+
+    assert second.skipped is True
+    assert len(store.get_all_turns(session_id=session.id)) == 1
+
+
+def test_skipped_duplicate_does_not_consume_a_turn_index(session, store):
+    """A rejected duplicate must not leave a gap in the turn sequence."""
+    ingest("first message", "user", session, store)
+    ingest("first message", "user", session, store)
+    ingest("second message", "user", session, store)
+
+    turns = store.get_all_turns(session_id=session.id)
+    assert [t.turn_index for t in turns] == [0, 1]
+
+
+def test_distinct_turns_are_both_kept(session, store):
+    """Different text is never treated as a duplicate."""
+    ingest("first message", "user", session, store)
+    ingest("second message", "user", session, store)
+
+    assert len(store.get_all_turns(session_id=session.id)) == 2
+
+
+def test_same_text_from_different_roles_is_kept(session, store):
+    """A user turn and an assistant turn may legitimately share text."""
+    ingest("ship it", "user", session, store)
+    second = ingest("ship it", "assistant", session, store)
+
+    assert second.skipped is True
+    assert len(store.get_all_turns(session_id=session.id)) == 1
+
+
+def test_genuine_repeat_outside_the_window_is_kept(session, store):
+    """A user really saying the same thing later must still be recorded."""
+    from datetime import timedelta
+
+    from agent_kg.ingest import _DUPLICATE_WINDOW_SECONDS
+
+    ingest("ok", "user", session, store)
+
+    # Backdate the stored turn past the window, simulating a later repeat.
+    stored = store.get_all_turns(session_id=session.id)[0]
+    stored.created_at = stored.created_at - timedelta(seconds=_DUPLICATE_WINDOW_SECONDS + 60)
+    store.upsert_node(stored)
+
+    second = ingest("ok", "user", session, store)
+
+    assert second.skipped is False
+    assert len(store.get_all_turns(session_id=session.id)) == 2

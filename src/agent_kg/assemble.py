@@ -30,6 +30,15 @@ def _approx_tokens(text: str) -> int:
     return max(1, len(text) // _CHARS_PER_TOKEN)
 
 
+def _text_key(text: str) -> str:
+    """Normalize turn text for duplicate detection.
+
+    :param text: Raw turn text.
+    :return: Whitespace-collapsed, case-folded key.
+    """
+    return " ".join(text.split()).casefold()
+
+
 def assemble_context(
     store: AgentKGStore,
     query: str,
@@ -82,16 +91,33 @@ def assemble_context(
     # ------------------------------------------------------------------
     # 3. Semantically relevant turns (not recent)
     # ------------------------------------------------------------------
+    # Prefer the current session for recency, but fall back to all sessions:
+    # every CLI and hook invocation opens a fresh session, so scoping strictly
+    # to it yields an empty set and the exclusion below silently does nothing.
+    # Whichever list wins feeds BOTH the exclusion set here and the verbatim
+    # section at the end, so a turn cannot land in both.
     recent_turns = store.get_all_turns(session_id=session_id)[-recent_window:]
+    if not recent_turns:
+        recent_turns = store.get_all_turns(session_id=None)[-recent_window:]
     recent_ids = {t.id for t in recent_turns}
+
+    # Turns are stored without content dedup, so the same text can exist under
+    # several node ids. Track text as well as id, or duplicates each pay budget.
+    seen_texts = {_text_key(t.text) for t in recent_turns}
 
     sem_hits = store.search(query, k=6, kind_filter=str(NodeKind.TURN))
     sem_turns = []
     for h in sem_hits:
-        if h["node_id"] not in recent_ids:
-            node = store.get_node(h["node_id"])
-            if node:
-                sem_turns.append(node)
+        if h["node_id"] in recent_ids:
+            continue
+        node = store.get_node(h["node_id"])
+        if node is None:
+            continue
+        key = _text_key(node.text)
+        if key in seen_texts:
+            continue
+        seen_texts.add(key)
+        sem_turns.append(node)
 
     if sem_turns:
         sem_lines = []
@@ -114,13 +140,17 @@ def assemble_context(
             _add("## Active Topics\n" + ", ".join(topic_labels[:8]))
 
     # ------------------------------------------------------------------
-    # 5. Verbatim recent turns — search ALL sessions (CLI calls each create
-    #    a new session; we want the most recent turns regardless of session)
+    # 5. Verbatim recent turns — the same list section 3 excluded against,
+    #    deduplicated by text so repeated node ids collapse to one entry.
     # ------------------------------------------------------------------
-    recent_turns = store.get_all_turns(session_id=None)[-recent_window:]
     if recent_turns:
         recent_lines = []
+        emitted: set[str] = set()
         for t in recent_turns:
+            key = _text_key(t.text)
+            if key in emitted:
+                continue
+            emitted.add(key)
             role_label = t.role.upper() if t.role else "UNKNOWN"
             recent_lines.append(f"**[{role_label}]** {t.text}")
         _add("## Recent Conversation\n" + "\n\n".join(recent_lines))
