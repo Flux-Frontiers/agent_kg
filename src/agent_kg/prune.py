@@ -126,6 +126,7 @@ def prune(
     session: Session | None = None,
     window: int = _DEFAULT_WINDOW,
     token_budget: int | None = None,
+    session_id: str | None = None,
 ) -> PruneReport:
     """Execute one KG Context Pruning pass.
 
@@ -134,12 +135,16 @@ def prune(
     :param session: Active session (used for pruning_pass tracking).
     :param window: Number of most-recent turns to keep verbatim (not pruned).
     :param token_budget: If given, prune until total turn tokens <= budget.
+    :param session_id: Restrict pruning to this session's turns. None prunes
+        every session in the repo, which is only safe when no other session is
+        live -- concurrent conversations would otherwise be summarized into
+        each other's clusters.
     :return: :class:`~agent_kg.schema.PruneReport` with pass statistics.
     """
     now = datetime.now(UTC)
 
-    # Get all turns ordered by turn_index
-    all_turns = store.get_all_turns()
+    # Get all turns ordered by turn_index, restricted to the scoped session.
+    all_turns = store.get_all_turns(session_id=session_id)
     if len(all_turns) <= window:
         return PruneReport(
             summaries_created=0,

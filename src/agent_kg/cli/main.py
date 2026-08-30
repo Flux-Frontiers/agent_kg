@@ -86,7 +86,10 @@ def ingest(
     kg = _resolve_kg(repo, person, session)
     result = kg.ingest(text=text, role=role, embed=not no_embed)
     if result.skipped:
-        click.echo("Turn skipped (slash command, empty, or system-only content).")
+        if result.skip_reason == "duplicate":
+            click.echo("Turn skipped (identical turn already ingested moments ago).")
+        else:
+            click.echo("Turn skipped (slash command, empty, or system-only content).")
         kg.close()
         return
     click.echo(f"Ingested turn #{kg.session.turn_count - 1} (role={role})")
@@ -202,7 +205,7 @@ def prune_cmd(window: int, repo: str, person: str, session: str | None, force: b
         )
         kg.close()
         return
-    report = kg.prune(window=window)
+    report = kg.prune(window=window, session_id=session or None)
     click.echo(f"Pruning pass {report.pruning_pass} complete.")
     click.echo(f"  Summaries created: {report.summaries_created}")
     click.echo(f"  Turns pruned: {report.turns_pruned}")
@@ -621,11 +624,14 @@ def profile_remove(
 # Directory where hook scripts are deployed on the user's machine.
 _HOOKS_DEPLOY_DIR = Path.home() / ".agentkg" / "hooks"
 
-# Scripts bundled inside the package (src/agent_kg/hooks/).
+# Scripts bundled inside the package (src/agent_kg/hooks/). The resolver is a
+# helper the three hooks invoke, not a hook itself, but it deploys alongside
+# them because they locate it relative to their own directory.
 _HOOK_SCRIPTS = [
     "agent_kg_user_prompt_hook.sh",
     "agent_kg_stop_hook.sh",
     "agent_kg_precompact_hook.sh",
+    "resolve_repo_root.py",
 ]
 
 
@@ -643,7 +649,11 @@ def _claude_hooks(deploy_dir: Path) -> dict:
         "UserPromptSubmit": [
             {
                 "hooks": [
-                    {"type": "command", "command": str(deploy_dir / "agent_kg_user_prompt_hook.sh")}
+                    {
+                        "type": "command",
+                        "command": str(deploy_dir / "agent_kg_user_prompt_hook.sh"),
+                        "timeout": 30,
+                    }
                 ]
             }
         ],

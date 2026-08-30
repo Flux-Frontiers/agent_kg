@@ -38,6 +38,15 @@ _SLASH_COMMAND = re.compile(r"^\s*/\w")
 # rejecting any short but valid turn like "Hi." or "OK".
 _MIN_CONTENT_CHARS = 2
 
+# Window for treating an identical turn as a repeated ingest call rather than
+# the user genuinely saying the same thing again. Observed double-ingests land
+# 16-60ms apart; a real repeat ("ok", "yes") is minutes later.
+_DUPLICATE_WINDOW_SECONDS = 5.0
+
+# How many recent turns to scan for that duplicate. The scan stops early once
+# it passes the window, so this is only an upper bound.
+_DUPLICATE_SCAN_DEPTH = 10
+
 
 def _should_skip_turn(text: str) -> bool:
     """Return True if this turn should be silently skipped at ingest time.
@@ -60,6 +69,49 @@ def _should_skip_turn(text: str) -> bool:
     stripped = _SELF_CLOSING_TAG.sub("", stripped).strip()
     if len(stripped) < _MIN_CONTENT_CHARS:
         return True
+    return False
+
+
+def _normalize_for_compare(text: str) -> str:
+    """Normalize turn text for duplicate detection.
+
+    :param text: Raw turn text.
+    :return: Whitespace-collapsed, case-folded key.
+    """
+    return " ".join(text.split()).casefold()
+
+
+def _is_recent_duplicate(
+    text: str,
+    session: Session,
+    store: AgentKGStore,
+    now: datetime,
+) -> bool:
+    """Return True if this exact text was already ingested moments ago.
+
+    Duplicate Turn nodes arise when a caller invokes ingest twice for a single
+    turn. Those land milliseconds apart, whereas a user genuinely repeating
+    themselves does so much later, so the check is bounded by time rather than
+    by content alone.
+
+    :param text: Raw turn text about to be ingested.
+    :param session: Active session (duplicates are only checked within it).
+    :param store: Backing store to scan.
+    :param now: Timestamp of the incoming turn.
+    :return: True if an identical turn was ingested inside the window.
+    """
+    key = _normalize_for_compare(text)
+    recent = store.get_all_turns(session_id=session.id)[-_DUPLICATE_SCAN_DEPTH:]
+    for prior in reversed(recent):
+        created = prior.created_at
+        if created is None:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        if (now - created).total_seconds() > _DUPLICATE_WINDOW_SECONDS:
+            break
+        if _normalize_for_compare(prior.text) == key:
+            return True
     return False
 
 
@@ -129,6 +181,7 @@ class IngestResult:
     :param task_nodes: Task nodes created.
     :param edges_created: Number of new edges added.
     :param profile_updates: Preference/commitment/expertise records found.
+    :param skip_reason: Why the turn was skipped, or None if it was ingested.
     """
 
     def __init__(self) -> None:
@@ -140,6 +193,7 @@ class IngestResult:
         self.edges_created: int = 0
         self.profile_updates: list[dict[str, Any]] = []
         self.skipped: bool = False
+        self.skip_reason: str | None = None
 
     def __repr__(self) -> str:
         if self.skipped:
@@ -176,9 +230,17 @@ def ingest_turn(
     # Skip noise turns (slash commands, empty-after-stripping, session sentinels)
     if _should_skip_turn(text):
         result.skipped = True
+        result.skip_reason = "noise"
         return result
 
     now = datetime.now(UTC)
+
+    # Drop a repeated ingest of the same turn before it consumes a turn index.
+    if _is_recent_duplicate(text, session, store, now):
+        result.skipped = True
+        result.skip_reason = "duplicate"
+        return result
+
     turn_idx = session.next_turn_index()
 
     # Clean text for NLP (strips IDE/system tags); raw text kept on Turn node.

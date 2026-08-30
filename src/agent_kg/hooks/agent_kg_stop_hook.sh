@@ -39,9 +39,26 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(s
 # Expand ~ in transcript path
 TRANSCRIPT_PATH="${TRANSCRIPT_PATH/#\~/$HOME}"
 
-# Resolve repo root; skip if no .agentkg
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+# Resolve the repo this session belongs to. Never derive it from the process
+# working directory alone: a hook inherits whatever directory the agent's shell
+# last moved to, so a session that inspects a sibling repo would ingest into --
+# and prune -- that repo instead of its own.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT=$(python3 "$HOOK_DIR/resolve_repo_root.py" "$TRANSCRIPT_PATH" 2>/dev/null)
+[ -n "$REPO_ROOT" ] || REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 if [ ! -d "$REPO_ROOT/.agentkg" ]; then
+    echo "{}"
+    exit 0
+fi
+
+# Resolve the agentkg CLI. Hook processes do not reliably inherit the login
+# shell's PATH, so fall back to the default uv tool install location.
+AGENTKG=$(command -v agentkg 2>/dev/null)
+if [ -z "$AGENTKG" ] && [ -x "$HOME/.local/bin/agentkg" ]; then
+    AGENTKG="$HOME/.local/bin/agentkg"
+fi
+if [ -z "$AGENTKG" ]; then
+    echo "[$(date '+%H:%M:%S')] agentkg not found on PATH — skipping" >> "$STATE_DIR/hook.log"
     echo "{}"
     exit 0
 fi
@@ -53,7 +70,8 @@ fi
 #    stayed unembedded forever. Embedding here costs ~3s against a 30s hook
 #    timeout, and the UserPromptSubmit hook already pays the same cost.
 if [ -n "$MSG" ]; then
-    agentkg ingest "$MSG" --role assistant --repo "$REPO_ROOT" 2>/dev/null || true
+    "$AGENTKG" ingest "$MSG" --role assistant --repo "$REPO_ROOT" \
+        ${SESSION_ID:+--session "$SESSION_ID"} >/dev/null 2>&1 || true
 fi
 
 # 2. Count human messages in transcript to decide whether to consolidate
@@ -93,10 +111,11 @@ echo "[$(date '+%H:%M:%S')] Stop session=$SESSION_ID exchanges=$EXCHANGE_COUNT s
 if [ "$SINCE_LAST" -ge "$CONSOLIDATE_INTERVAL" ] && [ "$EXCHANGE_COUNT" -gt 0 ]; then
     echo "$EXCHANGE_COUNT" > "$LAST_CONSOLIDATE_FILE"
     echo "[$(date '+%H:%M:%S')] Triggering consolidation at exchange $EXCHANGE_COUNT" >> "$STATE_DIR/hook.log"
-    agentkg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
+    "$AGENTKG" prune --repo "$REPO_ROOT" --force \
+        ${SESSION_ID:+--session "$SESSION_ID"} >> "$STATE_DIR/hook.log" 2>&1 &
 fi
 
 # 4. Async snapshot
-agentkg snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
+"$AGENTKG" snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
 
 echo "{}"
