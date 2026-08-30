@@ -643,7 +643,11 @@ def _claude_hooks(deploy_dir: Path) -> dict:
         "UserPromptSubmit": [
             {
                 "hooks": [
-                    {"type": "command", "command": str(deploy_dir / "agent_kg_user_prompt_hook.sh")}
+                    {
+                        "type": "command",
+                        "command": str(deploy_dir / "agent_kg_user_prompt_hook.sh"),
+                        "timeout": 30,
+                    }
                 ]
             }
         ],

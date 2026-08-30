@@ -39,13 +39,25 @@ if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     exit 0
 fi
 
+# Resolve the agentkg CLI. Hook processes do not reliably inherit the login
+# shell's PATH, so fall back to the default uv tool install location.
+AGENTKG=$(command -v agentkg 2>/dev/null)
+if [ -z "$AGENTKG" ] && [ -x "$HOME/.local/bin/agentkg" ]; then
+    AGENTKG="$HOME/.local/bin/agentkg"
+fi
+if [ -z "$AGENTKG" ]; then
+    echo "[$(date '+%H:%M:%S')] agentkg not found on PATH — skipping" >> "$STATE_DIR/hook.log"
+    echo "{}"
+    exit 0
+fi
+
 echo "[$(date '+%H:%M:%S')] PreCompact triggered for session $SESSION_ID" >> "$STATE_DIR/hook.log"
 
 # Run prune synchronously — summaries + embeddings must land before compaction
-agentkg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1
+"$AGENTKG" prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1
 
 # Snapshot synchronously so the pre-compaction state is preserved
-agentkg snapshot --repo "$REPO_ROOT" --label "pre-compact" 2>/dev/null
+"$AGENTKG" snapshot --repo "$REPO_ROOT" --label "pre-compact" 2>/dev/null
 
 echo "[$(date '+%H:%M:%S')] PreCompact complete for session $SESSION_ID" >> "$STATE_DIR/hook.log"
 

@@ -46,6 +46,18 @@ if [ ! -d "$REPO_ROOT/.agentkg" ]; then
     exit 0
 fi
 
+# Resolve the agentkg CLI. Hook processes do not reliably inherit the login
+# shell's PATH, so fall back to the default uv tool install location.
+AGENTKG=$(command -v agentkg 2>/dev/null)
+if [ -z "$AGENTKG" ] && [ -x "$HOME/.local/bin/agentkg" ]; then
+    AGENTKG="$HOME/.local/bin/agentkg"
+fi
+if [ -z "$AGENTKG" ]; then
+    echo "[$(date '+%H:%M:%S')] agentkg not found on PATH — skipping" >> "$STATE_DIR/hook.log"
+    echo "{}"
+    exit 0
+fi
+
 # 1. Ingest assistant turn, embedding inline.
 #    This previously passed --no-embed and deferred to the consolidation pass,
 #    which left nodes unsearchable until (and unless) that pass reached them —
@@ -53,7 +65,7 @@ fi
 #    stayed unembedded forever. Embedding here costs ~3s against a 30s hook
 #    timeout, and the UserPromptSubmit hook already pays the same cost.
 if [ -n "$MSG" ]; then
-    agentkg ingest "$MSG" --role assistant --repo "$REPO_ROOT" 2>/dev/null || true
+    "$AGENTKG" ingest "$MSG" --role assistant --repo "$REPO_ROOT" 2>/dev/null || true
 fi
 
 # 2. Count human messages in transcript to decide whether to consolidate
@@ -93,10 +105,10 @@ echo "[$(date '+%H:%M:%S')] Stop session=$SESSION_ID exchanges=$EXCHANGE_COUNT s
 if [ "$SINCE_LAST" -ge "$CONSOLIDATE_INTERVAL" ] && [ "$EXCHANGE_COUNT" -gt 0 ]; then
     echo "$EXCHANGE_COUNT" > "$LAST_CONSOLIDATE_FILE"
     echo "[$(date '+%H:%M:%S')] Triggering consolidation at exchange $EXCHANGE_COUNT" >> "$STATE_DIR/hook.log"
-    agentkg prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
+    "$AGENTKG" prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
 fi
 
 # 4. Async snapshot
-agentkg snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
+"$AGENTKG" snapshot --repo "$REPO_ROOT" --label "session-end" 2>/dev/null &
 
 echo "{}"
