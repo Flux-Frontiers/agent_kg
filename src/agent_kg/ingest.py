@@ -181,6 +181,7 @@ class IngestResult:
     :param task_nodes: Task nodes created.
     :param edges_created: Number of new edges added.
     :param profile_updates: Preference/commitment/expertise records found.
+    :param skip_reason: Why the turn was skipped, or None if it was ingested.
     """
 
     def __init__(self) -> None:
@@ -192,6 +193,7 @@ class IngestResult:
         self.edges_created: int = 0
         self.profile_updates: list[dict[str, Any]] = []
         self.skipped: bool = False
+        self.skip_reason: str | None = None
 
     def __repr__(self) -> str:
         if self.skipped:
@@ -228,6 +230,7 @@ def ingest_turn(
     # Skip noise turns (slash commands, empty-after-stripping, session sentinels)
     if _should_skip_turn(text):
         result.skipped = True
+        result.skip_reason = "noise"
         return result
 
     now = datetime.now(UTC)
@@ -235,6 +238,7 @@ def ingest_turn(
     # Drop a repeated ingest of the same turn before it consumes a turn index.
     if _is_recent_duplicate(text, session, store, now):
         result.skipped = True
+        result.skip_reason = "duplicate"
         return result
 
     turn_idx = session.next_turn_index()

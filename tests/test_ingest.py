@@ -327,3 +327,13 @@ def test_genuine_repeat_outside_the_window_is_kept(session, store):
 
     assert second.skipped is False
     assert len(store.get_all_turns(session_id=session.id)) == 2
+
+
+def test_skip_reason_distinguishes_duplicate_from_noise(session, store):
+    """Callers can tell why a turn was rejected."""
+    ingest("a perfectly ordinary turn", "user", session, store)
+    duplicate = ingest("a perfectly ordinary turn", "user", session, store)
+    noise = ingest("/release", "user", session, store)
+
+    assert duplicate.skip_reason == "duplicate"
+    assert noise.skip_reason == "noise"

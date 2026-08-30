@@ -86,7 +86,10 @@ def ingest(
     kg = _resolve_kg(repo, person, session)
     result = kg.ingest(text=text, role=role, embed=not no_embed)
     if result.skipped:
-        click.echo("Turn skipped (slash command, empty, or system-only content).")
+        if result.skip_reason == "duplicate":
+            click.echo("Turn skipped (identical turn already ingested moments ago).")
+        else:
+            click.echo("Turn skipped (slash command, empty, or system-only content).")
         kg.close()
         return
     click.echo(f"Ingested turn #{kg.session.turn_count - 1} (role={role})")
