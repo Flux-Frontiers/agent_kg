@@ -205,7 +205,7 @@ def prune_cmd(window: int, repo: str, person: str, session: str | None, force: b
         )
         kg.close()
         return
-    report = kg.prune(window=window)
+    report = kg.prune(window=window, session_id=session or None)
     click.echo(f"Pruning pass {report.pruning_pass} complete.")
     click.echo(f"  Summaries created: {report.summaries_created}")
     click.echo(f"  Turns pruned: {report.turns_pruned}")

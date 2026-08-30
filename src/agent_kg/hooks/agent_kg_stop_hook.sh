@@ -111,7 +111,8 @@ echo "[$(date '+%H:%M:%S')] Stop session=$SESSION_ID exchanges=$EXCHANGE_COUNT s
 if [ "$SINCE_LAST" -ge "$CONSOLIDATE_INTERVAL" ] && [ "$EXCHANGE_COUNT" -gt 0 ]; then
     echo "$EXCHANGE_COUNT" > "$LAST_CONSOLIDATE_FILE"
     echo "[$(date '+%H:%M:%S')] Triggering consolidation at exchange $EXCHANGE_COUNT" >> "$STATE_DIR/hook.log"
-    "$AGENTKG" prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1 &
+    "$AGENTKG" prune --repo "$REPO_ROOT" --force \
+        ${SESSION_ID:+--session "$SESSION_ID"} >> "$STATE_DIR/hook.log" 2>&1 &
 fi
 
 # 4. Async snapshot

@@ -31,7 +31,7 @@ STATE_DIR="$HOME/.agentkg/hook_state"
 mkdir -p "$STATE_DIR"
 
 INPUT=$(cat)
-SESSION_ID=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_id','unknown'))" 2>/dev/null)
+SESSION_ID=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_id',''))" 2>/dev/null)
 TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null)
 TRANSCRIPT_PATH="${TRANSCRIPT_PATH/#\~/$HOME}"
 
@@ -59,15 +59,16 @@ if [ -z "$AGENTKG" ]; then
     exit 0
 fi
 
-echo "[$(date '+%H:%M:%S')] PreCompact triggered for session $SESSION_ID" >> "$STATE_DIR/hook.log"
+echo "[$(date '+%H:%M:%S')] PreCompact triggered for session ${SESSION_ID:-unknown}" >> "$STATE_DIR/hook.log"
 
 # Run prune synchronously — summaries + embeddings must land before compaction
-"$AGENTKG" prune --repo "$REPO_ROOT" --force >> "$STATE_DIR/hook.log" 2>&1
+"$AGENTKG" prune --repo "$REPO_ROOT" --force \
+    ${SESSION_ID:+--session "$SESSION_ID"} >> "$STATE_DIR/hook.log" 2>&1
 
 # Snapshot synchronously so the pre-compaction state is preserved
 "$AGENTKG" snapshot --repo "$REPO_ROOT" --label "pre-compact" 2>/dev/null
 
-echo "[$(date '+%H:%M:%S')] PreCompact complete for session $SESSION_ID" >> "$STATE_DIR/hook.log"
+echo "[$(date '+%H:%M:%S')] PreCompact complete for session ${SESSION_ID:-unknown}" >> "$STATE_DIR/hook.log"
 
 # Let compaction proceed
 echo "{}"

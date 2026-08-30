@@ -143,11 +143,13 @@ class AgentKG:
         self,
         token_budget: int | None = None,
         window: int = 20,
+        session_id: str | None = None,
     ) -> PruneReport:
         """Execute one KG Context Pruning pass (Phase 3).
 
         :param token_budget: Optional token budget trigger.
         :param window: Hot window — most-recent N turns are never pruned.
+        :param session_id: Restrict pruning to this session's turns (None = all).
         :return: :class:`~agent_kg.schema.PruneReport` with pass statistics.
         """
         return prune.prune(
@@ -156,6 +158,7 @@ class AgentKG:
             session=self._session,
             window=window,
             token_budget=token_budget,
+            session_id=session_id,
         )
 
     def consolidate(self, force: bool = False) -> dict[str, Any]:

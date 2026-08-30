@@ -70,3 +70,71 @@ class TestShouldConsolidate:
         """The threshold constant is a positive integer."""
         assert isinstance(_CONSOLIDATE_THRESHOLD, int)
         assert _CONSOLIDATE_THRESHOLD > 0
+
+
+# ---------------------------------------------------------------------------
+# Prune session scoping
+#
+# Regression coverage: prune read store.get_all_turns() with no session filter,
+# so a compaction in one session compressed a concurrent session's turns into
+# its own summary clusters.
+# ---------------------------------------------------------------------------
+
+
+def _seed_turns(store, session_id, count, prefix):
+    """Insert ``count`` turns for a session, bypassing ingest."""
+    from agent_kg.schema import Node, NodeKind
+
+    for i in range(count):
+        store.upsert_node(
+            Node(
+                kind=NodeKind.TURN,
+                label=f"{prefix} {i}",
+                text=f"{prefix} turn number {i} with enough words to be worth pruning",
+                role="user" if i % 2 == 0 else "assistant",
+                turn_index=i,
+                token_count=12,
+                session_id=session_id,
+            )
+        )
+
+
+def test_prune_scoped_to_session_leaves_other_sessions_alone(tmp_path):
+    """A scoped prune must not touch a concurrent session's turns."""
+    from agent_kg.prune import prune
+    from agent_kg.store import AgentKGStore
+    from agent_kg.summarize import Summarizer, SummarizerConfig
+
+    store = AgentKGStore(db_path=tmp_path / "t.db", vectors_path=tmp_path / "v.sqlite")
+    try:
+        _seed_turns(store, "mine", 30, "mine")
+        _seed_turns(store, "theirs", 30, "theirs")
+        summarizer = Summarizer(SummarizerConfig(backend="extractive"))
+
+        prune(store, summarizer, window=5, session_id="mine")
+
+        theirs = store.get_all_turns(session_id="theirs")
+        assert len(theirs) == 30, "a concurrent session's turns must survive"
+    finally:
+        store.close()
+
+
+def test_unscoped_prune_still_spans_sessions(tmp_path):
+    """Omitting the scope keeps the previous repo-wide behaviour."""
+    from agent_kg.prune import prune
+    from agent_kg.store import AgentKGStore
+    from agent_kg.summarize import Summarizer, SummarizerConfig
+
+    store = AgentKGStore(db_path=tmp_path / "t.db", vectors_path=tmp_path / "v.sqlite")
+    try:
+        _seed_turns(store, "mine", 30, "mine")
+        _seed_turns(store, "theirs", 30, "theirs")
+        summarizer = Summarizer(SummarizerConfig(backend="extractive"))
+
+        report = prune(store, summarizer, window=5)
+
+        assert report.turns_pruned > 0
+        remaining = len(store.get_all_turns())
+        assert remaining < 60
+    finally:
+        store.close()
