@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Snapshots are built on the shared `kg_utils.snapshots` model, not a
+  hand-rolled reimplementation.** AgentKG's `capture`/`list_snapshots`/
+  `diff_snapshots` predated the fleet's shared snapshot infrastructure and had
+  none of it: snapshots were filed under a bare timestamp filename with no
+  manifest, no tag keying, no `subject`/`tool`/`tool_version` provenance, and
+  none of the fixes the rest of the fleet's snapshot handling has had --
+  including the `kgmodule-utils` 0.19.1 fix for a backfilled delta silently
+  dropping domain-specific fields.
+
+  `agent_kg.snapshots` now exports a `SnapshotManager` subclassing
+  `kg_utils.snapshots.SnapshotManager`, with `capture_conversation()` building
+  the AgentKG metrics dict (node/edge counts, turn count, summary count, open
+  task count, session count, pruning pass) and delegating to the shared
+  `capture()`. `AgentKG.snapshot()` and `agentkg snapshot` both take an
+  optional release tag (`VERSION` / `key=`) and `--subject` / `subject=`, the
+  same convention every other KG module uses: pass the tag for a repo
+  snapshot, omit it for a conversation graph, which has no tag, and get a UTC
+  timestamp instead.
+
+  `.agentkg/snapshots/` keeps its directory layout; the files in it now carry
+  the shared schema (`key`, `branch`, `timestamp`, `version`, `subject`,
+  `tool`, `tool_version`, `metrics`, `vs_previous`, `vs_baseline`) instead of
+  the old flat dict, and a `manifest.json` index is written alongside them for
+  the first time. This is a breaking format change for anything reading
+  `.agentkg/snapshots/*.json` directly; nothing in this repo does.
+
+- **Dependency floors brought current.** `kgmodule-utils` moves
+  `>=0.18.0` -> `>=0.19.1` (needed for the delta-backfill fix above to take
+  effect at all), `doc-kg` `>=0.22.0` -> `>=0.24.1`, `pycode-kg`
+  `>=0.23.1` -> `>=0.26.0`, matching their currently-published releases.
+
+### Added
+
+- **PyPI publishing.** `v0.9.0` was tagged and GitHub-released with a wheel
+  and sdist, but the release workflow had no PyPI publish step, so
+  `agent-kg` never reached the index past `0.8.2`. A `publish` job now runs
+  after the GitHub Release, using PyPI Trusted Publishing (OIDC) the same way
+  `kgmodule-utils` and `pycode-kg` do. Requires a Trusted Publisher configured
+  on the `agent-kg` PyPI project for this repo and workflow before the first
+  tag push will succeed -- see the project's Publishing settings on PyPI.
+
 ## [0.9.0] - 2026-08-30
 
 ### Added

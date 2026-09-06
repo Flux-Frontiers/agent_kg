@@ -305,19 +305,31 @@ class AgentKG:
         """Record end_time for the current session."""
         self._session.close()
 
-    def snapshot(self, label: str | None = None, version: str = "0.1.0") -> dict[str, Any]:
-        """Capture a point-in-time snapshot of this AgentKG's state.
+    def snapshot(
+        self,
+        label: str | None = None,
+        version: str | None = None,
+        key: str = "",
+        subject: str = "",
+    ) -> snapshots.Snapshot:
+        """Capture and persist a point-in-time snapshot of this AgentKG's state.
 
-        :param label: Optional human-readable label.
-        :param version: Version string.
-        :return: Snapshot dict (also written to disk).
+        :param label: Optional human-readable label, stored in ``metrics``.
+        :param version: Version string; auto-detected from the installed
+            package if not provided.
+        :param key: Snapshot identifier. Pass the release tag for a repo
+            snapshot; omit it for a conversation graph, which has no tag, and
+            get a UTC timestamp instead.
+        :param subject: What was measured, e.g. ``repo:agent-kg`` or
+            ``person:eric``.
+        :return: The saved :class:`~agent_kg.snapshots.Snapshot`.
         """
-        return snapshots.capture(
-            store=self._store,
-            snapshots_dir=self._snapshots_dir,
-            label=label,
-            version=version,
+        mgr = snapshots.SnapshotManager(self._snapshots_dir)
+        snap = mgr.capture_conversation(
+            self._store, version=version, key=key, subject=subject, label=label
         )
+        mgr.save_snapshot(snap)
+        return snap
 
     @property
     def profile(self) -> UserProfileStore:
