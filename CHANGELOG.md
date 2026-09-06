@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on the `agent-kg` PyPI project for this repo and workflow before the first
   tag push will succeed -- see the project's Publishing settings on PyPI.
 
+## [0.10.0] - 2026-09-06
+
 ## [0.9.0] - 2026-08-30
 
 ### Added

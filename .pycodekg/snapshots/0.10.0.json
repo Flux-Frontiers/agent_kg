@@ -1,0 +1,145 @@
+{
+  "key": "0.10.0",
+  "branch": "main",
+  "timestamp": "2026-09-06T22:14:09.349620+00:00",
+  "version": "0.10.0",
+  "subject": "repo:agent-kg",
+  "tool": "pycode-kg",
+  "tool_version": "0.26.0",
+  "tree_hash": "32f586e4cad289d7913049513e93e44babd1c1e2",
+  "metrics": {
+    "db_path": ".pycodekg/graph.sqlite",
+    "total_nodes": 3310,
+    "meaningful_nodes": 239,
+    "total_edges": 3307,
+    "node_counts": {
+      "class": 16,
+      "function": 95,
+      "method": 100,
+      "module": 28,
+      "symbol": 3071
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 1031,
+      "CALLS": 1085,
+      "CONTAINS": 211,
+      "IMPORTS": 189,
+      "INHERITS": 5,
+      "RESOLVES_TO": 786
+    },
+    "module_count": 28,
+    "class_count": 16,
+    "function_count": 95,
+    "method_count": 100,
+    "docstring_coverage": 0.82,
+    "snapshot_count": 29,
+    "coverage_documented": 196,
+    "coverage_total": 239,
+    "critical_issues": 3,
+    "complexity_median": 5,
+    "module_node_counts": {
+      "src/agent_kg/__init__.py": 4,
+      "src/agent_kg/app.py": 218,
+      "src/agent_kg/assemble.py": 60,
+      "src/agent_kg/cli/__init__.py": 1,
+      "src/agent_kg/cli/main.py": 399,
+      "src/agent_kg/consolidate.py": 32,
+      "src/agent_kg/graph.py": 177,
+      "src/agent_kg/hooks/resolve_repo_root.py": 38,
+      "src/agent_kg/index.py": 66,
+      "src/agent_kg/ingest.py": 170,
+      "src/agent_kg/kg.py": 2,
+      "src/agent_kg/mcp/__init__.py": 1,
+      "src/agent_kg/mcp/server.py": 89,
+      "src/agent_kg/nlp/__init__.py": 2,
+      "src/agent_kg/nlp/entities.py": 59,
+      "src/agent_kg/nlp/intent.py": 74,
+      "src/agent_kg/nlp/preferences.py": 66,
+      "src/agent_kg/nlp/topics.py": 57,
+      "src/agent_kg/onboard.py": 44,
+      "src/agent_kg/prune.py": 153,
+      "src/agent_kg/query.py": 48,
+      "src/agent_kg/schema.py": 119,
+      "src/agent_kg/session.py": 65,
+      "src/agent_kg/snapshots.py": 35,
+      "src/agent_kg/store.py": 358,
+      "src/agent_kg/summarize.py": 53,
+      "src/agent_kg/user_profile.py": 248,
+      "src/agent_kg/viz.py": 186
+    }
+  },
+  "hotspots": [
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_db",
+      "callers": 17,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:_resolve_kg",
+      "callers": 13,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore._get_db",
+      "callers": 8,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.add_edge",
+      "callers": 7,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore.get_by_kind",
+      "callers": 6,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_backend",
+      "callers": 6,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_node",
+      "callers": 6,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_nodes_by_kind",
+      "callers": 5,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.embed",
+      "callers": 5,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore.upsert",
+      "callers": 5,
+      "callees": 3,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[WARN] 1 dead-code candidates found (`store.py:upsert_node_with_embedding`) -- no callers in code or tests; verify against downstream consumers, then remove or archive",
+    "[INFO] 5 definitions are unused in production code but exercised by tests -- likely public API for downstream packages; not counted against the quality grade",
+    "[WARN] `store.py` has 35 functions/methods/classes -- consider splitting into focused submodules"
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 85,
+    "edges": 6,
+    "coverage_delta": 0.02400000000000002,
+    "critical_issues_delta": 0
+  }
+}

@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-08-15T16:46:56.940360+00:00",
+  "last_update": "2026-09-06T22:14:09.351376+00:00",
   "snapshots": [
     {
       "key": "00a7e2232464ab2430183109a3af280dde492b53",
@@ -2144,6 +2144,86 @@
           "nodes": -23,
           "edges": -60,
           "coverage_delta": 0.015000000000000013,
+          "critical_issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "0.10.0",
+      "branch": "main",
+      "timestamp": "2026-09-06T22:14:09.349620+00:00",
+      "version": "0.10.0",
+      "subject": "repo:agent-kg",
+      "tool": "pycode-kg",
+      "tool_version": "0.26.0",
+      "file": "0.10.0.json",
+      "metrics": {
+        "db_path": ".pycodekg/graph.sqlite",
+        "total_nodes": 3310,
+        "meaningful_nodes": 239,
+        "total_edges": 3307,
+        "node_counts": {
+          "class": 16,
+          "function": 95,
+          "method": 100,
+          "module": 28,
+          "symbol": 3071
+        },
+        "edge_counts": {
+          "ATTR_ACCESS": 1031,
+          "CALLS": 1085,
+          "CONTAINS": 211,
+          "IMPORTS": 189,
+          "INHERITS": 5,
+          "RESOLVES_TO": 786
+        },
+        "module_count": 28,
+        "class_count": 16,
+        "function_count": 95,
+        "method_count": 100,
+        "docstring_coverage": 0.82,
+        "snapshot_count": 29,
+        "coverage_documented": 196,
+        "coverage_total": 239,
+        "critical_issues": 3,
+        "complexity_median": 5,
+        "module_node_counts": {
+          "src/agent_kg/__init__.py": 4,
+          "src/agent_kg/app.py": 218,
+          "src/agent_kg/assemble.py": 60,
+          "src/agent_kg/cli/__init__.py": 1,
+          "src/agent_kg/cli/main.py": 399,
+          "src/agent_kg/consolidate.py": 32,
+          "src/agent_kg/graph.py": 177,
+          "src/agent_kg/hooks/resolve_repo_root.py": 38,
+          "src/agent_kg/index.py": 66,
+          "src/agent_kg/ingest.py": 170,
+          "src/agent_kg/kg.py": 2,
+          "src/agent_kg/mcp/__init__.py": 1,
+          "src/agent_kg/mcp/server.py": 89,
+          "src/agent_kg/nlp/__init__.py": 2,
+          "src/agent_kg/nlp/entities.py": 59,
+          "src/agent_kg/nlp/intent.py": 74,
+          "src/agent_kg/nlp/preferences.py": 66,
+          "src/agent_kg/nlp/topics.py": 57,
+          "src/agent_kg/onboard.py": 44,
+          "src/agent_kg/prune.py": 153,
+          "src/agent_kg/query.py": 48,
+          "src/agent_kg/schema.py": 119,
+          "src/agent_kg/session.py": 65,
+          "src/agent_kg/snapshots.py": 35,
+          "src/agent_kg/store.py": 358,
+          "src/agent_kg/summarize.py": 53,
+          "src/agent_kg/user_profile.py": 248,
+          "src/agent_kg/viz.py": 186
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 85,
+          "edges": 6,
+          "coverage_delta": 0.02400000000000002,
           "critical_issues_delta": 0
         }
       }
