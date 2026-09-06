@@ -336,6 +336,7 @@ def sessions(repo: str, person: str) -> None:
 
 
 @cli.command()
+@click.argument("version", metavar="VERSION", default="", required=False)
 @click.option("--repo", "-p", default=".", show_default=True, help="Repo root path.")
 @click.option(
     "--person",
@@ -344,13 +345,30 @@ def sessions(repo: str, person: str) -> None:
     help=_PERSON_HELP,
 )
 @click.option("--label", "-l", default=None, help="Human-readable snapshot label.")
-def snapshot(repo: str, person: str, label: str | None) -> None:
-    """Capture a point-in-time snapshot."""
+@click.option(
+    "--subject",
+    default="",
+    type=str,
+    help="What was measured, e.g. 'repo:agent-kg' or 'person:eric'.",
+)
+def snapshot(repo: str, person: str, label: str | None, version: str, subject: str) -> None:
+    """Capture a point-in-time snapshot.
+
+    Pass VERSION as the release tag when snapshotting a repo release; omit it
+    for a conversation graph, which has no tag, and get a UTC timestamp
+    instead. The tag becomes the snapshot's key.
+    """
     kg = _resolve_kg(repo, person, None)
-    snap = kg.snapshot(label=label)
-    click.echo(f"Snapshot captured: {snap['timestamp']}")
-    click.echo(f"  Nodes: {snap['node_count']}, Edges: {snap['edge_count']}")
-    click.echo(f"  Turns: {snap.get('turn_count', 0)}, Summaries: {snap.get('summary_count', 0)}")
+    # An explicit VERSION is a release tag and becomes the key. An
+    # auto-detected one is the measuring tool's version and must not be.
+    snap = kg.snapshot(label=label, key=version or "", subject=subject)
+    click.echo(f"Snapshot captured: {snap.key}")
+    click.echo(f"  Timestamp: {snap.timestamp}")
+    click.echo(f"  Nodes: {snap.metrics['total_nodes']}, Edges: {snap.metrics['total_edges']}")
+    click.echo(
+        f"  Turns: {snap.metrics.get('turn_count', 0)}, "
+        f"Summaries: {snap.metrics.get('summary_count', 0)}"
+    )
     kg.close()
 
 

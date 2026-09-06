@@ -38,6 +38,7 @@ Embeddings use `all-MiniLM-L6-v2` (384-dim) via `sentence-transformers` + sqlite
 - **Temporal snapshots** — point-in-time JSON snapshots for diffing session state
 - **MCP server** — exposes the full query pipeline as structured tools for AI agent integration
 - **Script-based hooks** — three Claude Code hooks (UserPromptSubmit, Stop, PreCompact) deployed as shell scripts via `install-hooks`
+- **One-line installer** -- `install-skill.sh` provisions the agent skill files, the `/agentkg` slash command, the hooks, the embedding model, and the MCP configs for Claude Code, Kilo Code, GitHub Copilot, and Cline
 
 ---
 
@@ -125,12 +126,76 @@ agentkg-mcp
 
 **Requirements:** Python ≥ 3.12, < 3.14
 
-### Poetry (recommended)
+### Bootstrap script (recommended)
+
+To install AgentKG and wire it into your AI coding agents in one step, run
+`install-skill.sh` from the repository you want to give memory to:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Flux-Frontiers/agent_kg/main/scripts/install-skill.sh | bash
+```
+
+The script is idempotent. Re-run it to pick up a new release.
+
+It performs nine steps:
+
+1. Installs `SKILL.md` into the Claude Code, Kilo Code, and generic agent skill
+   directories
+2. Installs the `/agentkg` slash command into `~/.claude/commands/`
+3. Installs the `/agentkg` slash command into the target repository for Cline
+4. Installs `agent-kg` if the `agentkg` CLI is not already present
+5. Runs `agentkg init` to download the embedding model, then installs the spaCy
+   `en_core_web_sm` model
+6. Runs `agentkg install-hooks` to deploy the three auto-ingest hooks
+7. Writes `.mcp.json` for Claude Code and Kilo Code, and optionally registers a
+   user-scope MCP server in `~/.claude.json`
+8. Writes `.vscode/mcp.json` for GitHub Copilot
+9. Writes `cline_mcp_settings.json` for Cline
+
+Unlike the other KGRAG tools, there is no graph build step. The conversation graph
+fills in as you converse.
+
+To preview the changes without writing anything, use `--dry-run`:
+
+```bash
+bash scripts/install-skill.sh --dry-run
+```
+
+#### Options
+
+| Flag | Description |
+|---|---|
+| `--providers <list>` | Comma-separated provider names, or `all` (default: `all`). Valid names: `claude`, `kilo`, `copilot`, `cline` |
+| `--person <id>` | Profile ID under `~/.kgrag/profiles/` (default: your OS username) |
+| `--hooks <mode>` | Where to wire the auto-ingest hooks: `global` (default), `claude`, or `none` |
+| `--global-mcp` | Also register `agent-kg` as a user-scope MCP server in `~/.claude.json` |
+| `--force` | Overwrite existing hook scripts and `settings.json` entries |
+| `--skip-init` | Skip the embedding-model download |
+| `--dry-run` | Print what would be done without making any changes |
+
+Examples:
+
+```bash
+# Claude Code only, hooks scoped to this repo
+bash scripts/install-skill.sh --providers claude --hooks claude
+
+# Every provider, plus a user-scope MCP server for all repos
+bash scripts/install-skill.sh --providers all --global-mcp --person egs
+```
+
+### Poetry
 
 ```bash
 git clone https://github.com/Flux-Frontiers/agent_kg.git
 cd agent_kg
 poetry install
+```
+
+To install the `dockg` and `pycodekg` CLIs that this repository's pre-commit hook
+and release workflow call, add the `kg` group:
+
+```bash
+poetry install --with dev,kg
 ```
 
 ### As a dependency
@@ -156,6 +221,24 @@ python -m spacy download en_core_web_sm
 ```
 
 Without the model, extraction falls back to keyword/regex heuristics automatically.
+The fallback never raises, so a missing model degrades extraction quality silently.
+Verify the model is loadable in the same environment that owns the `agentkg` CLI:
+
+```bash
+python -c "import spacy; spacy.load('en_core_web_sm')" && echo OK
+```
+
+In a `uv`-managed environment, `spacy download` shells out to `uv pip`, which resolves
+against the active environment rather than the target interpreter. It can report success
+having installed the model elsewhere. If the check above fails after a download, install
+the wheel directly into the interpreter that owns `agentkg`:
+
+```bash
+uv pip install --python "$(dirname "$(command -v agentkg)")/python" \
+  "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+```
+
+`install-skill.sh` performs this check and falls back to the pinned wheel automatically.
 
 ---
 
@@ -207,11 +290,45 @@ Configure in `.mcp.json` (Claude Code / Kilo Code):
 {
   "mcpServers": {
     "agent-kg": {
-      "command": "agentkg-mcp"
+      "command": "agentkg",
+      "args": ["mcp"],
+      "env": {
+        "AGENTKG_REPO": "/absolute/path/to/repo",
+        "AGENTKG_PERSON": "egs"
+      }
     }
   }
 }
 ```
+
+### Environment variables
+
+The server takes no `--repo` or `--person` flags. Scope it with environment
+variables instead:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read |
+| `AGENTKG_PERSON` | `default` | Profile ID under `~/.kgrag/profiles/` |
+| `AGENTKG_SESSION` | unset | Session UUID to scope queries to |
+
+Set `AGENTKG_PERSON` explicitly. It defaults to the literal string `default`, not to
+your OS username, so leaving it unset reads an empty profile even when your real
+profile is populated.
+
+### Register once for every repository
+
+To expose the memory tools in every repository without adding a per-repo `.mcp.json`,
+register the server at user scope in `~/.claude.json`:
+
+```bash
+bash scripts/install-skill.sh --global-mcp --person egs
+```
+
+Leave `AGENTKG_REPO` unset in a user-scope entry. The server then resolves `.` against
+each project's working directory, so one entry serves every repository. Point `command`
+at an absolute path rather than a single repository's `.venv`, because MCP servers do
+not reliably inherit the login shell `PATH`.
 
 ---
 
@@ -238,11 +355,17 @@ agentkg install-hooks --claude
 agentkg install-hooks --global --force
 ```
 
+`install-skill.sh` runs this step for you. Use `agentkg install-hooks` directly to
+change the hook wiring without re-running the full installer.
+
 The installer:
-1. Copies the three `.sh` scripts from the package into `~/.agentkg/hooks/` (executable)
+1. Copies the three `.sh` scripts and the `resolve_repo_root.py` helper from the
+   package into `~/.agentkg/hooks/` (executable)
 2. Merges `UserPromptSubmit`, `Stop`, and `PreCompact` entries into the target `settings.json`
 
-The scripts are portable — they use `git rev-parse --show-toplevel` to locate the repo and only fire when a `.agentkg/` directory is present.
+The scripts are portable. Each resolves the repository from the session transcript
+using `resolve_repo_root.py`, falls back to `git rev-parse --show-toplevel`, and only
+fires when a `.agentkg/` directory is present.
 
 ### Hook state and logs
 
@@ -265,7 +388,14 @@ agent_kg/
 │   ├── agent_kg_stop_hook.sh
 │   └── agent_kg_precompact_hook.sh
 ├── scripts/
+│   ├── install-skill.sh              # one-line installer (skill, hooks, MCP configs)
 │   └── generate_wiki.py              # GitHub wiki generator
+├── .claude/
+│   ├── commands/
+│   │   └── agentkg.md                # /agentkg slash command
+│   └── skills/
+│       └── agent-kg/
+│           └── SKILL.md              # agent skill reference
 ├── src/
 │   └── agent_kg/
 │       ├── __init__.py
@@ -289,7 +419,8 @@ agent_kg/
 │       ├── hooks/                    # bundled hook scripts (deployed by install-hooks)
 │       │   ├── agent_kg_user_prompt_hook.sh
 │       │   ├── agent_kg_stop_hook.sh
-│       │   └── agent_kg_precompact_hook.sh
+│       │   ├── agent_kg_precompact_hook.sh
+│       │   └── resolve_repo_root.py  # repo resolution helper used by all three
 │       ├── cli/
 │       │   ├── main.py               # Click CLI entry points
 │       │   └── __init__.py

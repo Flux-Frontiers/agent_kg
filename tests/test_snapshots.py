@@ -1,14 +1,23 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD. All rights reserved.
 # SPDX-License-Identifier: Elastic-2.0
 
-"""Unit tests for agent_kg.snapshots — capture, list, diff."""
+"""Unit tests for agent_kg.snapshots — the shared-model SnapshotManager.
+
+AgentKG used to hand-roll its own capture/list/diff functions with no
+relationship to kg_utils.snapshots: no tag keying, no manifest, no
+subject/tool/tool_version provenance. This suite covers the migration onto
+the shared model, matching the pattern used by every other KG module.
+"""
+
+from __future__ import annotations
 
 import json
 
 import pytest
+from kg_utils.snapshots import Snapshot as SharedSnapshot
 
 from agent_kg.schema import Node, NodeKind, TaskStatus
-from agent_kg.snapshots import capture, diff_snapshots, list_snapshots
+from agent_kg.snapshots import Snapshot, SnapshotManager
 from agent_kg.store import AgentKGStore
 
 
@@ -24,230 +33,172 @@ def store(tmp_path):
 
 
 @pytest.fixture
-def snaps_dir(tmp_path):
-    """Dedicated snapshots directory."""
-    return tmp_path / "snapshots"
+def mgr(tmp_path):
+    """SnapshotManager rooted at a fresh directory."""
+    return SnapshotManager(tmp_path / "snapshots")
 
 
 # ---------------------------------------------------------------------------
-# capture()
+# Snapshot is the shared class
 # ---------------------------------------------------------------------------
 
 
-class TestCapture:
-    """capture() — write a snapshot JSON and return the dict."""
+def test_snapshot_is_the_shared_class() -> None:
+    """AgentKG does not subclass Snapshot -- that pattern is what shipped a
+    real bug in two sibling repos (see SNAPSHOT_SUBCLASS_RETIREMENT.md)."""
+    assert Snapshot is SharedSnapshot
 
-    def test_returns_dict(self, store, snaps_dir):
-        """capture returns a dictionary."""
-        snap = capture(store, snaps_dir)
-        assert isinstance(snap, dict)
 
-    def test_required_keys(self, store, snaps_dir):
-        """Snapshot contains all required metric keys."""
-        snap = capture(store, snaps_dir)
+# ---------------------------------------------------------------------------
+# capture_conversation()
+# ---------------------------------------------------------------------------
+
+
+class TestCaptureConversation:
+    """capture_conversation() — build a Snapshot from store state."""
+
+    def test_returns_a_snapshot(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        assert isinstance(snap, Snapshot)
+
+    def test_metrics_contains_required_keys(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
         for key in (
-            "version",
-            "timestamp",
-            "node_count",
-            "edge_count",
+            "total_nodes",
+            "total_edges",
             "turn_count",
             "summary_count",
             "open_task_count",
             "session_count",
             "pruning_pass",
         ):
-            assert key in snap, f"Missing key: {key}"
+            assert key in snap.metrics, f"Missing metric: {key}"
 
-    def test_empty_store_zeros(self, store, snaps_dir):
-        """Empty store produces zero counts."""
-        snap = capture(store, snaps_dir)
-        assert snap["node_count"] == 0
-        assert snap["turn_count"] == 0
-        assert snap["open_task_count"] == 0
+    def test_empty_store_zeros(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        assert snap.metrics["total_nodes"] == 0
+        assert snap.metrics["turn_count"] == 0
+        assert snap.metrics["open_task_count"] == 0
 
-    def test_counts_reflect_data(self, store, snaps_dir):
-        """Snapshot counts match actual store contents."""
+    def test_counts_reflect_data(self, store, mgr) -> None:
         store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
         store.upsert_node(Node(kind=NodeKind.TASK, status=str(TaskStatus.OPEN)))
-        snap = capture(store, snaps_dir)
-        assert snap["node_count"] == 2
-        assert snap["turn_count"] == 1
-        assert snap["open_task_count"] == 1
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        assert snap.metrics["total_nodes"] == 2
+        assert snap.metrics["turn_count"] == 1
+        assert snap.metrics["open_task_count"] == 1
 
-    def test_writes_file_to_disk(self, store, snaps_dir):
-        """capture writes exactly one JSON file to snaps_dir."""
-        capture(store, snaps_dir)
-        files = list(snaps_dir.glob("*.json"))
-        assert len(files) == 1
+    def test_label_stored_in_metrics(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0", label="pre-release")
+        assert snap.metrics["label"] == "pre-release"
 
-    def test_file_is_valid_json(self, store, snaps_dir):
-        """The written file contains valid JSON."""
-        capture(store, snaps_dir)
-        f = next(snaps_dir.glob("*.json"))
-        data = json.loads(f.read_text())
-        assert "node_count" in data
+    def test_label_omitted_when_not_given(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        assert "label" not in snap.metrics
 
-    def test_label_stored(self, store, snaps_dir):
-        """The optional label is stored in the snapshot."""
-        snap = capture(store, snaps_dir, label="pre-release")
-        assert snap["label"] == "pre-release"
+    def test_version_stored(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="1.2.3", key="v1.2.3")
+        assert snap.version == "1.2.3"
 
-    def test_version_stored(self, store, snaps_dir):
-        """The version string is stored in the snapshot."""
-        snap = capture(store, snaps_dir, version="1.2.3")
-        assert snap["version"] == "1.2.3"
-
-    def test_creates_snaps_dir(self, store, tmp_path):
-        """capture creates the snapshots directory if it doesn't exist."""
-        new_dir = tmp_path / "new" / "deep" / "dir"
-        assert not new_dir.exists()
-        capture(store, new_dir)
-        assert new_dir.exists()
+    def test_subject_stored(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(
+            store, version="0.10.0", key="v0.10.0", subject="repo:agent-kg"
+        )
+        assert snap.subject == "repo:agent-kg"
 
 
 # ---------------------------------------------------------------------------
-# list_snapshots()
+# Key scheme (matches kgmodule-utils >= 0.19.0)
 # ---------------------------------------------------------------------------
 
 
-class TestListSnapshots:
-    """list_snapshots() — enumerate JSON files in a directory."""
+class TestKeyScheme:
+    """A snapshot is keyed on the supplied tag, not a tree hash."""
 
-    def test_empty_dir_returns_empty(self, snaps_dir):
-        """Non-existent directory returns []."""
-        assert list_snapshots(snaps_dir) == []
+    def test_capture_uses_a_supplied_key(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        assert snap.key == "v0.10.0"
 
-    def test_lists_captured_snapshot(self, store, snaps_dir):
-        """Captured snapshots appear in list_snapshots."""
-        capture(store, snaps_dir)
-        snaps = list_snapshots(snaps_dir)
-        assert len(snaps) == 1
+    def test_capture_without_a_key_does_not_use_the_tree_hash(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0")
+        assert snap.key != snap.tree_hash
 
-    def test_multiple_snapshots(self, store, snaps_dir):
-        """Multiple captures produce multiple entries."""
-        import time
+    def test_save_snapshot_persists_key_subject_and_tool(self, store, mgr, tmp_path) -> None:
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
+        snap = mgr.capture_conversation(
+            store, version="0.10.0", key="v0.10.0", subject="repo:agent-kg"
+        )
+        saved = mgr.save_snapshot(snap)
+        assert saved is not None
 
-        capture(store, snaps_dir, label="a")
-        time.sleep(1.1)  # filenames are second-precision; ensure distinct names
-        capture(store, snaps_dir, label="b")
-        snaps = list_snapshots(snaps_dir)
-        assert len(snaps) == 2
-
-    def test_each_entry_has_path(self, store, snaps_dir):
-        """Each entry in the list has a 'path' key."""
-        capture(store, snaps_dir)
-        snaps = list_snapshots(snaps_dir)
-        assert "path" in snaps[0]
-
-    def test_newest_first_order(self, store, snaps_dir):
-        """Snapshots are returned newest first (by filename sort, reversed)."""
-        capture(store, snaps_dir, label="first")
-        import time
-
-        time.sleep(1.1)  # ensure distinct filenames (timestamp-based)
-        capture(store, snaps_dir, label="second")
-        snaps = list_snapshots(snaps_dir)
-        assert snaps[0]["label"] == "second"
+        on_disk = json.loads(saved.read_text(encoding="utf-8"))
+        assert on_disk["key"] == "v0.10.0"
+        assert on_disk["subject"] == "repo:agent-kg"
+        assert on_disk["tool"] == "agent-kg"
+        assert on_disk["tool_version"]
 
 
 # ---------------------------------------------------------------------------
-# diff_snapshots()
+# save_snapshot / load_snapshot / list_snapshots / diff_snapshots
+# (all inherited from the shared manager -- covered here at the integration
+# level, not re-testing the shared implementation itself)
 # ---------------------------------------------------------------------------
+
+
+class TestPersistence:
+    def test_save_rejects_zero_nodes(self, store, mgr) -> None:
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        with pytest.raises(ValueError, match="0 nodes"):
+            mgr.save_snapshot(snap)
+
+    def test_save_and_load_round_trip(self, store, mgr) -> None:
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        mgr.save_snapshot(snap)
+
+        loaded = mgr.load_snapshot("v0.10.0")
+        assert loaded is not None
+        assert loaded.metrics["total_nodes"] == 1
+
+    def test_list_snapshots(self, store, mgr) -> None:
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
+        snap = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0")
+        mgr.save_snapshot(snap)
+
+        listed = mgr.list_snapshots()
+        assert len(listed) == 1
+        assert listed[0]["key"] == "v0.10.0"
 
 
 class TestDiffSnapshots:
-    """diff_snapshots() — pure function, no I/O."""
+    """diff_snapshots() delta includes AgentKG's domain fields."""
 
-    def test_zero_delta_identical(self):
-        """Two identical snapshots have zero deltas for all numeric fields."""
-        snap = {
-            "node_count": 5,
-            "edge_count": 3,
-            "turn_count": 4,
-            "summary_count": 1,
-            "open_task_count": 0,
-            "session_count": 2,
-            "pruning_pass": 0,
-        }
-        delta = diff_snapshots(snap, snap)
-        for key, v in delta.items():
-            assert v["delta"] == 0, f"{key}: expected delta=0, got {v}"
+    def test_domain_delta_fields_present(self, store, mgr) -> None:
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
+        snap_a = mgr.capture_conversation(store, version="0.10.0", key="a")
+        mgr.save_snapshot(snap_a)
 
-    def test_positive_delta(self):
-        """Nodes added between snapshots show positive delta."""
-        a = {
-            "node_count": 2,
-            "edge_count": 1,
-            "turn_count": 1,
-            "summary_count": 0,
-            "open_task_count": 0,
-            "session_count": 1,
-            "pruning_pass": 0,
-        }
-        b = {
-            "node_count": 10,
-            "edge_count": 5,
-            "turn_count": 6,
-            "summary_count": 2,
-            "open_task_count": 1,
-            "session_count": 1,
-            "pruning_pass": 1,
-        }
-        delta = diff_snapshots(a, b)
-        assert delta["node_count"]["delta"] == 8
-        assert delta["turn_count"]["delta"] == 5
-        assert delta["summary_count"]["delta"] == 2
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s2"))
+        store.upsert_node(Node(kind=NodeKind.TASK, status=str(TaskStatus.OPEN)))
+        snap_b = mgr.capture_conversation(store, version="0.10.0", key="b")
+        mgr.save_snapshot(snap_b)
 
-    def test_negative_delta(self):
-        """Nodes removed between snapshots show negative delta."""
-        a = {
-            "node_count": 10,
-            "edge_count": 5,
-            "turn_count": 8,
-            "summary_count": 0,
-            "open_task_count": 2,
-            "session_count": 1,
-            "pruning_pass": 0,
-        }
-        b = {
-            "node_count": 4,
-            "edge_count": 5,
-            "turn_count": 0,
-            "summary_count": 2,
-            "open_task_count": 0,
-            "session_count": 1,
-            "pruning_pass": 1,
-        }
-        delta = diff_snapshots(a, b)
-        assert delta["node_count"]["delta"] == -6
-        assert delta["turn_count"]["delta"] == -8
+        result = mgr.diff_snapshots("a", "b")
+        assert result["delta"]["turns_delta"] == 1
+        assert result["delta"]["open_tasks_delta"] == 1
 
-    def test_before_after_values(self):
-        """Delta dict contains 'before' and 'after' values."""
-        a = {
-            "node_count": 3,
-            "edge_count": 0,
-            "turn_count": 0,
-            "summary_count": 0,
-            "open_task_count": 0,
-            "session_count": 0,
-            "pruning_pass": 0,
-        }
-        b = {
-            "node_count": 7,
-            "edge_count": 0,
-            "turn_count": 0,
-            "summary_count": 0,
-            "open_task_count": 0,
-            "session_count": 0,
-            "pruning_pass": 0,
-        }
-        delta = diff_snapshots(a, b)
-        assert delta["node_count"]["before"] == 3
-        assert delta["node_count"]["after"] == 7
+    def test_backfilled_delta_keeps_domain_fields(self, store, mgr) -> None:
+        """The load_snapshot backfill also carries the domain delta fields --
+        the exact gap fixed in kgmodule-utils 0.19.1."""
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s"))
+        snap_a = mgr.capture_conversation(store, version="0.10.0", key="a")
+        mgr.save_snapshot(snap_a)
 
-    def test_missing_keys_default_to_zero(self):
-        """Missing numeric keys in either snapshot default to 0."""
-        delta = diff_snapshots({}, {})
-        for key in ("node_count", "edge_count", "turn_count"):
-            assert delta[key]["delta"] == 0
+        store.upsert_node(Node(kind=NodeKind.TURN, session_id="s2"))
+        snap_b = mgr.capture_conversation(store, version="0.10.0", key="b")
+        mgr.save_snapshot(snap_b)
+
+        loaded = mgr.load_snapshot("b")
+        assert loaded is not None
+        assert loaded.vs_previous is not None
+        assert loaded.vs_previous["turns_delta"] == 1

@@ -3,121 +3,163 @@
 
 """snapshots.py — Temporal snapshot support for AgentKG.
 
-Captures point-in-time metrics for the conversation tree:
-  - node/edge counts by kind
-  - turn count, summary count, open tasks
-  - pruning_pass level
-  - session count
+Thin layer over the shared ``kg_utils.snapshots`` module, the same
+infrastructure every other KG module in the fleet uses.
 
-Mirrors the snapshot format used by code_kg and doc_kg.
-Stored in ``<repo>/.agentkg/snapshots/<timestamp>.json``.
+``Snapshot``, ``SnapshotManifest`` and ``PruneResult`` are re-exported from
+``kg_utils.snapshots`` unchanged. This module adds ``SnapshotManager``, which
+sets ``package_name="agent-kg"`` and builds the AgentKG-specific metrics dict
+in ``capture_conversation()``: node/edge counts, turn count, summary count,
+open task count, session count, and the pruning pass, plus ``turns_delta``,
+``summaries_delta`` and ``open_tasks_delta`` in the computed delta.
+
+Before this, AgentKG hand-rolled its own ``capture``/``list_snapshots``/
+``diff_snapshots`` functions with no relationship to the shared model: no tag
+keying, no manifest, no ``subject``/``tool``/``tool_version`` provenance, and
+none of the fixes the rest of the fleet's snapshot infrastructure has had.
+Snapshots were filed under a timestamp-only filename in
+``<repo>/.agentkg/snapshots/`` with no index. That directory layout is
+unchanged; the files in it now carry the shared schema.
+
+Do not subclass ``Snapshot`` here, and do not reimplement ``save_snapshot``,
+``load_snapshot``, ``get_previous``, ``get_baseline`` or ``diff_snapshots``.
+That pattern is what let a real bug ship in two sibling repos -- see
+``kgrag_priv/docs/SNAPSHOT_SUBCLASS_RETIREMENT.md``.
+
+Usage
+-----
+>>> from agent_kg.snapshots import SnapshotManager
+>>> mgr = SnapshotManager(".agentkg/snapshots")
+>>> snapshot = mgr.capture_conversation(store, version="0.10.0", key="v0.10.0",
+...                                      subject="repo:agent-kg")
+>>> mgr.save_snapshot(snapshot)
 """
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from kg_utils.snapshots import PruneResult as PruneResult  # noqa: F401 -- re-exported
+from kg_utils.snapshots import Snapshot as Snapshot  # noqa: F401 -- re-exported
+from kg_utils.snapshots import SnapshotManager as _BaseSnapshotManager
+from kg_utils.snapshots import SnapshotManifest as SnapshotManifest  # noqa: F401 -- re-exported
 
 from agent_kg.schema import NodeKind
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from agent_kg.store import AgentKGStore
 
+__all__ = [
+    "PruneResult",
+    "Snapshot",
+    "SnapshotManager",
+    "SnapshotManifest",
+]
 
-def capture(
-    store: AgentKGStore,
-    snapshots_dir: Path,
-    label: str | None = None,
-    version: str = "0.1.0",
-) -> dict[str, Any]:
-    """Capture and persist a snapshot of the current AgentKG state.
 
-    :param store: The backing store.
-    :param snapshots_dir: Directory to write the snapshot JSON file.
-    :param label: Optional human-readable label.
-    :param version: Version string.
-    :return: The snapshot dict (also written to disk).
+class SnapshotManager(_BaseSnapshotManager):
+    """AgentKG snapshot manager.
+
+    Subclasses the shared ``kg_utils.snapshots.SnapshotManager`` and adds:
+
+    * ``package_name="agent-kg"`` default for version detection.
+    * ``capture_conversation()``, which reads the store for node/edge counts,
+      turn count, summary count, open task count, session count and the
+      current pruning pass, and delegates to the shared ``capture()``.
+    * ``_compute_delta_from_metrics`` extended with ``turns_delta``,
+      ``summaries_delta`` and ``open_tasks_delta``.
+
+    Everything else -- saving, loading, listing, pruning, key handling -- is
+    inherited unchanged.
     """
-    s = store.stats()
-    turns = store.get_all_turns()
-    open_tasks = store.get_open_tasks()
-    summaries = store.get_nodes_by_kind(NodeKind.SUMMARY)
-    sessions = store.list_sessions()
 
-    pruning_pass = 0
-    if turns:
-        pruning_pass = max(t.pruning_pass for t in turns)
-    elif summaries:
-        pruning_pass = max(s_.pruning_pass for s_ in summaries)
+    def __init__(
+        self,
+        snapshots_dir: Path | str,
+        *,
+        package_name: str = "agent-kg",
+    ) -> None:
+        """Initialize the manager rooted at ``snapshots_dir``.
 
-    snap: dict[str, Any] = {
-        "version": version,
-        "label": label,
-        "timestamp": datetime.now(UTC).isoformat(),
-        "kind": "agent",
-        "node_count": s["node_count"],
-        "edge_count": s["edge_count"],
-        "kind_counts": s.get("kind_counts", {}),
-        "turn_count": len(turns),
-        "summary_count": len(summaries),
-        "open_task_count": len(open_tasks),
-        "session_count": len(sessions),
-        "pruning_pass": pruning_pass,
-    }
+        :param snapshots_dir: Directory holding snapshot JSON and the manifest.
+        :param package_name: Package name used for version detection.
+        """
+        super().__init__(snapshots_dir, package_name=package_name)
 
-    snapshots_dir = Path(snapshots_dir)
-    snapshots_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
-    path = snapshots_dir / f"{ts}.json"
-    path.write_text(json.dumps(snap, indent=2))
+    # ------------------------------------------------------------------
+    # capture_conversation — build the AgentKG metrics dict
+    # ------------------------------------------------------------------
 
-    return snap
+    def capture_conversation(
+        self,
+        store: AgentKGStore,
+        version: str | None = None,
+        branch: str | None = None,
+        key: str = "",
+        subject: str = "",
+        label: str | None = None,
+    ) -> Snapshot:
+        """Capture a snapshot of the current AgentKG conversation-tree state.
 
+        :param store: The backing store to read metrics from.
+        :param version: Version string; auto-detected from the installed
+            package if not provided.
+        :param branch: Git branch; auto-detected if ``None``.
+        :param key: Snapshot identifier. Pass the release tag for a repo
+            snapshot; omit it for a conversation graph, which has no tag, and
+            get a UTC timestamp instead -- the same convention as every other
+            KG module.
+        :param subject: What was measured, e.g. ``repo:agent-kg`` or
+            ``person:eric``. Recorded separately from ``version``, which
+            names the measuring tool.
+        :param label: Optional human-readable label, stored in ``metrics``.
+        :return: New :class:`~kg_utils.snapshots.Snapshot` (not yet persisted).
+        """
+        stats = store.stats()
+        turns = store.get_all_turns()
+        open_tasks = store.get_open_tasks()
+        summaries = store.get_nodes_by_kind(NodeKind.SUMMARY)
+        sessions = store.list_sessions()
 
-def list_snapshots(snapshots_dir: Path) -> list[dict[str, Any]]:
-    """Return all snapshots in ``snapshots_dir``, newest first.
+        pruning_pass = 0
+        if turns:
+            pruning_pass = max(t.pruning_pass for t in turns)
+        elif summaries:
+            pruning_pass = max(s.pruning_pass for s in summaries)
 
-    :param snapshots_dir: Directory containing snapshot JSON files.
-    :return: List of snapshot dicts with an added ``path`` key.
-    """
-    p = Path(snapshots_dir)
-    if not p.exists():
-        return []
-    snaps = []
-    for f in sorted(p.glob("*.json"), reverse=True):
-        try:
-            data = json.loads(f.read_text())
-            data["path"] = str(f)
-            snaps.append(data)
-        except Exception:
-            pass
-    return snaps
+        metrics: dict[str, Any] = {
+            "total_nodes": stats["node_count"],
+            "total_edges": stats["edge_count"],
+            "node_counts": stats.get("kind_counts", {}),
+            "turn_count": len(turns),
+            "summary_count": len(summaries),
+            "open_task_count": len(open_tasks),
+            "session_count": len(sessions),
+            "pruning_pass": pruning_pass,
+        }
+        if label is not None:
+            metrics["label"] = label
 
+        return super().capture(
+            version=version,
+            branch=branch,
+            graph_stats_dict=metrics,
+            key=key,
+            subject=subject,
+        )
 
-def diff_snapshots(snap_a: dict[str, Any], snap_b: dict[str, Any]) -> dict[str, Any]:
-    """Compute deltas between two snapshots.
+    # ------------------------------------------------------------------
+    # Delta computation — adds turns_delta, summaries_delta, open_tasks_delta
+    # ------------------------------------------------------------------
 
-    :param snap_a: Earlier snapshot.
-    :param snap_b: Later snapshot.
-    :return: Dict of ``{field: (a_value, b_value, delta)}`` for numeric fields.
-    """
-    numeric_keys = [
-        "node_count",
-        "edge_count",
-        "turn_count",
-        "summary_count",
-        "open_task_count",
-        "session_count",
-        "pruning_pass",
-    ]
-    deltas: dict[str, Any] = {}
-    for key in numeric_keys:
-        a = snap_a.get(key, 0)
-        b = snap_b.get(key, 0)
-        try:
-            deltas[key] = {"before": a, "after": b, "delta": b - a}
-        except TypeError:
-            deltas[key] = {"before": a, "after": b, "delta": None}
-    return deltas
+    def _compute_delta_from_metrics(
+        self, new_m: dict[str, Any], old_m: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Compute delta dict including AgentKG-specific fields."""
+        base = super()._compute_delta_from_metrics(new_m, old_m)
+        base["turns_delta"] = new_m.get("turn_count", 0) - old_m.get("turn_count", 0)
+        base["summaries_delta"] = new_m.get("summary_count", 0) - old_m.get("summary_count", 0)
+        base["open_tasks_delta"] = new_m.get("open_task_count", 0) - old_m.get("open_task_count", 0)
+        return base

@@ -74,7 +74,7 @@ dependencies = [
     # from first_seen/last_seen/created_at, so a federated query can scope this
     # KG by time. AgentKG is the fleet's clearest interval case — a topic
     # spans from first mention to last.
-    "kgmodule-utils[semantic,sqlite-vec]>=0.18.0",
+    "kgmodule-utils[semantic,sqlite-vec]>=0.19.1",
     # Capped at <2: mcp 2.0 removed the low-level Server decorator API
     # (@app.list_tools / @app.call_tool) that agent_kg.mcp.server registers on.
     "mcp>=1.0.0,<2",
@@ -152,8 +152,8 @@ ruff = ">=0.4.0,<0.16"
 optional = true
 
 [tool.poetry.group.kg.dependencies]
-doc-kg = ">=0.22.0"
-pycode-kg = ">=0.23.1"
+doc-kg = ">=0.24.1"
+pycode-kg = ">=0.26.0"
 
 [project.urls]
 Homepage   = "https://github.com/Flux-Frontiers/agent_kg"
