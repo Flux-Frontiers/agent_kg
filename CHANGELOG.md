@@ -42,6 +42,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A one-line installer.** `scripts/install-skill.sh` bootstraps AgentKG's
+  AI-agent integration in one step: skill files, the `/agentkg` slash command,
+  the CLI itself if missing, the embedding model and spaCy's `en_core_web_sm`,
+  the three auto-ingest hooks, and MCP configs for Claude Code, Kilo Code,
+  GitHub Copilot and Cline.
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Flux-Frontiers/agent_kg/main/scripts/install-skill.sh | bash
+  ```
+
+  Supports `--dry-run`, `--providers`, `--person`, `--hooks`, `--force`,
+  `--skip-init` and `--global-mcp`. Backs up `~/.claude.json` before writing a
+  user-scope MCP entry into it. See the README's "Bootstrap script" section
+  for the full flag reference.
+
 - **PyPI publishing.** `v0.9.0` was tagged and GitHub-released with a wheel
   and sdist, but the release workflow had no PyPI publish step, so
   `agent-kg` never reached the index past `0.8.2`. A `publish` job now runs
