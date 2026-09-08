@@ -202,3 +202,13 @@ class TestDiffSnapshots:
         assert loaded is not None
         assert loaded.vs_previous is not None
         assert loaded.vs_previous["turns_delta"] == 1
+
+
+def test_package_name_comes_from_the_class_attribute(mgr) -> None:
+    """Replaces the deleted __init__, whose only job was this string.
+
+    Against kgmodule-utils < 0.20.0 the base has no package_name class
+    attribute, so every snapshot's tool field would read "kg-utils".
+    """
+    assert mgr.package_name == "agent-kg"
+    assert SnapshotManager.package_name == "agent-kg"

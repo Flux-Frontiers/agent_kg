@@ -47,8 +47,6 @@ from kg_utils.snapshots import SnapshotManifest as SnapshotManifest  # noqa: F40
 from agent_kg.schema import NodeKind
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from agent_kg.store import AgentKGStore
 
 __all__ = [
@@ -75,18 +73,9 @@ class SnapshotManager(_BaseSnapshotManager):
     inherited unchanged.
     """
 
-    def __init__(
-        self,
-        snapshots_dir: Path | str,
-        *,
-        package_name: str = "agent-kg",
-    ) -> None:
-        """Initialize the manager rooted at ``snapshots_dir``.
-
-        :param snapshots_dir: Directory holding snapshot JSON and the manifest.
-        :param package_name: Package name used for version detection.
-        """
-        super().__init__(snapshots_dir, package_name=package_name)
+    #: Version detection reads this; the base records it as the snapshot's
+    #: ``tool``. Replaces an ``__init__`` that only forwarded to ``super()``.
+    package_name = "agent-kg"
 
     # ------------------------------------------------------------------
     # capture_conversation — build the AgentKG metrics dict

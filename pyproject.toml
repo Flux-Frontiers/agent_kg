@@ -74,7 +74,11 @@ dependencies = [
     # from first_seen/last_seen/created_at, so a federated query can scope this
     # KG by time. AgentKG is the fleet's clearest interval case — a topic
     # spans from first mention to last.
-    "kgmodule-utils[semantic,sqlite-vec]>=0.19.1",
+    # 0.20.0 is a hard requirement, not a preference: snapshots.py sets the
+    # package_name class attribute instead of carrying an __init__ that only
+    # forwarded to super(). Against 0.19.x the manager reports itself as
+    # "kg-utils" in every snapshot's tool field.
+    "kgmodule-utils[semantic,sqlite-vec]>=0.20.0",
     # Capped at <2: mcp 2.0 removed the low-level Server decorator API
     # (@app.list_tools / @app.call_tool) that agent_kg.mcp.server registers on.
     "mcp>=1.0.0,<2",
