@@ -2,18 +2,17 @@
 
 > Released: 2026-09-08
 
-AgentKG's `SnapshotManager` sheds the last of its hand-rolled boilerplate,
-now that the fleet's shared snapshot base carries what every KG module was
-independently reimplementing.
+AgentKG's `SnapshotManager` drops its last hand-rolled override, now that
+the fleet's shared snapshot base covers it.
 
 ## What changed
 
-**`SnapshotManager.__init__` is gone.** It existed only to forward to
-`super().__init__()` and set one string. `kgmodule-utils` 0.20.0 replaced
-that pattern fleet-wide with a `package_name` class attribute, and AgentKG's
-override — along with the same override in seven of the fleet's eight other
-KG modules — is retired in favor of it. Nothing else about snapshot capture,
-storage, or the on-disk schema changes.
+**`SnapshotManager.__init__` is gone.** It forwarded to `super().__init__()`
+to set one string. `kgmodule-utils` 0.20.0 replaces that pattern fleet-wide
+with a `package_name` class attribute; AgentKG's override, along with the
+same override in seven of the fleet's eight other KG modules, is retired in
+favor of it. Snapshot capture, storage, and the on-disk schema are
+unchanged.
 
 **The `kgmodule-utils` floor moves to `>=0.20.0`**, and it's a hard
 requirement rather than a preference: against 0.19.x, the base class has no
@@ -31,12 +30,10 @@ existing `CITATION.cff`.
 
 ## Upgrading
 
-If you subclassed `agent_kg.snapshots.SnapshotManager` and called
-`super().__init__()` yourself, that call now resolves to the shared base
-class directly — nothing further is required unless your subclass depended
-on AgentKG's `__init__` running any AgentKG-specific logic, which it never
-did. Otherwise, bump `kgmodule-utils` to `>=0.20.0` and `poetry install`;
-no other action is needed.
+Bump `kgmodule-utils` to `>=0.20.0` and run `poetry install`. If you
+subclassed `agent_kg.snapshots.SnapshotManager` and called
+`super().__init__()`, that call now resolves to the shared base class
+directly; AgentKG's `__init__` never did anything beyond that.
 
 ---
 

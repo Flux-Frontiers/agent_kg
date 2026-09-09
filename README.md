@@ -438,7 +438,7 @@ agent_kg/
 
 ## Citation
 
-If you use AgentKG in research or a project, please cite it:
+Cite AgentKG as:
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21250047-blue.svg)](https://doi.org/10.5281/zenodo.21250047)
 
