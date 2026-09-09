@@ -156,8 +156,13 @@ ruff = ">=0.4.0,<0.16"
 optional = true
 
 [tool.poetry.group.kg.dependencies]
-doc-kg = ">=0.24.1"
-pycode-kg = ">=0.26.0"
+# Both floors are the releases that retired these packages' own snapshot
+# overrides and moved them onto kgmodule-utils>=0.20.0, the same SDK this repo
+# now requires. Pinned lower, `poetry install --with kg` could resolve a dockg
+# or pycodekg predating the shared extension points into the same environment
+# as an agent_kg that depends on them.
+doc-kg = ">=0.26.0"
+pycode-kg = ">=0.27.0"
 
 [project.urls]
 Homepage   = "https://github.com/Flux-Frontiers/agent_kg"

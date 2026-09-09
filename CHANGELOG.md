@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`SnapshotManager.__init__` is gone**, replaced by the `package_name` class
+  attribute added in `kgmodule-utils` 0.20.0. Its entire body forwarded to
+  `super()` to change one string, which seven of the fleet's eight KG modules
+  were also doing.
+
+  Nothing else changes here. This module was already at the target shape -- no
+  `Snapshot` subclass, no `diff_snapshots` override, and a module docstring
+  stating the rule the other seven had to be refactored into.
+
+- **The floor on `kgmodule-utils` moves to `>=0.20.0`**, a hard requirement
+  rather than a preference: against 0.19.x the base has no `package_name` class
+  attribute, so every snapshot's `tool` field would read `"kg-utils"`.
+
+### Fixed
+
+- **The `doc-kg` and `pycode-kg` tooling pins** now floor on the releases that
+  retired those packages' own snapshot overrides -- doc-kg 0.26.0 and
+  pycode-kg 0.27.0 -- so `poetry install --with kg` cannot resolve a dockg or
+  pycodekg predating the shared extension points into an environment that
+  depends on them.
+
+## [0.10.0] - 2026-09-06
+
+### Changed
+
 - **Snapshots are built on the shared `kg_utils.snapshots` model, not a
   hand-rolled reimplementation.** AgentKG's `capture`/`list_snapshots`/
   `diff_snapshots` predated the fleet's shared snapshot infrastructure and had
@@ -65,7 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on the `agent-kg` PyPI project for this repo and workflow before the first
   tag push will succeed -- see the project's Publishing settings on PyPI.
 
-## [0.10.0] - 2026-09-06
 
 ## [0.9.0] - 2026-08-30
 
