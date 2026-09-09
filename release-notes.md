@@ -1,56 +1,42 @@
-# Release Notes — v0.10.0
+# Release Notes — v0.11.0
 
-> Released: 2026-09-06
+> Released: 2026-09-08
 
-AgentKG's snapshots move onto the fleet's shared model, and a one-line
-installer now sets up the whole AI-agent integration in a single command.
+AgentKG's `SnapshotManager` sheds the last of its hand-rolled boilerplate,
+now that the fleet's shared snapshot base carries what every KG module was
+independently reimplementing.
 
 ## What changed
 
-**Snapshots are built on the shared `kg_utils.snapshots` model.** Until now,
-AgentKG's snapshot support was a completely standalone reimplementation with
-no relationship to the rest of the fleet: a bare timestamp filename, no
-manifest, no tag keying, and no `subject`/`tool`/`tool_version` provenance.
-It had none of the fixes the shared infrastructure has picked up over the
-past several releases, including a fix shipped just this week for a
-backfilled delta that silently dropped domain-specific fields.
+**`SnapshotManager.__init__` is gone.** It existed only to forward to
+`super().__init__()` and set one string. `kgmodule-utils` 0.20.0 replaced
+that pattern fleet-wide with a `package_name` class attribute, and AgentKG's
+override — along with the same override in seven of the fleet's eight other
+KG modules — is retired in favor of it. Nothing else about snapshot capture,
+storage, or the on-disk schema changes.
 
-`AgentKG.snapshot()` and `agentkg snapshot` now take an optional release tag
-and a `--subject`, the same convention every other KG module in the fleet
-uses: pass the tag when snapshotting a release, omit it for an ordinary
-conversation graph and get a UTC timestamp instead. `.agentkg/snapshots/`
-keeps its directory layout, but the files in it now carry the shared schema,
-and a `manifest.json` index is written alongside them for the first time.
-This is a breaking format change for anything reading those files directly;
-nothing in this repo does.
+**The `kgmodule-utils` floor moves to `>=0.20.0`**, and it's a hard
+requirement rather than a preference: against 0.19.x, the base class has no
+`package_name` attribute, and every snapshot's `tool` field would silently
+read `"kg-utils"` instead of `"agent-kg"`.
 
-**A one-line installer.** `scripts/install-skill.sh` sets up everything a
-repository needs to give an AI coding agent persistent conversational
-memory: the skill files, the `/agentkg` slash command, the CLI itself if
-it's missing, the embedding model, the auto-ingest hooks, and MCP server
-configuration for Claude Code, Kilo Code, GitHub Copilot, and Cline.
+**Tooling pins for `doc-kg` and `pycode-kg` moved up** to the releases that
+retired those packages' own snapshot overrides — 0.26.0 and 0.27.0
+respectively — so `poetry install --with kg` can no longer resolve a version
+of either that predates the shared extension points it now depends on.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/Flux-Frontiers/agent_kg/main/scripts/install-skill.sh | bash
-```
-
-It's idempotent, supports a `--dry-run` preview, and backs up
-`~/.claude.json` before writing to it.
-
-**PyPI publishing.** The previous release, `v0.9.0`, was tagged and
-GitHub-released but never reached PyPI — the workflow had no publish step.
-This release adds one, using PyPI's Trusted Publishing.
+**The README gained a Citation section**, with APA and BibTeX blocks
+matching the convention used across the rest of the fleet, alongside the
+existing `CITATION.cff`.
 
 ## Upgrading
 
-Dependency floors moved to match currently-published releases:
-`kgmodule-utils` to `>=0.19.1` (needed for the snapshot delta fix to take
-effect), `doc-kg` to `>=0.24.1`, `pycode-kg` to `>=0.26.0`.
-
-If your own code reads `.agentkg/snapshots/*.json` directly, expect the new
-schema. Nothing else requires action — `AgentKG.snapshot()` and
-`agentkg snapshot` work without arguments exactly as before, just with
-richer output when you pass a tag and subject.
+If you subclassed `agent_kg.snapshots.SnapshotManager` and called
+`super().__init__()` yourself, that call now resolves to the shared base
+class directly — nothing further is required unless your subclass depended
+on AgentKG's `__init__` running any AgentKG-specific logic, which it never
+did. Otherwise, bump `kgmodule-utils` to `>=0.20.0` and `poetry install`;
+no other action is needed.
 
 ---
 

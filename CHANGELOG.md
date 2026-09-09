@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-08
+
 ### Changed
 
 - **`SnapshotManager.__init__` is gone**, replaced by the `package_name` class
