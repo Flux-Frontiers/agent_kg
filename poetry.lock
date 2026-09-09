@@ -1000,19 +1000,19 @@ files = [
 
 [[package]]
 name = "doc-kg"
-version = "0.24.1"
+version = "0.26.0"
 description = "A tool to build a semantically searchable knowledge graph from markdown and text documents"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["kg"]
 files = [
-    {file = "doc_kg-0.24.1-py3-none-any.whl", hash = "sha256:f943b15a74effad63eb7b28b5833ab2e708fea523a29d6d68a99335b8675f039"},
-    {file = "doc_kg-0.24.1.tar.gz", hash = "sha256:0dcf9f63c1546e9ad8377720e68aab6bcfba0e21eb7d90b7467b86ddbf09ac34"},
+    {file = "doc_kg-0.26.0-py3-none-any.whl", hash = "sha256:0827bed5b18c8f72650fb2b7c823850a49381db4979bcce8905e87e7a0ef14b0"},
+    {file = "doc_kg-0.26.0.tar.gz", hash = "sha256:a7b0968b665c46fe8a8220095f06347f3650f6ee778f29573a5a51233d904c71"},
 ]
 
 [package.dependencies]
 click = ">=8.1.0,<9"
-kgmodule-utils = {version = ">=0.19.0", extras = ["semantic"]}
+kgmodule-utils = {version = ">=0.20.0", extras = ["semantic"]}
 mcp = ">=1.0.0,<2"
 pymupdf4llm = ">=0.0.17"
 pyyaml = ">=6.0.0"
@@ -1714,14 +1714,14 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "kgmodule-utils"
-version = "0.19.1"
+version = "0.20.0"
 description = "Shared types, graph store, semantic index, and pipeline base for the KGModule SDK"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main", "kg"]
 files = [
-    {file = "kgmodule_utils-0.19.1-py3-none-any.whl", hash = "sha256:c90228544351d99a294461bd81edf660bdfcd4ed796c7bb24329bb70dc520a9b"},
-    {file = "kgmodule_utils-0.19.1.tar.gz", hash = "sha256:e915c3b77cdf47fbf1ec5b265fd8f5bf735dc14e1e7a422485db89f266c28de9"},
+    {file = "kgmodule_utils-0.20.0-py3-none-any.whl", hash = "sha256:ed8b0ea531437acd0d9e8c53d307ec2fc796e328b3339e284c24714e375ad832"},
+    {file = "kgmodule_utils-0.20.0.tar.gz", hash = "sha256:462c9c84a113615736fb3c5165fd910bb2e8d8c26f6d862bd2be9f1edcb4648f"},
 ]
 
 [package.dependencies]
@@ -3058,19 +3058,19 @@ files = [
 
 [[package]]
 name = "pycode-kg"
-version = "0.26.0"
+version = "0.27.0"
 description = "A tool to build a searchable knowledge graph from Python repositories"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["kg"]
 files = [
-    {file = "pycode_kg-0.26.0-py3-none-any.whl", hash = "sha256:e1a513b583f6f094568292f62af04f9fc563a4b553f4d71a31ececa51be2cfb8"},
-    {file = "pycode_kg-0.26.0.tar.gz", hash = "sha256:4252ddb8a8f97cadfab8998a1c9ab37b9609313df9e5487fb88b6803fac6bc0d"},
+    {file = "pycode_kg-0.27.0-py3-none-any.whl", hash = "sha256:39eac05f5fc3be2e39ad9bff5789fc5824721a5ca4311f47511b2cfc4c12db8f"},
+    {file = "pycode_kg-0.27.0.tar.gz", hash = "sha256:bc2d4f591a095897301b24c3b4b64b7e04aebaf36394381cc264610540178e80"},
 ]
 
 [package.dependencies]
 click = ">=8.1.0,<9"
-kgmodule-utils = {version = ">=0.19.0", extras = ["semantic", "viz3d"]}
+kgmodule-utils = {version = ">=0.20.0", extras = ["semantic", "viz3d"]}
 mcp = ">=1.0.0,<2"
 networkx = ">=3.0"
 numpy = ">=1.24.0"
@@ -3084,7 +3084,7 @@ torch = ">=2.5.1"
 [package.extras]
 all = ["PyQt5 (>=5.15.0)", "markdown (>=3.6)", "param (>=2.0.0)", "plotly (>=5.14.0)", "pyvis (>=0.3.2)", "pyvista (>=0.44.0)", "pyvistaqt (>=0.11.0)", "quiltwright (>=0.8.0)", "streamlit (>=1.56.0)", "trame-vtk (>=2.0.0)"]
 viz = ["plotly (>=5.14.0)", "pyvis (>=0.3.2)", "streamlit (>=1.56.0)"]
-viz3d = ["PyQt5 (>=5.15.0)", "kgmodule-utils[viz3d-qt,viz3d-render] (>=0.18.1)", "markdown (>=3.6)", "param (>=2.0.0)", "pyvistaqt (>=0.11.0)", "quiltwright (>=0.8.0)", "trame-vtk (>=2.0.0)"]
+viz3d = ["PyQt5 (>=5.15.0)", "kgmodule-utils[viz3d-qt,viz3d-render] (>=0.20.0)", "markdown (>=3.6)", "param (>=2.0.0)", "pyvistaqt (>=0.11.0)", "quiltwright (>=0.8.0)", "trame-vtk (>=2.0.0)"]
 
 [[package]]
 name = "pycparser"
@@ -5409,4 +5409,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "ceffa0ad83949ac6530fe2b59304eb571234ae4611ac04d463ea60c0248c0492"
+content-hash = "781b7901d0febf68a3499e598d912167e1f8da50bed3410ea4435974e7579831"
