@@ -33,6 +33,11 @@ _SESSION_SENTINEL = re.compile(r"^\s*Session ended\.\s*$", re.MULTILINE)
 # Slash commands (e.g. /changelog-commit) start with / followed by a word character.
 _SLASH_COMMAND = re.compile(r"^\s*/\w")
 
+# Harness event notifications (background task / subagent completion notices),
+# injected as if they were user turns. Their nested tag content survives
+# _XML_TAG stripping, so they need their own check.
+_TASK_NOTIFICATION = re.compile(r"^\s*<task-notification>")
+
 # Minimum characters required after XML tag stripping to be worth ingesting.
 # Set to 2 to catch truly empty turns (pure system-tag content) without
 # rejecting any short but valid turn like "Hi." or "OK".
@@ -52,8 +57,9 @@ def _should_skip_turn(text: str) -> bool:
     """Return True if this turn should be silently skipped at ingest time.
 
     Turns that are noise from the Claude Code harness — slash commands,
-    near-empty turns after tag stripping, session sentinels — pollute the
-    graph with unhelpful nodes and degrade search quality.
+    near-empty turns after tag stripping, session sentinels, harness event
+    notifications (background task / subagent completion notices) -- pollute
+    the graph with unhelpful nodes and degrade search quality.
 
     :param text: Raw turn text (before any cleaning).
     :return: True if the turn should not be ingested.
@@ -63,6 +69,10 @@ def _should_skip_turn(text: str) -> bool:
         return True
     # Skip session-end sentinels
     if _SESSION_SENTINEL.match(text):
+        return True
+    # Skip harness event notifications (not the user speaking); their nested
+    # tag content can survive _XML_TAG stripping below, so check explicitly.
+    if _TASK_NOTIFICATION.match(text):
         return True
     # Skip turns that are effectively empty after stripping XML tags
     stripped = _XML_TAG.sub("", text)

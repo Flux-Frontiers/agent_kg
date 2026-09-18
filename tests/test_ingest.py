@@ -337,3 +337,24 @@ def test_skip_reason_distinguishes_duplicate_from_noise(session, store):
 
     assert duplicate.skip_reason == "duplicate"
     assert noise.skip_reason == "noise"
+
+
+def test_task_notification_turn_is_skipped(session, store):
+    """Harness event notifications are not the user speaking; they must not be stored."""
+    body = "<task-notification>" + ("Background task finished. " * 50) + "</task-notification>"
+
+    result = ingest(body, "user", session, store)
+
+    assert result.skipped is True
+    assert result.skip_reason == "noise"
+    assert len(store.get_all_turns(session_id=session.id)) == 0
+
+
+def test_turn_mentioning_task_notification_mid_sentence_is_kept(session, store):
+    """A real user turn that merely mentions the string must still be ingested."""
+    result = ingest(
+        "I saw a task-notification pop up earlier, is that expected?", "user", session, store
+    )
+
+    assert result.skipped is False
+    assert len(store.get_all_turns(session_id=session.id)) == 1

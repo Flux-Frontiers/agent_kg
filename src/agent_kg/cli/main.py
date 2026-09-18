@@ -165,7 +165,10 @@ def assemble(query_text: str, budget: int, repo: str, person: str, session: str 
     """Assemble a token-budgeted context block from the graph."""
     kg = _resolve_kg(repo, person, session)
     ctx = kg.assemble_context(query_text, budget=budget)
-    click.echo(ctx)
+    if not ctx:
+        click.echo("_No relevant context found._", err=True)
+    else:
+        click.echo(ctx)
     kg.close()
 
 

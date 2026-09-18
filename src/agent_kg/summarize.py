@@ -159,11 +159,52 @@ class Summarizer:
             return None
 
     @staticmethod
-    def _extractive_fallback(text: str) -> str:
-        """Return the first and last sentence of ``text`` as a stub summary."""
-        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
-        if not sentences:
-            return text[:200]
-        if len(sentences) == 1:
-            return sentences[0]
-        return f"{sentences[0]} ... {sentences[-1]}"
+    def _split_sentences(text: str) -> list[str]:
+        """Split ``text`` into sentences on terminal punctuation.
+
+        :param text: Text to split.
+        :return: Non-empty, stripped sentences.
+        """
+        return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+
+    @classmethod
+    def _extractive_fallback(cls, text: str) -> str:
+        """Return a stub summary built from a cluster's user and assistant turns.
+
+        Cluster text is turns joined by blank lines, each prefixed ``[USER] ``
+        or ``[ASSISTANT] `` (see ``prune.py``). When those prefixes are
+        present, the fallback reports what the user asked and how it was
+        resolved. When they are absent (e.g. a single arbitrary block of
+        text), it falls back to a plain first + last sentence extract.
+
+        :param text: Conversation text to summarize.
+        :return: Summary string.
+        """
+        turns = re.findall(
+            r"\[(USER|ASSISTANT)\]\s*(.*?)(?=\n\n\[(?:USER|ASSISTANT)\]|\Z)", text, re.S
+        )
+        if not turns:
+            sentences = cls._split_sentences(text)
+            if not sentences:
+                return text[:200]
+            if len(sentences) == 1:
+                return sentences[0]
+            return f"{sentences[0]} ... {sentences[-1]}"
+
+        user_turns = [t for role, t in turns if role == "USER"]
+        assistant_turns = [t for role, t in turns if role == "ASSISTANT"]
+
+        asked = ""
+        if user_turns:
+            sentences = cls._split_sentences(user_turns[0])
+            if sentences:
+                asked = f"User asked: {sentences[0][:200]}"
+
+        outcome = ""
+        for turn_text in reversed(assistant_turns):
+            declarative = [s for s in cls._split_sentences(turn_text) if not s.endswith("?")]
+            if declarative:
+                outcome = f"Outcome: {declarative[0][:200]}"
+                break
+
+        return " ".join(part for part in (asked, outcome) if part)

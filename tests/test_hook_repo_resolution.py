@@ -17,6 +17,7 @@ tests exercise it the same way.
 
 import importlib.util
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -36,9 +37,16 @@ resolver = _load()
 
 
 def _git_repo(path):
-    """Create a git work tree at ``path`` and return it."""
+    """Create a git work tree at ``path`` and return it.
+
+    ``GIT_*`` variables are stripped first. A commit made from a linked
+    worktree exports ``GIT_DIR`` to its hooks, and the pre-commit hook runs
+    this suite; ``git init`` under that ``GIT_DIR`` re-initializes the real
+    repository and sets ``core.bare=true`` in its shared config.
+    """
     path.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "-q", str(path)], check=True, capture_output=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    subprocess.run(["git", "init", "-q", str(path)], check=True, capture_output=True, env=env)
     return path
 
 
@@ -185,3 +193,20 @@ def test_non_git_directory_resolves_to_itself(tmp_path):
     got = resolver.resolve_repo_root(transcript_path=None, env={}, cwd=str(plain))
 
     assert Path(got).resolve() == plain.resolve()
+
+
+def test_git_repo_helper_ignores_inherited_git_dir(tmp_path, monkeypatch):
+    """An inherited GIT_DIR must not redirect the helper's ``git init``."""
+    sentinel = _git_repo(tmp_path / "sentinel")
+    monkeypatch.setenv("GIT_DIR", str(sentinel / ".git"))
+
+    made = _git_repo(tmp_path / "made")
+
+    bare = subprocess.run(
+        ["git", "config", "--file", str(sentinel / ".git" / "config"), "core.bare"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert bare == "false"
+    assert (made / ".git").is_dir()

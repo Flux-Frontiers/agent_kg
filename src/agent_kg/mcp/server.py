@@ -251,9 +251,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
         elif name == "agent_kg_assemble":
             kg = AgentKG(repo_path=repo, person_id=person_id, session_id=session_id)
-            text = kg.assemble_context(
-                arguments["query"],
-                budget=arguments.get("budget", 4000),
+            text = (
+                kg.assemble_context(
+                    arguments["query"],
+                    budget=arguments.get("budget", 4000),
+                )
+                or "No relevant context found."
             )
             kg.close()
 
