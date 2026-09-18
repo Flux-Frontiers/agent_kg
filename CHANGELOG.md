@@ -12,6 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`kgmodule-utils` floor raised to `>=0.22.0`** (was `>=0.20.0`), for the
   fleet's current release. Nothing in this repo depends on 0.22.0's cast-path
   fix specifically; this is a currency bump.
+- **`assemble_context` no longer echoes the caller's live session.** When the
+  given session has turns, its turns are excluded from every section and
+  "Recent Conversation" is omitted; the caller already has them. A fresh or
+  absent session still gets the most recent turns across all sessions.
+- **Relevance floors on recall**: past turns need a score of 0.77 and
+  summaries 0.80, calibrated on a real graph. Below-floor hits are dropped.
+- **"Active Topics" section removed.** It listed noun-chunk fragments of the
+  query.
+- **Every recalled item is dated**, and the block opens with a line saying it
+  may be stale.
+- **Empty assembly returns `""`** instead of a placeholder. `agentkg assemble`
+  prints nothing to stdout in that case, so the prompt hook injects nothing;
+  the MCP tool and Streamlit app show "No relevant context found."
+- **The extractive summary fallback reports what was asked and the outcome**,
+  skipping trailing questions, instead of joining the first and last sentences
+  with "...".
+- **The stop and pre-compact hooks summarize with `SYNTH_BACKEND=omlx`** unless
+  the variable is already set.
+
+### Fixed
+
+- **Harness `<task-notification>` events are no longer ingested as user
+  turns**, and recall ignores ones already stored: notification queries return
+  nothing, notification turns are skipped, and notification blocks are
+  stripped from summaries.
 
 ## [0.11.0] - 2026-09-08
 

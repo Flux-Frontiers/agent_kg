@@ -27,6 +27,10 @@
 #   transcript_path         — path to the JSONL session transcript
 
 CONSOLIDATE_INTERVAL=20   # Run prune every N human messages
+# Summarize on the local oMLX server by default. The Anthropic "primary"
+# backend needs API credit and fails silently to a stub summary without it.
+# An explicit SYNTH_BACKEND in the environment still wins.
+export SYNTH_BACKEND="${SYNTH_BACKEND:-omlx}"
 STATE_DIR="$HOME/.agentkg/hook_state"
 mkdir -p "$STATE_DIR"
 

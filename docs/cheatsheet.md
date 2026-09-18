@@ -117,6 +117,10 @@ fall back to the fleet-wide defaults shared with the rest of KGRAG (`kg_utils.sy
 | `ollama` | `http://localhost:11434/v1` | `hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q8_0` | `[local]` extra |
 | `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | `[local]` extra + `OPENAI_API_KEY` |
 
+The Claude Code stop and pre-compact hooks run `prune` with `SYNTH_BACKEND=omlx`
+unless the variable is already set, so the tool install they call needs the
+`[local]` extra: `uv tool install "agent-kg[llm,local] @ file:///path/to/agent_kg"`.
+
 Set the backend (and optional overrides) in the environment before running `prune`:
 
 ```bash

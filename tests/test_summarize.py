@@ -54,12 +54,46 @@ def test_empty_text_returns_empty() -> None:
 
 
 def test_extractive_fallback_first_and_last() -> None:
+    """Untagged text (no [USER]/[ASSISTANT] prefixes) keeps the old behavior."""
     out = Summarizer._extractive_fallback("First one. Middle bit. Last one.")
     assert out == "First one. ... Last one."
 
 
 def test_extractive_fallback_single_sentence() -> None:
     assert Summarizer._extractive_fallback("Only one sentence here") == "Only one sentence here"
+
+
+def test_extractive_fallback_untagged_text_returns_nonempty() -> None:
+    """Text with no role prefixes still yields a non-empty fallback summary."""
+    assert Summarizer._extractive_fallback("just some plain text with no tags") != ""
+
+
+def test_extractive_fallback_skips_trailing_question_for_outcome() -> None:
+    """When the last assistant sentence is a question, use the declarative one instead."""
+    cluster = (
+        "[USER] Can we ship the release today?\n\n"
+        "[ASSISTANT] CI is green now. Want me to push it now?"
+    )
+    out = Summarizer._extractive_fallback(cluster)
+    assert "Want me to push it now?" not in out
+    assert "CI is green now." in out
+
+
+def test_extractive_fallback_falls_back_to_earlier_assistant_turn() -> None:
+    """If every sentence of the last assistant turn is a question, try earlier ones."""
+    cluster = (
+        "[USER] Status update?\n\n"
+        "[ASSISTANT] The migration finished cleanly.\n\n"
+        "[USER] Anything else?\n\n"
+        "[ASSISTANT] Is that all for now?"
+    )
+    out = Summarizer._extractive_fallback(cluster)
+    assert "Outcome: The migration finished cleanly." in out
+
+
+def test_extractive_fallback_tagged_cluster_has_no_ellipsis_joiner() -> None:
+    cluster = "[USER] What is the plan?\n\n[ASSISTANT] Ship on Friday."
+    assert " ... " not in Summarizer._extractive_fallback(cluster)
 
 
 # ---------------------------------------------------------------------------

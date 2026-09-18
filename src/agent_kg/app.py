@@ -389,7 +389,7 @@ def _run_query(
 
     hits.sort(key=lambda h: h.get("score", 0.0), reverse=True)
 
-    context_md = assemble_context(store, q, budget=budget)
+    context_md = assemble_context(store, q, budget=budget) or "_No relevant context found._"
     return hits, context_md
 
 

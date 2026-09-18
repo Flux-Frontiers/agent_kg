@@ -61,6 +61,11 @@ fi
 
 echo "[$(date '+%H:%M:%S')] PreCompact triggered for session ${SESSION_ID:-unknown}" >> "$STATE_DIR/hook.log"
 
+# Summarize on the local oMLX server by default. The Anthropic "primary"
+# backend needs API credit and fails silently to a stub summary without it.
+# An explicit SYNTH_BACKEND in the environment still wins.
+export SYNTH_BACKEND="${SYNTH_BACKEND:-omlx}"
+
 # Run prune synchronously — summaries + embeddings must land before compaction
 "$AGENTKG" prune --repo "$REPO_ROOT" --force \
     ${SESSION_ID:+--session "$SESSION_ID"} >> "$STATE_DIR/hook.log" 2>&1
