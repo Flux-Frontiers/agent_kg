@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Repo resolution ignores an inherited `GIT_DIR`.** `git_toplevel` ran
+  `git -C <path> rev-parse --show-toplevel` with the caller's environment.
+  Git exports `GIT_DIR` to hooks when a commit is made from a linked
+  worktree, and with it set, git reports on that repository instead of the
+  one containing `<path>`, so the resolver could return the wrong repo.
+  `GIT_*` variables are now stripped from the child's environment, as the
+  test helper already did for `git init`.
+
 ## [0.12.0] - 2026-09-18
 
 ### Changed

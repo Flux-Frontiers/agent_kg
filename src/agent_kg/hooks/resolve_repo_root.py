@@ -59,9 +59,15 @@ def first_transcript_cwd(transcript_path: str | os.PathLike[str]) -> str | None:
 def git_toplevel(path: str | os.PathLike[str]) -> str | None:
     """Return the git work tree containing ``path``, if any.
 
+    ``GIT_*`` variables are stripped from the child's environment. Git exports
+    ``GIT_DIR`` to hooks when a commit is made from a linked worktree, and with
+    it set, ``git -C <path>`` reports on that repository instead of the one
+    containing ``path``.
+
     :param path: Directory to inspect.
     :return: Absolute path to the work tree root, or None.
     """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     try:
         done = subprocess.run(
             ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
@@ -69,6 +75,7 @@ def git_toplevel(path: str | os.PathLike[str]) -> str | None:
             text=True,
             timeout=10,
             check=False,
+            env=env,
         )
     except (OSError, subprocess.SubprocessError):
         return None

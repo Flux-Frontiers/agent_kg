@@ -210,3 +210,26 @@ def test_git_repo_helper_ignores_inherited_git_dir(tmp_path, monkeypatch):
     ).stdout.strip()
     assert bare == "false"
     assert (made / ".git").is_dir()
+
+
+@pytest.mark.parametrize("var", ["GIT_DIR", "GIT_WORK_TREE"])
+def test_inherited_git_location_does_not_redirect_resolution(tmp_path, monkeypatch, var):
+    """An inherited ``GIT_DIR`` or ``GIT_WORK_TREE`` must not pick the repo.
+
+    Git exports ``GIT_DIR`` to hooks when a commit is made from a linked
+    worktree. ``git -C <path> rev-parse`` then reports on the repository the
+    variable names instead of the one containing ``<path>``, so resolution
+    silently returned a sibling repository and
+    ``test_subdirectory_normalizes_to_work_tree_root`` failed inside any
+    worktree commit.
+    """
+    project = _git_repo(tmp_path / "project")
+    nested = project / "src" / "deep"
+    nested.mkdir(parents=True)
+    elsewhere = _git_repo(tmp_path / "elsewhere")
+    monkeypatch.setenv(var, str(elsewhere / ".git") if var == "GIT_DIR" else str(elsewhere))
+
+    got = resolver.git_toplevel(nested)
+
+    assert got is not None
+    assert Path(got).resolve() == project.resolve()
