@@ -1,39 +1,54 @@
-# Release Notes — v0.11.0
+# Release Notes -- v0.12.0
 
-> Released: 2026-09-08
+> Released: 2026-09-18
 
-AgentKG's `SnapshotManager` drops its last hand-rolled override, now that
-the fleet's shared snapshot base covers it.
+The context AgentKG injects before each prompt is now worth reading. It used to
+repeat the live session back to the agent that was in it, surface loosely
+related turns with no dates, and fill an empty result with a placeholder. This
+release makes recall relevant, dated, and silent when there is nothing to say.
 
 ## What changed
 
-**`SnapshotManager.__init__` is gone.** It forwarded to `super().__init__()`
-to set one string. `kgmodule-utils` 0.20.0 replaces that pattern fleet-wide
-with a `package_name` class attribute; AgentKG's override, along with the
-same override in seven of the fleet's eight other KG modules, is retired in
-favor of it. Snapshot capture, storage, and the on-disk schema are
-unchanged.
+**The live session is no longer echoed back.** When the calling session
+already has turns, those turns are left out of every section and the "Recent
+Conversation" block is omitted: the agent asking already has them. A fresh
+session, or a call with no session, still gets the most recent turns from
+across all sessions, which is the case the block was meant for.
 
-**The `kgmodule-utils` floor moves to `>=0.20.0`**, and it's a hard
-requirement rather than a preference: against 0.19.x, the base class has no
-`package_name` attribute, and every snapshot's `tool` field would silently
-read `"kg-utils"` instead of `"agent-kg"`.
+**Recall has relevance floors.** Past turns need a score of 0.77 and summaries
+0.80 to be included, thresholds calibrated against a real conversation graph.
+Anything below is dropped rather than padded in. The "Active Topics" line,
+which listed fragments of the query back to the caller, is gone.
 
-**Tooling pins for `doc-kg` and `pycode-kg` moved up** to the releases that
-retired those packages' own snapshot overrides — 0.26.0 and 0.27.0
-respectively — so `poetry install --with kg` can no longer resolve a version
-of either that predates the shared extension points it now depends on.
+**Everything recalled is dated,** and the block opens by saying it may be
+stale, so the agent reading it treats it as history rather than as the current
+state of the work.
 
-**The README gained a Citation section**, with APA and BibTeX blocks
-matching the convention used across the rest of the fleet, alongside the
-existing `CITATION.cff`.
+**Nothing relevant means nothing injected.** An empty assembly returns an
+empty string, `agentkg assemble` prints nothing, and the prompt hook adds
+nothing to the prompt. The MCP tool and the Streamlit app say "No relevant
+context found."
+
+**Harness notifications stay out of the graph.** Background-task
+`<task-notification>` events were being ingested as user turns, so recall
+could quote an automated event as though the user had said it. They are no
+longer stored, and ones already stored are skipped on recall and stripped from
+summaries.
+
+**Smaller changes.** The extractive summary fallback now states what was asked
+and how it came out, instead of stitching the first and last sentences
+together. The stop and pre-compact hooks summarize with `SYNTH_BACKEND=omlx`
+unless that variable is already set. The `kgmodule-utils` floor moves to
+`>=0.22.0`, the fleet's current release. And 45 snapshot files whose tree-hash
+keys named no commit in this repo were pruned from `.pycodekg/` and `.dockg/`.
 
 ## Upgrading
 
-Bump `kgmodule-utils` to `>=0.20.0` and run `poetry install`. If you
-subclassed `agent_kg.snapshots.SnapshotManager` and called
-`super().__init__()`, that call now resolves to the shared base class
-directly; AgentKG's `__init__` never did anything beyond that.
+Upgrade the package; no rebuild or migration is needed. Existing graphs are
+read as before, and notification turns already in a graph are ignored
+automatically. If a prompt hook now injects nothing, that is the new behavior
+for a query with no relevant history, not a fault. Set `SYNTH_BACKEND`
+yourself if the hooks should summarize with a backend other than oMLX.
 
 ---
 

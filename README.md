@@ -1,9 +1,9 @@
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
+[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
-[![DOI](https://zenodo.org/badge/1186774406.svg)](https://zenodo.org/badge/latestdoi/1186774406)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21250047-blue.svg)](https://zenodo.org/badge/latestdoi/1186774406)
 
 **AgentKG** — Conversational Memory as a Live, Queryable Knowledge Graph
 
@@ -444,7 +444,7 @@ Cite AgentKG as:
 
 **APA**
 
-> Suchanek, E. G. (2026). *AgentKG: Conversational Memory as a Knowledge Graph* (Version 0.11.0) [Software]. Flux-Frontiers. https://doi.org/10.5281/zenodo.21250047
+> Suchanek, E. G. (2026). *AgentKG: Conversational Memory as a Knowledge Graph* (Version 0.12.0) [Software]. Flux-Frontiers. https://doi.org/10.5281/zenodo.21250047
 
 **BibTeX**
 
@@ -452,7 +452,7 @@ Cite AgentKG as:
 @software{suchanek_agent_kg,
   author    = {Suchanek, Eric G.},
   title     = {{AgentKG}: Conversational Memory as a Knowledge Graph},
-  version   = {0.11.0},
+  version   = {0.12.0},
   year      = {2026},
   publisher = {Flux-Frontiers},
   url       = {https://github.com/Flux-Frontiers/agent_kg},
