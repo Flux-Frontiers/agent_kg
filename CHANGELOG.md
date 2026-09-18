@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`kgmodule-utils` floor raised to `>=0.22.0`** (was `>=0.20.0`), for the
+  fleet's current release. Nothing in this repo depends on 0.22.0's cast-path
+  fix specifically; this is a currency bump.
+
 ## [0.11.0] - 2026-09-08
 
 ### Changed
