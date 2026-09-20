@@ -131,7 +131,7 @@ pre-commit = ">=4.5.1"
 # >=9.0.3 is a security floor, not a preference: GHSA-6w46-j5rx-g56g.
 pytest = ">=9.0.3"
 pytest-cov = ">=5.0.0"
-ruff = ">=0.4.0,<0.16"
+ruff = ">=0.15,<0.16"
 
 # ---------------------------------------------------------------------------
 # Maintainer tooling (Poetry group, not a PEP 621 extra)
@@ -162,7 +162,7 @@ optional = true
 # or pycodekg predating the shared extension points into the same environment
 # as an agent_kg that depends on them.
 doc-kg = ">=0.26.0"
-pycode-kg = ">=0.27.0"
+pycode-kg = ">=0.27.1"
 
 [project.urls]
 Homepage   = "https://github.com/Flux-Frontiers/agent_kg"
