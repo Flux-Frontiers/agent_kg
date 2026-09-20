@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`pycode-kg` floor raised to `>=0.27.1`** in the maintainer-only `kg`
+  group, and the `ruff` floor from `>=0.4.0` to `>=0.15` inside the existing
+  `<0.16` cap (`kgrag_priv` sweep item 49, tier 1). Nothing under `src/`
+  imports `pycode-kg`; it is a CLI this repo runs.
+
+No `mcp` floor change: `agentkg-mcp` is built on the low-level
+`mcp.server.Server`, not `mcp.server.fastmcp`, so sweep item 47 does not apply
+here. The fleet roster had listed this repo in error until 2026-09-20, on a
+grep hit that turned out to be a comment.
+
 ## [0.12.1] - 2026-09-18
 
 ### Fixed
