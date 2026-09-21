@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The `kg` Poetry group is gone** (`kgrag_priv` sweep item 50, phase 1).
+  It held `doc-kg` and `pycode-kg`, tools this repo runs but never imports. Under the fleet's
+  "tools are global" rule a tool is installed once with `uv tool` and is
+  never a dependency of the repo; 20 of 22 clones were carrying their own
+  copy, and every copy was a lock entry that drifted on each release.
+  The pre-commit hook needed no change: it already preferred a `.venv` copy
+  and fell back to `PATH`, which is the shape the rest of the fleet is
+  moving to.
+
 - **`pycode-kg` floor raised to `>=0.27.1`** in the maintainer-only `kg`
   group, and the `ruff` floor from `>=0.4.0` to `>=0.15` inside the existing
   `<0.16` cap (`kgrag_priv` sweep item 49, tier 1). Nothing under `src/`

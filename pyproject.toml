@@ -133,37 +133,6 @@ pytest = ">=9.0.3"
 pytest-cov = ">=5.0.0"
 ruff = ">=0.15,<0.16"
 
-# ---------------------------------------------------------------------------
-# Maintainer tooling (Poetry group, not a PEP 621 extra)
-# ---------------------------------------------------------------------------
-# doc-kg and pycode-kg are tools this repo *runs*, not libraries it imports.
-# Nothing under src/ imports either one. They are here because:
-#   - the local .git/hooks/pre-commit rebuilds both indices before committing
-#     (it probes .venv/bin/pycodekg and .venv/bin/dockg first, so an installed
-#     group is exactly what it wants to find),
-#   - .claude/commands/release.md runs `pycodekg build` as a release step,
-#   - .mcp.json serves a `dockg` MCP server.
-# Undeclared, all three silently degrade on a fresh clone.
-#
-# A Poetry group rather than [project.optional-dependencies] on purpose. Groups
-# are maintainer-facing: locked and installable, but NOT written into the
-# wheel's metadata -- so no published extra acquires a sibling package, and the
-# KG fleet's dependency resolution stays decoupled.
-#
-#   poetry install --with kg      # get the dockg / pycodekg CLIs into .venv/bin
-#   poetry install                # default: group is optional, skipped
-[tool.poetry.group.kg]
-optional = true
-
-[tool.poetry.group.kg.dependencies]
-# Both floors are the releases that retired these packages' own snapshot
-# overrides and moved them onto kgmodule-utils>=0.20.0, the same SDK this repo
-# now requires. Pinned lower, `poetry install --with kg` could resolve a dockg
-# or pycodekg predating the shared extension points into the same environment
-# as an agent_kg that depends on them.
-doc-kg = ">=0.26.0"
-pycode-kg = ">=0.27.1"
-
 [project.urls]
 Homepage   = "https://github.com/Flux-Frontiers/agent_kg"
 Repository = "https://github.com/Flux-Frontiers/agent_kg"
