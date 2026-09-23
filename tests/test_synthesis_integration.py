@@ -11,13 +11,16 @@ Every test is parametrized across all three synth backends (``omlx``, ``ollama``
 ``openai``) and marked ``integration`` so CI skips them (``pytest -m "not
 integration"``). Each parametrization skips gracefully when its backend is not
 reachable (no local server, or no API key for ``openai``), so a plain local
-``pytest`` run is always safe.
+``pytest`` run is always safe. A local server that requires a key (oMLX
+started with one answers 401 without it) reads it from ``<BACKEND>_API``:
+``OMLX_API`` or ``OLLAMA_API``. The skip message carries the server's error,
+so a rejected key is not reported as a missing server.
 
 Run locally against whatever servers you have up::
 
     pytest -m integration tests/test_synthesis_integration.py -v
     # override a backend's endpoint/model:
-    OMLX_ENDPOINT=http://localhost:8080/v1 \
+    OMLX_ENDPOINT=http://localhost:8080/v1 OMLX_API=... \
     OLLAMA_ENDPOINT=http://localhost:11434/v1 \
     OPENAI_API_KEY=sk-... \
         pytest -m integration tests/test_synthesis_integration.py -v
@@ -55,8 +58,11 @@ _CONVERSATION = (
 )
 
 
-def _list_models(cfg: SummarizerConfig) -> list[str]:
-    """Return the models the backend in ``cfg`` advertises (empty on failure)."""
+def _probe(cfg: SummarizerConfig) -> tuple[list[str], str]:
+    """Return the models the backend in ``cfg`` advertises, and why not if none.
+
+    :return: ``(models, error)``; ``error`` is empty on success.
+    """
     tc = TextConfig(
         backend=TextBackend(cfg.backend),
         endpoint=cfg.synth_endpoint,
@@ -64,9 +70,14 @@ def _list_models(cfg: SummarizerConfig) -> list[str]:
         api_key=cfg.synth_api_key,
     )
     try:
-        return TextSynthesizer(tc).list_models()
-    except Exception:  # noqa: BLE001
-        return []
+        return TextSynthesizer(tc).list_models(), ""
+    except Exception as exc:  # noqa: BLE001
+        return [], f"{type(exc).__name__}: {exc}"
+
+
+def _list_models(cfg: SummarizerConfig) -> list[str]:
+    """Return the models the backend in ``cfg`` advertises (empty on failure)."""
+    return _probe(cfg)[0]
 
 
 @pytest.fixture(params=["omlx", "ollama", "openai"])
@@ -74,7 +85,8 @@ def summarizer_cfg(request: pytest.FixtureRequest) -> SummarizerConfig:
     """Resolve a reachable ``SummarizerConfig`` for the parametrized backend, or skip.
 
     Honors ``SYNTH_*`` plus per-backend ``OMLX_ENDPOINT`` / ``OLLAMA_ENDPOINT``
-    overrides; ``openai`` requires ``SYNTH_API_KEY`` / ``OPENAI_API_KEY``.
+    overrides and ``OMLX_API`` / ``OLLAMA_API`` keys; ``openai`` requires
+    ``SYNTH_API_KEY`` / ``OPENAI_API_KEY``.
     """
     backend = request.param
 
@@ -93,12 +105,19 @@ def summarizer_cfg(request: pytest.FixtureRequest) -> SummarizerConfig:
         return cfg
 
     endpoint = os.environ.get(f"{backend.upper()}_ENDPOINT") or _LOCAL_ENDPOINT[backend]
-    models = _list_models(SummarizerConfig(backend=backend, synth_endpoint=endpoint))
+    key_var = f"{backend.upper()}_API"
+    key = os.environ.get(key_var, "")
+    models, error = _probe(
+        SummarizerConfig(backend=backend, synth_endpoint=endpoint, synth_api_key=key)
+    )
     if not models:
-        pytest.skip(f"no {backend} server reachable at {endpoint}")
+        hint = "" if key else f"; set {key_var} if the server needs a key"
+        pytest.skip(f"{backend} at {endpoint} unavailable ({error or 'no models'}){hint}")
     preferred = os.environ.get("SYNTH_MODEL") or _PREFERRED_MODEL[backend]
     model = preferred if preferred in models else models[0]
-    return SummarizerConfig(backend=backend, synth_endpoint=endpoint, synth_model=model)
+    return SummarizerConfig(
+        backend=backend, synth_endpoint=endpoint, synth_model=model, synth_api_key=key
+    )
 
 
 @pytest.mark.integration

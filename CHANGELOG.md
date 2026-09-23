@@ -33,6 +33,16 @@ No `mcp` floor change: `agentkg-mcp` is built on the low-level
 here. The fleet roster had listed this repo in error until 2026-09-20, on a
 grep hit that turned out to be a comment.
 
+### Fixed
+
+- **Synthesis integration tests reach a keyed oMLX server.** A local
+  backend's key is read from `<BACKEND>_API` (`OMLX_API`, `OLLAMA_API`) and
+  passed to the probe and the config. An oMLX server started with a key
+  answered 401, and the probe reported it as "no omlx server reachable", so
+  four tests skipped against a server that was running. The skip message now
+  names the variable to set.
+
+
 ## [0.12.1] - 2026-09-18
 
 ### Fixed
