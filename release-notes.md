@@ -1,32 +1,47 @@
-# Release Notes -- v0.12.1
+# Release Notes -- v0.13.0
 
-> Released: 2026-09-18
+> Released: 2026-10-21
 
-A one-fix patch release. AgentKG's Claude Code hooks decide which repository a
-session belongs to before they record the conversation into its graph, and the
-Stop hook prunes that same graph. This release makes that decision reliable
-when the hook's process has inherited a `GIT_DIR` pointing somewhere else.
+AgentKG keeps a global profile for each person, and until now that profile
+always lived under `~/.kgrag/profiles/`. This release lets the profile root
+move: pass `profile_root` to `AgentKG`, or set `AGENTKG_PROFILE_ROOT`.
+Programs that run AgentKG for agents other than you, such as the book-tree
+agents in gutenberg_kg's moots, can now keep those profiles out of yours.
+Nothing changes unless you set one of the two.
 
 ## What changed
 
-**Repo resolution ignores an inherited `GIT_DIR`.** The resolver normalises a
-session's project directory to its git work tree by running `git rev-parse
---show-toplevel`, and it passed the caller's environment through. Git exports
-`GIT_DIR` to the processes it spawns during a commit made from a linked
-worktree, and with it set, git answers for the repository that variable names
-rather than the directory being asked about. A hook running in such a process
-could therefore record into, or prune, the wrong repository's graph. The
-resolver now strips `GIT_*` variables from git's environment. A hook running
-from an ordinary Claude Code prompt, where `GIT_DIR` is not set, was never
-affected.
+**Profiles can live in any directory.** The profile location was written out
+by hand in seven places: the `AgentKG` constructor, the MCP `agent_kg_profile`
+tool, the explorer app, and the `init`, `wipe --global` and `viz` commands.
+All of them now ask one resolver, `agent_kg.user_profile.profile_root()`
+(with `profile_dir(person_id)` for one person's directory). An explicit
+`profile_root` argument wins, then the `AGENTKG_PROFILE_ROOT` environment
+variable, then `~/.kgrag/profiles`. Because the CLI, the MCP server and the
+app all follow the variable, setting it once in a shell or an MCP config moves
+every entry point together, including what `wipe --global` deletes.
+
+**Dependencies are current.** The lock now carries the latest fleet releases,
+including `kgmodule-utils` 0.27.1, and the dependency updates that cleared 25
+Dependabot alerts. No dependency floor changed. Maintainers no longer get
+`doc-kg` and `pycode-kg` from a repo-local Poetry group; those are installed
+once as global tools.
+
+**Synthesis tests find a keyed oMLX server.** The integration tests now read
+a local backend's key from `OMLX_API` or `OLLAMA_API`. Before this, an oMLX
+server started with a key answered 401, and the tests skipped as though no
+server were running.
 
 ## Upgrading
 
 Upgrade with `pip install -U agent-kg`, or `uv tool upgrade agent-kg` for a
-tool install, then run `agentkg install-hooks` once. The installer copies the
-hook scripts and the resolver into `~/.agentkg/hooks/`, so hooks keep running
-the old copy until it is refreshed. No data migration or configuration change
-is needed.
+tool install. No data migration is needed, and existing profiles stay where
+they are. To move profiles, set `AGENTKG_PROFILE_ROOT` and move the
+`<person>/` directories to the new root yourself; AgentKG does not copy them.
+
+Code that patched the private `agent_kg.graph._PROFILE_BASE` constant, as
+some tests did, should set `AGENTKG_PROFILE_ROOT` instead. The constant is
+gone, so such a patch now fails with an `AttributeError`.
 
 ---
 

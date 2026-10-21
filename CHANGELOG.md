@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-21
+
 ### Added
 
 - **Profiles can live in any directory.** `AgentKG(..., profile_root=path)`
@@ -21,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their profiles out of your own.
 
 ### Changed
+
+- **Lock refreshed onto the latest releases**, with no floor changes: the
+  fleet packages (#38), the dependencies behind 25 Dependabot alerts (#36),
+  and `kgmodule-utils` 0.27.1, whose `pdf` and `ingest` extras now declare
+  `pymupdf>=2.0` (`kgrag_priv` sweep item 86).
 
 - **Fleet dependency floors raised and relocked** (`kgrag_priv` sweep item 46):
   `kgmodule-utils` to `>=0.23.0`. The three packages released on 2026-09-20 and put

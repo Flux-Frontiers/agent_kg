@@ -1677,14 +1677,14 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "kgmodule-utils"
-version = "0.27.0"
+version = "0.27.1"
 description = "Shared types, graph store, semantic index, and pipeline base for the KGModule SDK"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main"]
 files = [
-    {file = "kgmodule_utils-0.27.0-py3-none-any.whl", hash = "sha256:39da894124aae271b669726545d29f3342b40c5569a2174648ee4e8366a7d2a1"},
-    {file = "kgmodule_utils-0.27.0.tar.gz", hash = "sha256:eb43fba63ce918697be2f1207a2b1e943859c457c6563067da39fe08a1e6db91"},
+    {file = "kgmodule_utils-0.27.1-py3-none-any.whl", hash = "sha256:176342750f52d539e0491e2fcf04afcc35460244bc4b5a7f1f4e562e6f5de3d7"},
+    {file = "kgmodule_utils-0.27.1.tar.gz", hash = "sha256:573119f13a2bcf4eba9e9a18911dbbb7e516d6913fa73603683eeb0fd71840de"},
 ]
 
 [package.dependencies]
@@ -1696,9 +1696,9 @@ torch = {version = ">=2.5.1", optional = true, markers = "extra == \"semantic\""
 transformers = {version = ">=5.5.0,<6", optional = true, markers = "extra == \"semantic\""}
 
 [package.extras]
-ingest = ["firecrawl-anydoc (>=0.1.9)", "pymupdf4llm (>=1.28.2)"]
+ingest = ["firecrawl-anydoc (>=0.1.9)", "pymupdf (>=2.0)"]
 lancedb = ["lancedb (>=0.19.0)"]
-pdf = ["pymupdf4llm (>=1.28.2)"]
+pdf = ["pymupdf (>=2.0)"]
 semantic = ["numpy (>=1.24.0)", "rich (>=13.0.0,<15.0.0)", "sentence-transformers (>=5.4.1)", "sqlite-vec (==0.1.9)", "torch (>=2.5.1)", "transformers (>=5.5.0,<6)"]
 sqlite-vec = ["sqlite-vec (==0.1.9)"]
 synthesis = ["httpx (>=0.27.0)", "openai (>=1.30.0)", "pillow (>=10.0.0)"]
