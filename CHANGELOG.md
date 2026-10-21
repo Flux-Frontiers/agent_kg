@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Profiles can live in any directory.** `AgentKG(..., profile_root=path)`
+  and the new `AGENTKG_PROFILE_ROOT` environment variable move the directory
+  that holds every person's profile, which was hardcoded to
+  `~/.kgrag/profiles` in seven places. An explicit `profile_root` wins, then
+  the variable, then the old default, so nothing changes unless you set one.
+  The CLI (`init`, `wipe --global`, `viz`), the MCP `agent_kg_profile` tool and
+  the explorer app all resolve the path through the new
+  `agent_kg.user_profile.profile_root` / `profile_dir` helpers. Agents that
+  are not you, such as the tree agents in gutenberg_kg's moots, can now keep
+  their profiles out of your own.
+
 ### Changed
 
 - **Fleet dependency floors raised and relocked** (`kgrag_priv` sweep item 46):

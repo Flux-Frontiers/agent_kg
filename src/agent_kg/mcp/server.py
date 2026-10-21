@@ -41,7 +41,6 @@ Configuration via environment:
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Any
 
 import mcp.server.stdio
@@ -315,10 +314,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
                 text = f"Open tasks ({len(tasks)}):\n" + "\n".join(lines)
 
         elif name == "agent_kg_profile":
-            from agent_kg.user_profile import UserProfileStore
+            from agent_kg.user_profile import UserProfileStore, profile_dir
 
-            profile_dir = Path.home() / ".kgrag" / "profiles" / person_id
-            profile = UserProfileStore(profile_dir)
+            profile = UserProfileStore(profile_dir(person_id))
             text = profile.render_markdown()
             profile.close()
 

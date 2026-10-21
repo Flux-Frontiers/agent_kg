@@ -40,16 +40,13 @@ from agent_kg.schema import NodeKind, PruneReport
 from agent_kg.session import Session
 from agent_kg.store import AgentKGStore
 from agent_kg.summarize import Summarizer, SummarizerConfig
-from agent_kg.user_profile import UserProfileStore
+from agent_kg.user_profile import UserProfileStore, profile_dir
 
 # Default storage layout (mirrors .pycodekg / .dockg convention)
 _AGENTKG_DIR = ".agentkg"
 _DB_NAME = "graph.sqlite"
 _VECTORS_FILE = "vectors.sqlite"
 _SNAPSHOTS_DIR = "snapshots"
-
-# Global UserProfile path
-_PROFILE_BASE = Path.home() / ".kgrag" / "profiles"
 
 
 class AgentKG:
@@ -66,7 +63,7 @@ class AgentKG:
             vectors.sqlite   # semantic embeddings
             snapshots/       # temporal snapshots
 
-        ~/.kgrag/profiles/<person_id>/
+        <profile root>/<person_id>/   # default root: ~/.kgrag/profiles
             userprofile.sqlite   # global UserProfile tree
 
     :param repo_path: Repository root (conversation tree stored here).
@@ -74,6 +71,8 @@ class AgentKG:
     :param session_id: Resume a specific session UUID; else creates new.
     :param embed_model: Sentence-transformer model for embeddings.
     :param summarizer_config: Backend config for KG Context Pruning.
+    :param profile_root: Directory holding the profiles, or ``None`` for
+        ``$AGENTKG_PROFILE_ROOT``, then ``~/.kgrag/profiles``.
     """
 
     def __init__(
@@ -83,6 +82,7 @@ class AgentKG:
         session_id: str | None = None,
         embed_model: str | None = None,
         summarizer_config: SummarizerConfig | None = None,
+        profile_root: str | Path | None = None,
     ) -> None:
         self._repo_path = Path(repo_path).resolve()
         self._person_id = person_id
@@ -94,7 +94,7 @@ class AgentKG:
         self._db_path = agentkg_dir / _DB_NAME
         self._vectors_path = agentkg_dir / _VECTORS_FILE
         self._snapshots_dir = agentkg_dir / _SNAPSHOTS_DIR
-        self._profile_dir = _PROFILE_BASE / person_id
+        self._profile_dir = profile_dir(person_id, profile_root)
 
         # Components (lazy where possible)
         self._store = AgentKGStore(

@@ -4,7 +4,8 @@
 """profile.py — UserProfile tree: globally persistent personal knowledge.
 
 Stores Preference, Style, Interest, Expertise, Commitment, and Context
-nodes for a person in user-scoped storage (~/.kgrag/profiles/<person_id>/).
+nodes for a person in user-scoped storage (~/.kgrag/profiles/<person_id>/
+by default; see :func:`profile_root` to move it).
 
 This tree is NEVER pruned — it only grows and is updated in place.
 One canonical profile exists regardless of which repo you're working in.
@@ -15,6 +16,7 @@ Syncs key fields back to KGRAG PersonCorpusEntry metadata at session close.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -60,10 +62,42 @@ CREATE TABLE IF NOT EXISTS profile_identity (
 """
 
 
+#: Environment variable that moves the root holding every person's profile.
+PROFILE_ROOT_ENV = "AGENTKG_PROFILE_ROOT"
+
+
+def profile_root(root: str | Path | None = None) -> Path:
+    """Return the directory that holds every person's profile.
+
+    An explicit ``root`` wins, then ``$AGENTKG_PROFILE_ROOT``, then
+    ``~/.kgrag/profiles``.
+
+    :param root: Explicit root, or ``None`` to use the environment or default.
+    :return: The profile root.
+    """
+    if root is not None:
+        return Path(root).expanduser()
+    env = os.environ.get(PROFILE_ROOT_ENV, "").strip()
+    if env:
+        return Path(env).expanduser()
+    return Path.home() / ".kgrag" / "profiles"
+
+
+def profile_dir(person_id: str, root: str | Path | None = None) -> Path:
+    """Return one person's profile directory, ``<profile root>/<person_id>``.
+
+    :param person_id: The person's profile ID.
+    :param root: Explicit root, or ``None``; see :func:`profile_root`.
+    :return: The person's profile directory.
+    """
+    return profile_root(root) / person_id
+
+
 class UserProfileStore:
     """SQLite-backed UserProfile tree for a single person.
 
-    :param profile_dir: Path to ``~/.kgrag/profiles/<person_id>/``.
+    :param profile_dir: The person's profile directory, usually from
+        :func:`profile_dir`. Created on first use.
     """
 
     def __init__(self, profile_dir: Path) -> None:
