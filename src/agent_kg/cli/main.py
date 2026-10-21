@@ -37,7 +37,8 @@ from agent_kg.graph import AgentKG
 _DEFAULT_PERSON = getpass.getuser()
 
 _PERSON_HELP = (
-    "Person ID — global profile at ~/.kgrag/profiles/<person>/."
+    "Person ID — global profile at <profile root>/<person>/; the root is"
+    " $AGENTKG_PROFILE_ROOT, else ~/.kgrag/profiles."
     f" Defaults to your OS username ({_DEFAULT_PERSON})."
 )
 
@@ -962,8 +963,9 @@ def init(person: str, model: str) -> None:
     from kg_utils.embed import KNOWN_MODELS, resolve_model_path
 
     from agent_kg.store import _load_sentence_transformer
+    from agent_kg.user_profile import profile_dir as _profile_dir
 
-    profile_dir = Path.home() / ".kgrag" / "profiles" / person
+    profile_dir = _profile_dir(person)
     profile_dir.mkdir(parents=True, exist_ok=True)
     click.echo(f"Profile directory: {profile_dir}")
 
@@ -1001,7 +1003,7 @@ def init(person: str, model: str) -> None:
     "--global",
     "wipe_global",
     is_flag=True,
-    help="Wipe global user profile (~/.kgrag/profiles/<person>/).",
+    help="Wipe global user profile (<profile root>/<person>/).",
 )
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
 def wipe(repo: str, person: str, wipe_local: bool, wipe_global: bool, yes: bool) -> None:
@@ -1026,7 +1028,9 @@ def wipe(repo: str, person: str, wipe_local: bool, wipe_global: bool, yes: bool)
 
     repo_root = Path(repo).resolve()
     local_dir = repo_root / ".agentkg"
-    global_dir = Path.home() / ".kgrag" / "profiles" / person
+    from agent_kg.user_profile import profile_dir
+
+    global_dir = profile_dir(person)
 
     targets = []
     if wipe_local:
@@ -1108,7 +1112,9 @@ def viz(
 
     repo_root = Path(repo).resolve()
     agent_db = repo_root / ".agentkg" / "graph.sqlite"
-    profile_db = Path.home() / ".kgrag" / "profiles" / person / "userprofile.sqlite"
+    from agent_kg.user_profile import profile_dir
+
+    profile_db = profile_dir(person) / "userprofile.sqlite"
 
     # Default: show both
     if not show_agent and not show_profile:
@@ -1147,9 +1153,7 @@ def viz(
         if show_profile and profile_db.exists():
             prof_html = build_profile_html(profile_db)
             prof_out = (
-                Path(out)
-                if (out and not show_agent)
-                else Path.home() / ".kgrag" / "profiles" / person / "viz_profile.html"
+                Path(out) if (out and not show_agent) else profile_db.parent / "viz_profile.html"
             )
             write_html(prof_html, prof_out)
             click.echo(f"Profile graph → {prof_out}")

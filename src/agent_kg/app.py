@@ -128,7 +128,9 @@ with st.sidebar:
     person = st.text_input("Person ID", value=_args.person)
 
     agent_db = Path(repo) / ".agentkg" / "graph.sqlite"
-    profile_db = Path.home() / ".kgrag" / "profiles" / person / "userprofile.sqlite"
+    from agent_kg.user_profile import profile_dir
+
+    profile_db = profile_dir(person) / "userprofile.sqlite"
 
     st.divider()
     st.caption(f"**Agent DB:** `{agent_db}`")

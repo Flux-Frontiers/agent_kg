@@ -17,7 +17,7 @@ def test_assemble_empty_graph_prints_nothing_to_stdout(tmp_path, monkeypatch):
     nothing" -- a placeholder string here would get injected on every prompt.
     The "no context" message belongs on stderr instead.
     """
-    monkeypatch.setattr("agent_kg.graph._PROFILE_BASE", tmp_path / "profiles")
+    monkeypatch.setenv("AGENTKG_PROFILE_ROOT", str(tmp_path / "profiles"))
 
     runner = CliRunner()
     result = runner.invoke(

@@ -8,7 +8,8 @@
 
 `--person` identifies the **global user profile** at `~/.kgrag/profiles/<person>/`.
 The default is your OS login name (`getpass.getuser()`), so it is correct automatically
-on a single-user machine.
+on a single-user machine. Set `AGENTKG_PROFILE_ROOT` to keep profiles in another
+directory; `AgentKG(..., profile_root=path)` does the same from Python.
 
 **Only profile-scoped commands need an explicit `--person`:**
 `init`, `onboard`, `profile`, `viz --profile`, `wipe --global`.

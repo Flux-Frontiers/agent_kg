@@ -65,6 +65,12 @@ Embeddings are on by default. `init` pre-warms the model cache so the first `ing
 The default is your OS login name (`getpass.getuser()`), which is correct automatically
 on a single-user machine — you rarely need to set it explicitly.
 
+To keep profiles somewhere else, set `AGENTKG_PROFILE_ROOT` to the directory that
+should hold them; the CLI, the MCP server and the explorer app all follow it. From
+Python, `AgentKG(..., profile_root=path)` does the same for one instance and takes
+precedence over the variable. Use a separate root for agents that are not you, so
+their profiles never mix with yours.
+
 **`--person` only affects profile-scoped commands:** `init`, `onboard`, `profile`,
 `viz --profile`, `wipe --global`. Local graph commands (`query`, `assemble`, `stats`,
 `sessions`, `snapshot`, `prune`, `ingest`, `analyze`) are repo-scoped and ignore it.
@@ -309,7 +315,8 @@ variables instead:
 | Variable | Default | Purpose |
 |---|---|---|
 | `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read |
-| `AGENTKG_PERSON` | `default` | Profile ID under `~/.kgrag/profiles/` |
+| `AGENTKG_PERSON` | `default` | Profile ID under the profile root |
+| `AGENTKG_PROFILE_ROOT` | `~/.kgrag/profiles` | Directory that holds every person's profile |
 | `AGENTKG_SESSION` | unset | Session UUID to scope queries to |
 
 Set `AGENTKG_PERSON` explicitly. It defaults to the literal string `default`, not to
