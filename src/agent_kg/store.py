@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import sys
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 os.environ.setdefault("TQDM_DISABLE", "1")
@@ -526,6 +527,47 @@ class AgentKGStore:
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         rows = db.execute(f"SELECT * FROM edges {where}", params).fetchall()
         return [_row_to_edge(dict(r)) for r in rows]
+
+    def edges_touching(
+        self,
+        node_id: str,
+        *,
+        direction: str = "both",
+        rels: Sequence[str] | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the edges incident on *node_id*, in either or both directions.
+
+        The same contract as :meth:`kg_utils.store.GraphStore.edges_touching`:
+        every relation unless *rels* narrows it, ordered by
+        ``(relation, source, target)`` so a capped result is deterministic.
+
+        :param node_id: The node whose edges to return.
+        :param direction: ``"out"``, ``"in"`` or ``"both"``.
+        :param rels: Relation types to keep, or ``None`` for all of them.
+        :param limit: Maximum number of edges, or ``None`` for no cap.
+        :return: Edge dicts with keys ``src``, ``rel``, ``dst``, ``weight``.
+        :raises ValueError: If *direction* is not one of the three values.
+        """
+        if direction == "out":
+            where, args = "source_id = ?", [node_id]
+        elif direction == "in":
+            where, args = "target_id = ?", [node_id]
+        elif direction == "both":
+            where, args = "(source_id = ? OR target_id = ?)", [node_id, node_id]
+        else:
+            raise ValueError(f"direction must be 'out', 'in' or 'both', got {direction!r}")
+        sql = f"SELECT source_id, relation, target_id, weight FROM edges WHERE {where}"
+        params: list[Any] = list(args)
+        if rels:
+            sql += f" AND relation IN ({','.join('?' for _ in rels)})"
+            params.extend(rels)
+        sql += " ORDER BY relation, source_id, target_id"
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(limit)
+        rows = self._get_db().execute(sql, params).fetchall()
+        return [{"src": r[0], "rel": r[1], "dst": r[2], "weight": r[3]} for r in rows]
 
     # ------------------------------------------------------------------
     # Semantic search (the `index` interface)

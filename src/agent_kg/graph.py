@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from kg_utils.embed import DEFAULT_MODEL
+from kg_utils.validation import MAX_HOP, MAX_MAX_NODES, bounded_int
 
 from agent_kg import assemble, consolidate, prune, query, snapshots
 from agent_kg.ingest import IngestResult, ingest_turn
@@ -73,6 +74,9 @@ class AgentKG:
     :param summarizer_config: Backend config for KG Context Pruning.
     :param profile_root: Directory holding the profiles, or ``None`` for
         ``$AGENTKG_PROFILE_ROOT``, then ``~/.kgrag/profiles``.
+    :param db_path: Conversation graph; ``None`` for ``<repo>/.agentkg/graph.sqlite``.
+    :param vectors_path: sqlite-vec store; ``None`` for
+        ``<repo>/.agentkg/vectors.sqlite``.
     """
 
     def __init__(
@@ -83,6 +87,9 @@ class AgentKG:
         embed_model: str | None = None,
         summarizer_config: SummarizerConfig | None = None,
         profile_root: str | Path | None = None,
+        *,
+        db_path: str | Path | None = None,
+        vectors_path: str | Path | None = None,
     ) -> None:
         self._repo_path = Path(repo_path).resolve()
         self._person_id = person_id
@@ -91,8 +98,8 @@ class AgentKG:
         agentkg_dir = self._repo_path / _AGENTKG_DIR
         agentkg_dir.mkdir(parents=True, exist_ok=True)
 
-        self._db_path = agentkg_dir / _DB_NAME
-        self._vectors_path = agentkg_dir / _VECTORS_FILE
+        self._db_path = Path(db_path) if db_path else agentkg_dir / _DB_NAME
+        self._vectors_path = Path(vectors_path) if vectors_path else agentkg_dir / _VECTORS_FILE
         self._snapshots_dir = agentkg_dir / _SNAPSHOTS_DIR
         self._profile_dir = profile_dir(person_id, profile_root)
 
@@ -109,6 +116,26 @@ class AgentKG:
     # ------------------------------------------------------------------
     # The index property — satisfies the AgentKGAdapter stub
     # ------------------------------------------------------------------
+
+    @property
+    def repo_root(self) -> Path:
+        """Repository root the conversation tree is stored in."""
+        return self._repo_path
+
+    @property
+    def db_path(self) -> Path:
+        """SQLite conversation graph."""
+        return self._db_path
+
+    @property
+    def vectors_path(self) -> Path:
+        """sqlite-vec vector store."""
+        return self._vectors_path
+
+    @property
+    def model_name(self) -> str:
+        """Sentence-transformer model the store embeds with."""
+        return self._store._embed_model_name  # pylint: disable=protected-access
 
     @property
     def index(self) -> AgentKGStore:
@@ -177,23 +204,126 @@ class AgentKG:
     # Read interface (KGAdapter contract + extended)
     # ------------------------------------------------------------------
 
-    def query(self, q: str, k: int = 8) -> list[dict[str, Any]]:
+    def query(
+        self,
+        q: str,
+        k: int = 8,
+        *,
+        hop: int = 0,
+        max_nodes: int | None = None,
+        rels: tuple[str, ...] | list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Semantic search over the conversation graph.
 
         :param q: Natural-language query string.
-        :param k: Number of results.
-        :return: List of enriched hit dicts.
+        :param k: Number of semantic hits.
+        :param hop: Graph hops to bring along from each hit (0-5, default 0:
+            the hits alone, as before).
+        :param max_nodes: Most results, hits included; ``None`` for no cap.
+        :param rels: Relations to follow when *hop* > 0; ``None`` for all.
+        :return: List of enriched hit dicts, each with ``hop`` (0 for a
+            semantic hit) and ``via_seed``.
+        :raises ValueError: If *hop* or *max_nodes* is out of range.
         """
-        return query.query(self._store, q, k=k)
+        self._check_expansion(hop, max_nodes)
+        return query.with_neighbourhood(
+            self._store, query.query(self._store, q, k=k), hop=hop, max_nodes=max_nodes, rels=rels
+        )
 
-    def pack(self, q: str, k: int = 8) -> list[dict[str, Any]]:
+    def pack(
+        self,
+        q: str,
+        k: int = 8,
+        *,
+        hop: int = 0,
+        max_nodes: int | None = None,
+        rels: tuple[str, ...] | list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Return conversation snippets for LLM context packing.
 
         :param q: Natural-language query string.
-        :param k: Number of snippets.
-        :return: List of ``{node_id, kind, content, score}`` dicts.
+        :param k: Number of semantic snippets.
+        :param hop: Graph hops to bring along from each snippet (0-5, default 0).
+        :param max_nodes: Most snippets, seeds included; ``None`` for no cap.
+        :param rels: Relations to follow when *hop* > 0; ``None`` for all.
+        :return: List of ``{node_id, kind, content, score, hop, via_seed}`` dicts.
+        :raises ValueError: If *hop* or *max_nodes* is out of range.
         """
-        return query.pack(self._store, q, k=k)
+        self._check_expansion(hop, max_nodes)
+        return query.with_neighbourhood(
+            self._store,
+            query.pack(self._store, q, k=k),
+            hop=hop,
+            max_nodes=max_nodes,
+            rels=rels,
+            content=True,
+        )
+
+    @staticmethod
+    def _check_expansion(hop: int, max_nodes: int | None) -> None:
+        bounded_int("hop", hop, 0, MAX_HOP)
+        if max_nodes is not None:
+            bounded_int("max_nodes", max_nodes, 1, MAX_MAX_NODES)
+
+    def node(self, node_id: str) -> dict[str, Any] | None:
+        """Fetch one node of the conversation graph by its ID.
+
+        Reads the graph only; never loads the embedding model.
+
+        :param node_id: Node ID, e.g. from :meth:`query`.
+        :return: The node as a JSON-ready dict, or ``None`` if there is none.
+        """
+        node = self._store.get_node(node_id)
+        if node is None:
+            return None
+        return node.to_dict() | {"covers_turns": node.covers_turns, "metadata": node.metadata}
+
+    def neighbors(
+        self,
+        node_id: str,
+        *,
+        rels: tuple[str, ...] | list[str] | None = None,
+        direction: str = "both",
+        limit: int = 50,
+    ) -> dict[str, Any] | None:
+        """Return a node's one-hop neighbourhood: its edges and the nodes at their far ends.
+
+        The same contract as :meth:`kg_utils.pipeline.KGModule.neighbors`: a
+        turn's topics, entities and tasks, a topic's turns, a summary's
+        sources. Reads the graph only; never loads the embedding model.
+
+        :param node_id: The node whose neighbours to return.
+        :param rels: Relation types to follow, or ``None`` for all of them.
+        :param direction: ``"out"``, ``"in"`` or ``"both"``.
+        :param limit: Maximum number of edges, between 1 and 500.
+        :return: ``{"node": ..., "edges": [...], "nodes": [...]}``, ``nodes``
+            holding each distinct far-end node that exists, in edge order;
+            ``None`` if *node_id* is not in the graph, matching :meth:`node`.
+        :raises ValueError: On an empty *node_id*, an unknown *direction* or an
+            out-of-range *limit*.
+        """
+        if not isinstance(node_id, str) or not node_id.strip():
+            raise ValueError("node_id must be a non-empty string")
+        bounded_int("limit", limit, 1, MAX_MAX_NODES)
+        if direction not in ("out", "in", "both"):
+            raise ValueError(f"direction must be 'out', 'in' or 'both', got {direction!r}")
+        node = self.node(node_id)
+        if node is None:
+            return None
+        edges = self._store.edges_touching(
+            node_id, direction=direction, rels=list(rels) if rels else None, limit=limit
+        )
+        seen: set[str] = set()
+        nodes: list[dict[str, Any]] = []
+        for e in edges:
+            other = e["dst"] if e["src"] == node_id else e["src"]
+            if other in seen:
+                continue
+            seen.add(other)
+            far = self.node(other)
+            if far is not None:
+                nodes.append(far)
+        return {"node": node, "edges": edges, "nodes": nodes}
 
     def assemble_context(self, query_text: str, budget: int = 4000) -> str:
         """Assemble a token-budgeted context block from the graph.

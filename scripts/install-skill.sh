@@ -449,8 +449,9 @@ else
 fi
 
 # -- Step 7: Write .mcp.json (Claude Code + Kilo Code) ------------------------
-# The AgentKG MCP server takes no --repo flag; it is scoped entirely through
-# the AGENTKG_REPO and AGENTKG_PERSON environment variables.
+# The AgentKG MCP server is scoped here through AGENTKG_REPO and AGENTKG_PERSON;
+# it also takes --repo, which wins over AGENTKG_REPO, but the env form keeps one
+# config shape across every client below.
 echo ""
 echo "-- Step 7: Configuring .mcp.json (Claude Code + Kilo Code) --"
 echo ""

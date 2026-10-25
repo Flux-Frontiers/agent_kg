@@ -7,35 +7,30 @@ You are updating all AgentKG MCP documentation to reflect the current state of
 
 ## Step 0: Establish the Source of Truth
 
-Read `src/agent_kg/mcp/server.py` and extract the **authoritative tool list**:
+Run `agentkg mcp --manifest` and take the **authoritative tool list** from its JSON. The
+server is built on `kg_utils.mcp`: each tool's docstring is its description and its
+signature is its input schema, so the manifest is generated, never hand-kept.
 
-1. Find the `_TOOLS` list (returned by the `@app.list_tools()` handler) — these are the
-   declared tools, each a `types.Tool` with a `name`, `description`, and `inputSchema`.
-2. Cross-check against the `@app.call_tool()` dispatch (`call_tool`) — every `name ==`
-   branch is a live tool; the arguments it reads define the real parameters and defaults.
-3. For each tool, record:
-   - **Name** (e.g. `agent_kg_query`)
-   - **Parameters** with defaults (from `arguments.get(...)` and the `inputSchema`)
-   - **One-line description** (from the `Tool.description` / first docstring line)
-   - **Return shape** (all tools return a `TextContent` block — note JSON-ish vs prose)
-4. Print the complete tool inventory before proceeding. This is your ground truth.
+1. For each tool, record:
+   - **Name** (e.g. `query`)
+   - **Parameters** with defaults (from `input_schema`)
+   - **One-line description** (the first line of `description`)
+   - **Return shape** (structured JSON or text)
+2. Print the complete tool inventory before proceeding. This is your ground truth.
 
 **Example format:**
 ```
 TOOL INVENTORY (from src/agent_kg/mcp/server.py):
-  1. agent_kg_ingest(turn_text, role="user", repo, person_id, session_id) — ingest a turn
-  2. agent_kg_query(query, k=8, repo, person_id)                          — hybrid semantic recall
-  3. agent_kg_pack(query, k=6, …)                                         — source-grounded snippet pack
-  4. agent_kg_assemble(query, budget=4000, …)                            — assemble context within a token budget
-  5. agent_kg_prune(window=20, …)                                        — summarise + prune cold turns
-  6. agent_kg_stats(repo, person_id)                                     — node/edge counts by kind
-  7. agent_kg_topics(repo, person_id)                                    — list tracked topics
-  8. agent_kg_tasks(repo, person_id)                                     — list open tasks
-  9. agent_kg_profile(person_id)                                         — render the UserProfile markdown
- 10. agent_kg_analyze(repo, person_id)                                   — full conversation analysis
+  1. stats()                                  — node/edge counts by kind
+  2. query(q, k=8, hop=0, max_nodes=25, rels)  — semantic recall
+  3. pack(q, k=6, hop=0, max_nodes=15, rels)   — prompt-ready snippets
+  4. get_node(node_id)                        — one node
+  5. neighbors(node_id, rels, direction, limit) — a node's edges
+  6. ingest(turn_text, role="user")           — ingest a turn
+  …
 ```
 
-> The list above is illustrative — always regenerate it from `_TOOLS`. Never invent tool
+> The list above is illustrative — always regenerate it from the manifest. Never invent tool
 > names or parameters.
 
 ---
@@ -45,16 +40,16 @@ TOOL INVENTORY (from src/agent_kg/mcp/server.py):
 ### `.claude/skills/agent-kg/SKILL.md`
 
 - **Frontmatter `description:`** — ensure the MCP surface is represented. The
-  `agentkg-mcp` entry point must be mentioned; if the description enumerates capabilities,
+  `agentkg mcp` command must be mentioned; if the description enumerates capabilities,
   keep it consistent with the tool inventory.
 - **`### MCP server` section** — maintain an **"MCP Tools"** table immediately under it:
 
   | Tool | When to use |
   |---|---|
-  | `agent_kg_query(query, k)` | Hybrid semantic recall of past context |
+  | `query(q, k)` | Semantic recall of past context |
   | … | … |
 
-  Add a row for every tool in `_TOOLS`; update signatures in place; remove rows for tools
+  Add a row for every tool in the manifest; update signatures in place; remove rows for tools
   that no longer exist. Keep one line per tool.
 
 ---
@@ -67,7 +62,7 @@ homogenize styles.
 ### 2a. `README.md`
 
 - **Features list** — the `- **MCP server** —` bullet should describe the tool surface
-  accurately (the count is optional but, if stated, must match `_TOOLS`).
+  accurately (the count is optional but, if stated, must match the manifest).
 - **`## MCP Server` section** — if it carries an "Available tools" table, every tool needs a
   row with the correct signature and description. If no table exists and the surface is now
   large enough to warrant one, add a compact table after the `.mcp.json` example.
@@ -88,9 +83,9 @@ same updates (signatures, descriptions, count) following that file's existing fo
 
 ## Step 4: Consistency Check
 
-1. **Coverage** — every tool in `_TOOLS` appears in `SKILL.md` (and any table that lists tools).
-2. **No phantom tools** — no doc references a tool name absent from `_TOOLS` / `call_tool`.
-3. **Signatures** — parameter names and defaults match `server.py` exactly.
+1. **Coverage** — every tool in the manifest appears in `SKILL.md` (and any table that lists tools).
+2. **No phantom tools** — no doc references a tool name absent from the manifest.
+3. **Signatures** — parameter names and defaults match the manifest exactly.
 4. **Count** — any stated tool count matches the actual number of tools.
 
 Fix any inconsistency before proceeding.

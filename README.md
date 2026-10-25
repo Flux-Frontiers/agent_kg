@@ -111,7 +111,7 @@ username and is only needed for profile-scoped commands (`init`, `onboard`, `pro
 | `agentkg analyze` | Print a full Markdown analysis report |
 | `agentkg sessions` | List all sessions for this repo |
 | `agentkg snapshot` | Capture a point-in-time snapshot |
-| `agentkg mcp` | Start the MCP server (stdio transport) |
+| `agentkg mcp` | Start the MCP server (stdio or streamable-HTTP); `--manifest` prints its tools |
 
 Each command also ships as a dedicated `agentkg-<name>` script — no `poetry run` needed:
 
@@ -284,10 +284,31 @@ uv pip install --python "$(dirname "$(command -v agentkg)")/python" \
 
 ## MCP Server
 
-AgentKG ships a **Model Context Protocol (MCP) server** that exposes the full query pipeline as structured tools for AI agents.
+AgentKG ships a **Model Context Protocol (MCP) server**, built on the fleet's shared
+base `kg_utils.mcp`. It serves the fleet's five canonical tools, under the same names as
+every other KG server, and AgentKG's own seven:
+
+| Tool | Purpose |
+|---|---|
+| `stats()` | Node/edge counts by kind, session and turn count, person |
+| `query(q, k=8, hop=0, max_nodes=25, rels)` | Semantic recall: ranked turns, summaries, topics, tasks (`{"query", "hits"}`); `hop=1` brings each hit's graph neighbourhood |
+| `pack(q, k=6, hop=0, max_nodes=15, rels)` | Conversation snippets, summaries first, as prompt-ready text |
+| `get_node(node_id)` | One node of the conversation graph |
+| `neighbors(node_id, rels, direction, limit)` | A node's edges and the nodes at their other ends — a turn's topics, entities, tasks |
+| `ingest(turn_text, role="user")` | Add a turn; user turns also update the profile |
+| `assemble(q, budget=4000)` | Token-budgeted Markdown context block |
+| `prune(window=20)` | Compress cold turns into summary nodes |
+| `topics()` | Every tracked topic, with when it was last seen |
+| `tasks()` | Open tasks |
+| `profile(person_id=None)` | The UserProfile as Markdown |
+| `analyze()` | Full Markdown analysis report |
+
+`stats`, `get_node` and `neighbors` read the graph only and never load the embedding
+model. `agentkg mcp --manifest` prints the live tool list as JSON without opening the
+graph. `agentkg-mcp` is the same command under its older name.
 
 ```bash
-agentkg-mcp   # stdio transport
+agentkg mcp   # stdio transport
 ```
 
 Configure in `.mcp.json` (Claude Code / Kilo Code):
@@ -309,15 +330,17 @@ Configure in `.mcp.json` (Claude Code / Kilo Code):
 
 ### Environment variables
 
-The server takes no `--repo` or `--person` flags. Scope it with environment
-variables instead:
+The server takes the fleet's standard flags (`--repo`, `--db`, `--vectors`, `--model`,
+`--transport stdio|streamable-http`, `--host`, `--port`, `--manifest`). A `--repo`
+given on the command line wins over `AGENTKG_REPO`; the person and session come only
+from the environment:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read |
+| `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read, when `--repo` is not given |
 | `AGENTKG_PERSON` | `default` | Profile ID under the profile root |
 | `AGENTKG_PROFILE_ROOT` | `~/.kgrag/profiles` | Directory that holds every person's profile |
-| `AGENTKG_SESSION` | unset | Session UUID to scope queries to |
+| `AGENTKG_SESSION` | unset | Session UUID to resume |
 
 Set `AGENTKG_PERSON` explicitly. It defaults to the literal string `default`, not to
 your OS username, so leaving it unset reads an empty profile even when your real

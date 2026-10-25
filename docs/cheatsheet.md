@@ -231,7 +231,8 @@ without needing to re-run the interview.
 ## MCP Server
 
 ```bash
-agentkg mcp   # stdio transport
+agentkg mcp              # stdio transport
+agentkg mcp --manifest   # the tool list as JSON, without opening the graph
 ```
 
 `.mcp.json` config (Claude Code / Kilo Code):
@@ -239,10 +240,29 @@ agentkg mcp   # stdio transport
 ```json
 {
   "mcpServers": {
-    "agent-kg": { "command": "agentkg-mcp" }
+    "agent-kg": {
+      "command": "agentkg",
+      "args": ["mcp"],
+      "env": { "AGENTKG_REPO": "/absolute/path/to/repo", "AGENTKG_PERSON": "egs" }
+    }
   }
 }
 ```
+
+| Tool | Purpose |
+|---|---|
+| `stats()` | Node/edge counts by kind, session and turn count, person |
+| `query(q, k=8, hop=0, max_nodes=25, rels)` | Semantic recall: ranked turns, summaries, topics, tasks (`{"query", "hits"}`); `hop=1` brings each hit's graph neighbourhood |
+| `pack(q, k=6, hop=0, max_nodes=15, rels)` | Conversation snippets, summaries first, as prompt-ready text |
+| `get_node(node_id)` | One node of the conversation graph |
+| `neighbors(node_id, rels, direction, limit)` | A node's edges and the nodes at their other ends — a turn's topics, entities, tasks |
+| `ingest(turn_text, role="user")` | Add a turn; user turns also update the profile |
+| `assemble(q, budget=4000)` | Token-budgeted Markdown context block |
+| `prune(window=20)` | Compress cold turns into summary nodes |
+| `topics()` | Every tracked topic, with when it was last seen |
+| `tasks()` | Open tasks |
+| `profile(person_id=None)` | The UserProfile as Markdown |
+| `analyze()` | Full Markdown analysis report |
 
 ---
 

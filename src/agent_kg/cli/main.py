@@ -26,10 +26,13 @@ Commands:
 from __future__ import annotations
 
 import getpass
+import os
 from pathlib import Path
 
 import click
+from click.core import ParameterSource
 from kg_utils.embed import DEFAULT_MODEL as _DEFAULT_EMBED_MODEL
+from kg_utils.mcp import add_mcp_command
 
 from agent_kg.graph import AgentKG
 
@@ -1173,12 +1176,25 @@ def viz(
         render_agent_tree_rich(agent_db)
 
 
-@cli.command()
-def mcp() -> None:
-    """Start the AgentKG MCP server."""
-    from agent_kg.mcp.server import main as mcp_main
+def _build_mcp_server(repo: Path, db: Path | None, vectors: Path | None, model: str | None):
+    """Build the AgentKG server; imported lazily so other commands skip ``mcp``.
 
-    mcp_main()
+    ``--repo`` given on the command line wins; otherwise ``AGENTKG_REPO``, which
+    is how the installers scope the server, then the working directory.
+    """
+    from agent_kg.mcp.server import build_server  # pylint: disable=import-outside-toplevel
+
+    env_repo = os.environ.get("AGENTKG_REPO")
+    ctx = click.get_current_context(silent=True)
+    if env_repo and ctx is not None and ctx.get_parameter_source("repo") is ParameterSource.DEFAULT:
+        repo = Path(env_repo)
+    return build_server(repo, db, vectors, model)
+
+
+#: ``agentkg mcp [--repo DIR] [--db FILE] [--vectors FILE] [--model NAME]
+#: [--transport stdio|streamable-http] [--host H] [--port N] [--manifest]``,
+#: the fleet's standard MCP command from kg_utils.mcp.
+mcp_command = add_mcp_command(cli, _build_mcp_server)
 
 
 if __name__ == "__main__":
