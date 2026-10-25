@@ -121,7 +121,8 @@ class SnapshotManager(_BaseSnapshotManager):
         metrics: dict[str, Any] = {
             "total_nodes": stats["node_count"],
             "total_edges": stats["edge_count"],
-            "node_counts": stats.get("kind_counts", {}),
+            "node_counts": stats["kind_counts"],
+            "edge_counts": stats["rel_counts"],
             "turn_count": len(turns),
             "summary_count": len(summaries),
             "open_task_count": len(open_tasks),

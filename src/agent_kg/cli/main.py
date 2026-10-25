@@ -289,14 +289,19 @@ def stats(repo: str, person: str) -> None:
     kg = _resolve_kg(repo, person, None)
     s = kg.stats()
     click.echo(f"AgentKG: {repo}")
-    click.echo(f"  Nodes:     {s['node_count']}")
-    click.echo(f"  Edges:     {s['edge_count']}")
+    click.echo(f"  Nodes:     {s['nodes']['total']}")
+    click.echo(f"  Edges:     {s['edges']['total']}")
     click.echo(f"  Session:   {s['session_id'][:8]}...")
     click.echo(f"  Turns:     {s['turn_count']}")
-    if s.get("kind_counts"):
-        click.echo("  By kind:")
-        for kind, count in sorted(s["kind_counts"].items()):
-            click.echo(f"    {kind:15} {count}")
+    click.echo(f"  Sessions:  {s['session_count']}")
+    for title, counts in (
+        ("By kind:", s["nodes"]["by_kind"]),
+        ("By relation:", s["edges"]["by_rel"]),
+    ):
+        if counts:
+            click.echo(f"  {title}")
+            for name, count in sorted(counts.items()):
+                click.echo(f"    {name:15} {count}")
     kg.close()
 
 

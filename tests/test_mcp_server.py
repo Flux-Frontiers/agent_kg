@@ -31,6 +31,7 @@ import numpy as np
 import pytest
 from click.testing import CliRunner
 from kg_utils.mcp import CANONICAL_TOOLS, manifest
+from kg_utils.stats import stats_problems
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -141,6 +142,8 @@ def test_graph_tools_answer_without_a_model(repo, monkeypatch):
 
     stats, node, near, missing, topics = _session(build_server(repo), calls)
     assert not stats.isError and stats.structuredContent["kind"] == "agent"
+    assert stats_problems(stats.structuredContent) == []
+    assert stats.structuredContent["nodes"]["by_kind"]["turn"] >= 1
     assert stats.structuredContent["person_id"] == "tester"
     assert not node.isError and node.structuredContent["id"] == turn
     assert isinstance(node.structuredContent["metadata"], dict)
@@ -171,6 +174,7 @@ def test_query_pack_and_ingest_through_mcp(repo, fake_model):
     assert not ingested.isError and "Ingested turn (role=user)" in ingested.content[0].text
     assert bad_role.isError and "role must be" in bad_role.content[0].text
     assert stats.structuredContent["turn_count"] == 4
+    assert stats_problems(stats.structuredContent) == []
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +191,18 @@ def test_hop_zero_keeps_the_old_hits(repo, fake_model):
         kg.query("x", hop=6)
     with pytest.raises(ValueError, match="max_nodes"):
         kg.pack("x", max_nodes=0)
+    kg.close()
+
+
+def test_stats_is_the_fleet_shape(repo):
+    kg = AgentKG(repo, person_id="tester")
+    s = kg.stats()
+    assert s["kind"] == "agent" and stats_problems(s) == []
+    flat = kg.index.stats()
+    assert s["nodes"] == {"total": flat["node_count"], "by_kind": flat["kind_counts"]}
+    assert s["edges"] == {"total": flat["edge_count"], "by_rel": flat["rel_counts"]}
+    assert s["turn_count"] == len(kg.index.get_all_turns()) == s["nodes"]["by_kind"]["turn"]
+    assert s["session_count"] >= 1 and s["person_id"] == "tester"
     kg.close()
 
 

@@ -610,20 +610,25 @@ class AgentKGStore:
     # ------------------------------------------------------------------
 
     def stats(self) -> dict[str, Any]:
-        """Return node count, edge count, and per-kind breakdown."""
+        """Return the store's own flat counts: totals and per-kind / per-relation breakdowns.
+
+        This is what the store records about itself (snapshots persist it).
+        Readers want :meth:`agent_kg.graph.AgentKG.stats`, the fleet shape.
+
+        :return: ``{"node_count", "edge_count", "kind_counts", "rel_counts"}``.
+        """
         db = self._get_db()
         node_count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
         edge_count = db.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
-        kind_counts: dict[str, int] = {}
-        for row in db.execute("SELECT kind, COUNT(*) FROM nodes GROUP BY kind"):
-            kind_counts[row[0]] = row[1]
+        kind_counts = dict(db.execute("SELECT kind, COUNT(*) FROM nodes GROUP BY kind").fetchall())
+        rel_counts = dict(
+            db.execute("SELECT relation, COUNT(*) FROM edges GROUP BY relation").fetchall()
+        )
         return {
             "node_count": node_count,
-            "nodes": node_count,
             "edge_count": edge_count,
-            "edges": edge_count,
             "kind_counts": kind_counts,
-            "kind": "agent",
+            "rel_counts": rel_counts,
         }
 
     # ------------------------------------------------------------------

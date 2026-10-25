@@ -17,7 +17,7 @@
 Satisfies the AgentKGAdapter contract:
   - ``AgentKG(repo_path, person_id="default")``
   - ``ag.index.search(q, k=k)`` → list of hit dicts
-  - ``ag.stats()`` → {nodes, edges, node_count, edge_count}
+  - ``ag.stats()`` → {kind, nodes: {total, by_kind}, edges: {total, by_rel}, ...}
   - ``ag.ingest(text, role)`` → IngestResult
   - ``ag.prune(token_budget)`` → PruneReport
   - ``ag.assemble_context(query, budget)`` → Markdown str
@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from kg_utils.embed import DEFAULT_MODEL
+from kg_utils.stats import kg_stats
 from kg_utils.validation import MAX_HOP, MAX_MAX_NODES, bounded_int
 
 from agent_kg import assemble, consolidate, prune, query, snapshots
@@ -340,19 +341,24 @@ class AgentKG:
         )
 
     def stats(self) -> dict[str, Any]:
-        """Return node + edge counts and session info.
+        """Return the graph's statistics in the fleet shape, with the session as extras.
 
-        :return: Dict with ``nodes``, ``edges``, ``node_count``, ``edge_count``,
-                 ``session_id``, ``turn_count``.
+        ``{"kind": "agent", "nodes": {"total", "by_kind"}, "edges": {"total",
+        "by_rel"}}`` (FLEET_STANDARDS, "KG stats shape"), plus ``session_id``,
+        ``turn_count``, ``session_count`` and ``person_id``.
+
+        :return: The statistics dict.
         """
         s = self._store.stats()
-        all_turns = self._store.get_all_turns()
-        return {
-            **s,
-            "session_id": self._session.id,
-            "turn_count": len(all_turns),
-            "person_id": self._person_id,
-        }
+        return kg_stats(
+            "agent",
+            s["kind_counts"],
+            s["rel_counts"],
+            session_id=self._session.id,
+            turn_count=s["kind_counts"].get(NodeKind.TURN.value, 0),
+            session_count=len(self._store.list_sessions()),
+            person_id=self._person_id,
+        )
 
     def analyze(self) -> str:
         """Return a Markdown analysis report for this AgentKG instance.
@@ -360,7 +366,7 @@ class AgentKG:
         :return: Markdown-formatted report string.
         """
         try:
-            s = self._store.stats()
+            s = self.stats()
             turns = self._store.get_all_turns()
             open_tasks = self._store.get_open_tasks()
             sessions = self._store.list_sessions()
@@ -375,8 +381,8 @@ class AgentKG:
                 f"- **Repo**: `{self._repo_path}`",
                 f"- **Person**: `{self._person_id}`",
                 f"- **Session**: `{self._session.id[:8]}…`",
-                f"- **Total nodes**: {s['node_count']}",
-                f"- **Total edges**: {s['edge_count']}",
+                f"- **Total nodes**: {s['nodes']['total']}",
+                f"- **Total edges**: {s['edges']['total']}",
                 f"- **Turns**: {len(turns)}",
                 f"- **Summaries**: {len(summaries)}",
                 f"- **Open tasks**: {len(open_tasks)}",

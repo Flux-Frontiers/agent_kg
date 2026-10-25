@@ -257,6 +257,16 @@ class TestStats:
         assert s["kind_counts"].get("turn", 0) == 2
         assert s["kind_counts"].get("topic", 0) == 1
 
+    def test_rel_counts(self, store):
+        """stats returns a per-relation breakdown that sums to edge_count."""
+        a, b = Node(kind=NodeKind.TURN), Node(kind=NodeKind.TURN)
+        store.upsert_node(a)
+        store.upsert_node(b)
+        store.add_edge(Edge(source_id=a.id, target_id=b.id, relation=EdgeRelation.FOLLOWS))
+        s = store.stats()
+        assert s["rel_counts"] == {"FOLLOWS": 1}
+        assert sum(s["rel_counts"].values()) == s["edge_count"]
+
 
 # ---------------------------------------------------------------------------
 # Vector-index reconciliation (drift detection + reindex)

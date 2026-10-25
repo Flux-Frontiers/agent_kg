@@ -15,6 +15,18 @@ passes.
 
 ### Changed
 
+- **`AgentKG.stats()`, and so the `stats` tool, returns the fleet stats
+  shape** (kgrag_priv `docs/FLEET_STANDARDS.md`, "KG stats shape"):
+  `{"kind": "agent", "nodes": {"total", "by_kind"}, "edges": {"total",
+  "by_rel"}}`, built by `kg_utils.stats.kg_stats`, with `session_id`,
+  `turn_count`, `session_count` and `person_id` as extras. The bare-int
+  `nodes` / `edges` keys, `node_count`, `edge_count` and `kind_counts` are
+  gone from it; read `stats["nodes"]["total"]` and friends. The store's own
+  `stats()` stays flat for snapshots, drops its unread bare-int `nodes` /
+  `edges` and `kind`, and gains `rel_counts`, so snapshots now record
+  `edge_counts` too. `agentkg stats` prints the relation breakdown and the
+  session count.
+
 - **The MCP server is built on `kg_utils.mcp`**, off the low-level `Server`.
   It serves the fleet's five canonical tools under the same names as every
   other KG server (`stats`, `query`, `pack`, `get_node`, `neighbors`), then

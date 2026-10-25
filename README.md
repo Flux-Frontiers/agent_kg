@@ -107,7 +107,7 @@ username and is only needed for profile-scoped commands (`init`, `onboard`, `pro
 | `agentkg query` | Semantic search over the graph |
 | `agentkg assemble` | Assemble a token-budgeted context block |
 | `agentkg prune` | Compress old turns into Summary nodes |
-| `agentkg stats` | Show graph node/edge counts |
+| `agentkg stats` | Show node/edge counts by kind and relation, turns and sessions |
 | `agentkg analyze` | Print a full Markdown analysis report |
 | `agentkg sessions` | List all sessions for this repo |
 | `agentkg snapshot` | Capture a point-in-time snapshot |
@@ -290,7 +290,7 @@ every other KG server, and AgentKG's own seven:
 
 | Tool | Purpose |
 |---|---|
-| `stats()` | Node/edge counts by kind, session and turn count, person |
+| `stats()` | Fleet stats shape: `nodes` `{total, by_kind}`, `edges` `{total, by_rel}`, plus `session_id`, `turn_count`, `session_count`, `person_id` |
 | `query(q, k=8, hop=0, max_nodes=25, rels)` | Semantic recall: ranked turns, summaries, topics, tasks (`{"query", "hits"}`); `hop=1` brings each hit's graph neighbourhood |
 | `pack(q, k=6, hop=0, max_nodes=15, rels)` | Conversation snippets, summaries first, as prompt-ready text |
 | `get_node(node_id)` | One node of the conversation graph |
