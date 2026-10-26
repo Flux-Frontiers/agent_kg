@@ -1,7 +1,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
+[![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)](https://github.com/Flux-Frontiers/agent_kg/releases)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21250047-blue.svg)](https://zenodo.org/badge/latestdoi/1186774406)
 
@@ -107,11 +107,11 @@ username and is only needed for profile-scoped commands (`init`, `onboard`, `pro
 | `agentkg query` | Semantic search over the graph |
 | `agentkg assemble` | Assemble a token-budgeted context block |
 | `agentkg prune` | Compress old turns into Summary nodes |
-| `agentkg stats` | Show graph node/edge counts |
+| `agentkg stats` | Show node/edge counts by kind and relation, turns and sessions |
 | `agentkg analyze` | Print a full Markdown analysis report |
 | `agentkg sessions` | List all sessions for this repo |
 | `agentkg snapshot` | Capture a point-in-time snapshot |
-| `agentkg mcp` | Start the MCP server (stdio transport) |
+| `agentkg mcp` | Start the MCP server (stdio or streamable-HTTP); `--manifest` prints its tools |
 
 Each command also ships as a dedicated `agentkg-<name>` script — no `poetry run` needed:
 
@@ -284,10 +284,31 @@ uv pip install --python "$(dirname "$(command -v agentkg)")/python" \
 
 ## MCP Server
 
-AgentKG ships a **Model Context Protocol (MCP) server** that exposes the full query pipeline as structured tools for AI agents.
+AgentKG ships a **Model Context Protocol (MCP) server**, built on the fleet's shared
+base `kg_utils.mcp`. It serves the fleet's five canonical tools, under the same names as
+every other KG server, and AgentKG's own seven:
+
+| Tool | Purpose |
+|---|---|
+| `stats()` | Fleet stats shape: `nodes` `{total, by_kind}`, `edges` `{total, by_rel}`, plus `session_id`, `turn_count`, `session_count`, `person_id` |
+| `query(q, k=8, hop=0, max_nodes=25, rels)` | Semantic recall: ranked turns, summaries, topics, tasks (`{"query", "hits"}`); `hop=1` brings each hit's graph neighbourhood |
+| `pack(q, k=6, hop=0, max_nodes=15, rels)` | Conversation snippets, summaries first, as prompt-ready text |
+| `get_node(node_id)` | One node of the conversation graph |
+| `neighbors(node_id, rels, direction, limit)` | A node's edges and the nodes at their other ends — a turn's topics, entities, tasks |
+| `ingest(turn_text, role="user")` | Add a turn; user turns also update the profile |
+| `assemble(q, budget=4000)` | Token-budgeted Markdown context block |
+| `prune(window=20)` | Compress cold turns into summary nodes |
+| `topics()` | Every tracked topic, with when it was last seen |
+| `tasks()` | Open tasks |
+| `profile(person_id=None)` | The UserProfile as Markdown |
+| `analyze()` | Full Markdown analysis report |
+
+`stats`, `get_node` and `neighbors` read the graph only and never load the embedding
+model. `agentkg mcp --manifest` prints the live tool list as JSON without opening the
+graph. `agentkg-mcp` is the same command under its older name.
 
 ```bash
-agentkg-mcp   # stdio transport
+agentkg mcp   # stdio transport
 ```
 
 Configure in `.mcp.json` (Claude Code / Kilo Code):
@@ -309,15 +330,17 @@ Configure in `.mcp.json` (Claude Code / Kilo Code):
 
 ### Environment variables
 
-The server takes no `--repo` or `--person` flags. Scope it with environment
-variables instead:
+The server takes the fleet's standard flags (`--repo`, `--db`, `--vectors`, `--model`,
+`--transport stdio|streamable-http`, `--host`, `--port`, `--manifest`). A `--repo`
+given on the command line wins over `AGENTKG_REPO`; the person and session come only
+from the environment:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read |
+| `AGENTKG_REPO` | `.` (the server's working directory) | Repository whose conversation graph the tools read, when `--repo` is not given |
 | `AGENTKG_PERSON` | `default` | Profile ID under the profile root |
 | `AGENTKG_PROFILE_ROOT` | `~/.kgrag/profiles` | Directory that holds every person's profile |
-| `AGENTKG_SESSION` | unset | Session UUID to scope queries to |
+| `AGENTKG_SESSION` | unset | Session UUID to resume |
 
 Set `AGENTKG_PERSON` explicitly. It defaults to the literal string `default`, not to
 your OS username, so leaving it unset reads an empty profile even when your real
@@ -451,7 +474,7 @@ Cite AgentKG as:
 
 **APA**
 
-> Suchanek, E. G. (2026). *AgentKG: Conversational Memory as a Knowledge Graph* (Version 0.13.0) [Software]. Flux-Frontiers. https://doi.org/10.5281/zenodo.21250047
+> Suchanek, E. G. (2026). *AgentKG: Conversational Memory as a Knowledge Graph* (Version 0.14.0) [Software]. Flux-Frontiers. https://doi.org/10.5281/zenodo.21250047
 
 **BibTeX**
 
@@ -459,7 +482,7 @@ Cite AgentKG as:
 @software{suchanek_agent_kg,
   author    = {Suchanek, Eric G.},
   title     = {{AgentKG}: Conversational Memory as a Knowledge Graph},
-  version   = {0.13.0},
+  version   = {0.14.0},
   year      = {2026},
   publisher = {Flux-Frontiers},
   url       = {https://github.com/Flux-Frontiers/agent_kg},

@@ -327,6 +327,11 @@ class AgentKGAdapter(KGAdapter):
 
 ### MCP Tools Exposed
 
+> As built since 0.14.0 the server serves the fleet's canonical `stats`, `query`,
+> `pack`, `get_node` and `neighbors` plus `ingest`, `assemble`, `prune`, `topics`,
+> `tasks`, `profile` and `analyze`; `agentkg mcp --manifest` prints the live list. The
+> table below is the original design, with its `agent_kg_*` names.
+
 | Tool | Description |
 |------|-------------|
 | `agent_kg_ingest(turn_text, role)` | Add a turn to the graph (Phase 1) |

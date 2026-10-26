@@ -1,0 +1,145 @@
+{
+  "key": "0.14.0",
+  "branch": "feat/mcp-server-base",
+  "timestamp": "2026-10-26T04:56:10.030787+00:00",
+  "version": "0.14.0",
+  "subject": "repo:agent-kg",
+  "tool": "pycode-kg",
+  "tool_version": "0.28.2",
+  "tree_hash": "77af9544bb4f55a5e590df8cd6a5e3e927836c77",
+  "metrics": {
+    "db_path": ".pycodekg/graph.sqlite",
+    "total_nodes": 3564,
+    "meaningful_nodes": 262,
+    "total_edges": 3563,
+    "node_counts": {
+      "class": 16,
+      "function": 110,
+      "method": 108,
+      "module": 28,
+      "symbol": 3302
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 1072,
+      "CALLS": 1161,
+      "CONTAINS": 234,
+      "IMPORTS": 206,
+      "INHERITS": 5,
+      "RESOLVES_TO": 885
+    },
+    "module_count": 28,
+    "class_count": 16,
+    "function_count": 110,
+    "method_count": 108,
+    "docstring_coverage": 0.8320000000000001,
+    "snapshot_count": 5,
+    "module_node_counts": {
+      "src/agent_kg/__init__.py": 4,
+      "src/agent_kg/app.py": 218,
+      "src/agent_kg/assemble.py": 85,
+      "src/agent_kg/cli/__init__.py": 1,
+      "src/agent_kg/cli/main.py": 417,
+      "src/agent_kg/consolidate.py": 32,
+      "src/agent_kg/graph.py": 236,
+      "src/agent_kg/hooks/resolve_repo_root.py": 44,
+      "src/agent_kg/index.py": 66,
+      "src/agent_kg/ingest.py": 172,
+      "src/agent_kg/kg.py": 2,
+      "src/agent_kg/mcp/__init__.py": 1,
+      "src/agent_kg/mcp/server.py": 105,
+      "src/agent_kg/nlp/__init__.py": 2,
+      "src/agent_kg/nlp/entities.py": 59,
+      "src/agent_kg/nlp/intent.py": 74,
+      "src/agent_kg/nlp/preferences.py": 66,
+      "src/agent_kg/nlp/topics.py": 57,
+      "src/agent_kg/onboard.py": 44,
+      "src/agent_kg/prune.py": 153,
+      "src/agent_kg/query.py": 102,
+      "src/agent_kg/schema.py": 119,
+      "src/agent_kg/session.py": 65,
+      "src/agent_kg/snapshots.py": 32,
+      "src/agent_kg/store.py": 374,
+      "src/agent_kg/summarize.py": 72,
+      "src/agent_kg/user_profile.py": 259,
+      "src/agent_kg/viz.py": 186
+    },
+    "coverage_documented": 218,
+    "coverage_total": 262,
+    "critical_issues": 3,
+    "complexity_median": 5
+  },
+  "hotspots": [
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_db",
+      "callers": 18,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/agent_kg/cli/main.py:_resolve_kg",
+      "callers": 13,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore._get_db",
+      "callers": 8,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_node",
+      "callers": 7,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.add_edge",
+      "callers": 7,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore.get_by_kind",
+      "callers": 6,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore._get_backend",
+      "callers": 6,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.get_nodes_by_kind",
+      "callers": 5,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/store.py:AgentKGStore.embed",
+      "callers": 5,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/agent_kg/user_profile.py:UserProfileStore.upsert",
+      "callers": 5,
+      "callees": 3,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[WARN] 1 dead-code candidates found (`store.py:upsert_node_with_embedding`) -- no callers in code or tests; verify against downstream consumers, then remove or archive",
+    "[INFO] 6 definitions are unused in production code but exercised by tests -- likely public API for downstream packages; not counted against the quality grade",
+    "[WARN] `store.py` has 36 functions/methods/classes -- consider splitting into focused submodules"
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 363,
+    "edges": 298,
+    "coverage_delta": 0.02100000000000013,
+    "critical_issues_delta": 1
+  }
+}

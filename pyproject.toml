@@ -50,7 +50,7 @@ packages = [{ include = "agent_kg", from = "src" }]
 # ---------------------------------------------------------------------------
 [project]
 name = "agent-kg"
-version = "0.13.0"
+version = "0.14.0"
 description = "Conversational memory as a knowledge graph"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -78,10 +78,9 @@ dependencies = [
     # package_name class attribute instead of carrying an __init__ that only
     # forwarded to super(). Against 0.19.x the manager reports itself as
     # "kg-utils" in every snapshot's tool field.
-    "kgmodule-utils[semantic,sqlite-vec]>=0.23.0",
-    # Capped at <2: mcp 2.0 removed the low-level Server decorator API
-    # (@app.list_tools / @app.call_tool) that agent_kg.mcp.server registers on.
-    "mcp>=1.0.0,<2",
+    # 0.29.0: the MCP server is kg_utils.mcp's ([mcp] brings mcp itself),
+    # stats() is the fleet stats shape, and LanceDB is gone.
+    "kgmodule-utils[semantic,sqlite-vec,mcp]>=0.29.0",
     "numpy>=1.24.0",
     "rich>=14.0.0",
     "safetensors>=0.5.0",

@@ -10,7 +10,8 @@ description: >
   running or debugging agent-kg CLI commands (agentkg-ingest, agentkg-query,
   agentkg-assemble, agentkg-prune, agentkg-stats, agentkg-analyze, agentkg-sessions,
   agentkg-snapshot, agentkg-onboard, agentkg-profile, agentkg-viz, agentkg-wipe,
-  agentkg-mcp), setting up hooks to auto-ingest conversation turns, managing the
+  agentkg-mcp / agentkg mcp), using its MCP tools (stats, query, pack, get_node,
+  neighbors, ingest, assemble, prune, topics, tasks, profile, analyze), setting up hooks to auto-ingest conversation turns, managing the
   UserProfile, or troubleshooting why profile or memory data is missing.
 ---
 
@@ -147,8 +148,27 @@ agentkg-wipe --local --global --yes
 ### MCP server
 
 ```bash
-agentkg-mcp   # starts the MCP server (stdio transport)
+agentkg mcp              # starts the MCP server (stdio transport); agentkg-mcp is the same
+agentkg mcp --manifest   # the live tool list as JSON
 ```
+
+| Tool | Purpose |
+|---|---|
+| `stats()` | Node/edge counts by kind, session and turn count, person |
+| `query(q, k=8, hop=0, max_nodes=25, rels)` | Semantic recall: ranked turns, summaries, topics, tasks (`{"query", "hits"}`); `hop=1` brings each hit's graph neighbourhood |
+| `pack(q, k=6, hop=0, max_nodes=15, rels)` | Conversation snippets, summaries first, as prompt-ready text |
+| `get_node(node_id)` | One node of the conversation graph |
+| `neighbors(node_id, rels, direction, limit)` | A node's edges and the nodes at their other ends — a turn's topics, entities, tasks |
+| `ingest(turn_text, role="user")` | Add a turn; user turns also update the profile |
+| `assemble(q, budget=4000)` | Token-budgeted Markdown context block |
+| `prune(window=20)` | Compress cold turns into summary nodes |
+| `topics()` | Every tracked topic, with when it was last seen |
+| `tasks()` | Open tasks |
+| `profile(person_id=None)` | The UserProfile as Markdown |
+| `analyze()` | Full Markdown analysis report |
+
+The first five are the fleet's canonical names, the same on every KG server; the
+`agent_kg_*` names were retired in 0.14.0 with no aliases.
 
 ## Hooks (Auto-Ingest)
 
