@@ -1,0 +1,127 @@
+{
+  "key": "0.14.0",
+  "branch": "feat/mcp-server-base",
+  "timestamp": "2026-10-26T04:56:07.008104+00:00",
+  "version": "0.14.0",
+  "subject": "repo:agent-kg",
+  "tool": "doc-kg",
+  "tool_version": "0.27.0",
+  "tree_hash": "77af9544bb4f55a5e590df8cd6a5e3e927836c77",
+  "metrics": {
+    "db_path": ".dockg/graph.sqlite",
+    "total_nodes": 2193,
+    "total_edges": 14993,
+    "node_counts": {
+      "chunk": 388,
+      "document": 11,
+      "entity": 664,
+      "keyword": 598,
+      "section": 232,
+      "topic": 300
+    },
+    "edge_counts": {
+      "CONTAINS": 620,
+      "CO_OCCURS_WITH": 10042,
+      "HAS_KEYWORD": 1549,
+      "HAS_TOPIC": 401,
+      "MENTIONS_ENTITY": 1734,
+      "NEXT": 152,
+      "REFERENCES": 1,
+      "SIMILAR_TO": 494
+    },
+    "meaningful_nodes": 2182,
+    "coverage_score": 0.9810996563573884,
+    "issues_count": 0,
+    "complexity_median": 22.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0005",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Fan-In Ranking",
+      "references": 0,
+      "semantic_links": 24,
+      "total_links": 25
+    },
+    {
+      "id": "chunk:CHANGELOG.md:0096",
+      "file_path": "CHANGELOG.md",
+      "label": "Added",
+      "references": 0,
+      "semantic_links": 23,
+      "total_links": 24
+    },
+    {
+      "id": "chunk:docs/AGENT_KG_DESIGN.md:0007",
+      "file_path": "docs/AGENT_KG_DESIGN.md",
+      "label": "Node Types",
+      "references": 0,
+      "semantic_links": 23,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0012",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0031",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Query Search Retrieval Semantic",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0032",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Graph Traversal Node Edge",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0003",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Edge Distribution",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0030",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "Data Persistence Storage Database",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:README.md:0029",
+      "file_path": "README.md",
+      "label": "MCP Server",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 18
+    },
+    {
+      "id": "chunk:analysis/agent_kg_analysis_20260404.md:0000",
+      "file_path": "analysis/agent_kg_analysis_20260404.md",
+      "label": "chunk:0001",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 18
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 141,
+    "edges": 864,
+    "coverage_delta": -0.000907919400187418,
+    "issues_delta": 0
+  }
+}
