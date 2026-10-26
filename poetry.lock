@@ -1677,17 +1677,19 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "kgmodule-utils"
-version = "0.27.1"
+version = "0.29.0"
 description = "Shared types, graph store, semantic index, and pipeline base for the KGModule SDK"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main"]
 files = [
-    {file = "kgmodule_utils-0.27.1-py3-none-any.whl", hash = "sha256:176342750f52d539e0491e2fcf04afcc35460244bc4b5a7f1f4e562e6f5de3d7"},
-    {file = "kgmodule_utils-0.27.1.tar.gz", hash = "sha256:573119f13a2bcf4eba9e9a18911dbbb7e516d6913fa73603683eeb0fd71840de"},
+    {file = "kgmodule_utils-0.29.0-py3-none-any.whl", hash = "sha256:0f81eab4c16ddca303d251e0d0db1d75e7eba6dd7df749899f8d9735f021a955"},
+    {file = "kgmodule_utils-0.29.0.tar.gz", hash = "sha256:012f37819602c43eef57a5b33f2d2075147d70e2663912c41b71402c8768006a"},
 ]
 
 [package.dependencies]
+click = {version = ">=8.1.0", optional = true, markers = "extra == \"mcp\""}
+mcp = {version = ">=1.23.0,<2", optional = true, markers = "extra == \"mcp\""}
 numpy = {version = ">=1.24.0", optional = true, markers = "extra == \"semantic\""}
 rich = {version = ">=13.0.0,<15.0.0", optional = true, markers = "extra == \"semantic\""}
 sentence-transformers = {version = ">=5.4.1", optional = true, markers = "extra == \"semantic\""}
@@ -1697,7 +1699,7 @@ transformers = {version = ">=5.5.0,<6", optional = true, markers = "extra == \"s
 
 [package.extras]
 ingest = ["firecrawl-anydoc (>=0.1.9)", "pymupdf (>=2.0)"]
-lancedb = ["lancedb (>=0.19.0)"]
+mcp = ["click (>=8.1.0)", "mcp (>=1.23.0,<2)"]
 pdf = ["pymupdf (>=2.0)"]
 semantic = ["numpy (>=1.24.0)", "rich (>=13.0.0,<15.0.0)", "sentence-transformers (>=5.4.1)", "sqlite-vec (==0.1.9)", "torch (>=2.5.1)", "transformers (>=5.5.0,<6)"]
 sqlite-vec = ["sqlite-vec (==0.1.9)"]
@@ -5224,4 +5226,4 @@ viz = ["pyvis", "streamlit"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "ec78064ec56490d39efa9d7ead99886a702ea10c2a1a22d6f093750fc445df95"
+content-hash = "630c39ac9a45b89b626f18866cb78e282879a2a39dc9f7fba2a6f8a6b0853fe8"
