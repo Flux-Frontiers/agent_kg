@@ -121,6 +121,9 @@ fall back to the fleet-wide defaults shared with the rest of KGRAG (`kg_utils.sy
 The Claude Code stop and pre-compact hooks run `prune` with `SYNTH_BACKEND=omlx`
 unless the variable is already set, so the tool install they call needs the
 `[local]` extra: `uv tool install "agent-kg[llm,local] @ file:///path/to/agent_kg"`.
+For the omlx backend the hooks also read oMLX's API key from
+`auth.api_key` in `~/.omlx/settings.json` into `VLLM_API_KEY` when that
+variable is unset or empty.
 
 Set the backend (and optional overrides) in the environment before running `prune`:
 
