@@ -50,7 +50,7 @@ packages = [{ include = "agent_kg", from = "src" }]
 # ---------------------------------------------------------------------------
 [project]
 name = "agent-kg"
-version = "0.14.0"
+version = "0.14.1"
 description = "Conversational memory as a knowledge graph"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -80,7 +80,7 @@ dependencies = [
     # "kg-utils" in every snapshot's tool field.
     # 0.29.0: the MCP server is kg_utils.mcp's ([mcp] brings mcp itself),
     # stats() is the fleet stats shape, and LanceDB is gone.
-    "kgmodule-utils[semantic,sqlite-vec,mcp]>=0.29.0",
+    "kgmodule-utils[semantic,sqlite-vec,mcp]>=0.30.2",
     "numpy>=1.24.0",
     "rich>=14.0.0",
     "safetensors>=0.5.0",

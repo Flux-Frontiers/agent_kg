@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-17
+
+### Changed
+
+- **kgmodule-utils floor raised to 0.30.2.** That release stops the `omlx`
+  synthesis backend from falling back to `OPENAI_API_KEY`, which sent the
+  OpenAI key to oMLX whenever `VLLM_API_KEY` was unset. Together with the hook
+  fix below, `agentkg prune` summarizes again on oMLX.
+
 ### Fixed
 
 - **The Stop and PreCompact hooks give oMLX its API key.** They run
