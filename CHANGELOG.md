@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI installs one cuBLAS again.** The 0.14.1 lock was written by Poetry
+  2.5.1, which marked the second `nvidia-cublas` and `nvidia-cuda-nvrtc`
+  entries `platform_system == "Linux"` instead of "Linux, but not x86_64 or
+  aarch64". On a Linux x86_64 runner both versions installed over each other
+  and importing torch crashed. The lock is regenerated with Poetry 2.4.3 from
+  the last good lock; only kgmodule-utils moves (0.29.0 to 0.30.2).
+  `tests/test_lock_markers.py` now fails when the lock would install two
+  versions of a package on Linux x86_64, macOS arm64 or Windows. The
+  published 0.14.1 package is unaffected; the lock does not ship in it.
+
 ## [0.14.1] - 2026-11-17
 
 ### Changed
