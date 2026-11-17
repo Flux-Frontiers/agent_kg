@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Stop and PreCompact hooks give oMLX its API key.** They run
+  `agentkg prune` with `SYNTH_BACKEND=omlx` by default, but a hook process
+  has no `VLLM_API_KEY`, so oMLX rejected the summarization requests with
+  401. When the backend is omlx and `VLLM_API_KEY` is unset or empty, the
+  hooks now read `auth.api_key` from `~/.omlx/settings.json` at run time and
+  export it for `prune`. The key is never printed or written to a file; a
+  missing settings file or key leaves the variable unset and the hook runs
+  as before. Other backends are unaffected. Re-run `agentkg install-hooks --global`
+  to deploy the updated scripts.
+
 ## [0.14.0] - 2026-10-26
 
 Step 4 of the fleet's MCP centralization (kgrag_priv

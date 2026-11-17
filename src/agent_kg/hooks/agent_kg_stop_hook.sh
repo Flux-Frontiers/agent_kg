@@ -31,6 +31,29 @@ CONSOLIDATE_INTERVAL=20   # Run prune every N human messages
 # backend needs API credit and fails silently to a stub summary without it.
 # An explicit SYNTH_BACKEND in the environment still wins.
 export SYNTH_BACKEND="${SYNTH_BACKEND:-omlx}"
+
+# oMLX rejects requests without an API key, and a hook process does not
+# inherit one from the login shell. Read it from oMLX's own settings at run
+# time, only for the omlx backend and only when VLLM_API_KEY is not already
+# set. The key is held in this process's environment and never printed or
+# written anywhere. A missing settings file or key leaves it unset.
+if [ "$SYNTH_BACKEND" = "omlx" ] && [ -z "${VLLM_API_KEY:-}" ]; then
+    VLLM_API_KEY=$(python3 -c '
+import json, os
+try:
+    with open(os.path.expanduser("~/.omlx/settings.json"), encoding="utf-8") as fh:
+        key = json.load(fh)["auth"]["api_key"]
+    if isinstance(key, str):
+        print(key)
+except Exception:
+    pass
+' 2>/dev/null)
+    if [ -n "$VLLM_API_KEY" ]; then
+        export VLLM_API_KEY
+    else
+        unset VLLM_API_KEY
+    fi
+fi
 STATE_DIR="$HOME/.agentkg/hook_state"
 mkdir -p "$STATE_DIR"
 
