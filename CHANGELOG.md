@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An Art Techno logo.** The dialogue: turns by the user (copper) and the
+  agent (gold) hang off one bus into a memory die, with topic, entity and task
+  nodes below it, and the tagline CONVERSATION AS MEMORY.
+  `scripts/build_logo.py` draws the mark, a 64 px icon and a banner as SVG
+  under `assets/` and writes the PNGs. The README header shows the banner, and
+  `docs/logo.png`, which the Streamlit app shows, replaces the old CodeKG
+  brain. It also writes `src/logo.png` for the pdoc task and
+  `assets/logo-md-256x256.png` for `scripts/generate_wiki.py`, which both
+  expected and neither found.
+
 ### Fixed
 
 - **CI installs one cuBLAS again.** The 0.14.1 lock was written by Poetry
