@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/agentkg_banner.png" alt="AgentKG" width="720"/>
+  <img src="https://raw.githubusercontent.com/Flux-Frontiers/agent_kg/main/assets/agentkg_banner.png" alt="AgentKG" width="720"/>
 </p>
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
