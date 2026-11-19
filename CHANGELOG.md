@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_lock_markers.py` now fails when the lock would install two
   versions of a package on Linux x86_64, macOS arm64 or Windows. The
   published 0.14.1 package is unaffected; the lock does not ship in it.
+- **README images show on PyPI.** The README's images used repository-relative
+  paths, which PyPI cannot resolve, so its project page showed broken images.
+  They now use absolute `raw.githubusercontent.com` URLs pinned to `main`.
 
 ## [0.14.1] - 2026-11-17
 
